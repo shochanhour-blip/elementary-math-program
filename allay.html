@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小学校向け 掛け算学習</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="controls">
+    <div class="input-pair">
+      <label>
+        <span>行 (row)</span>
+        <input id="rowInput" type="number" min="1" value="3" aria-label="行の数">
+      </label>
+      <span class="cross">×</span>
+      <label>
+        <span>列 (col)</span>
+        <input id="colInput" type="number" min="1" value="3" aria-label="列の数">
+      </label>
+    </div>
+    <div class="buttons">
+      <button id="generateBtn">実行</button>
+      <button id="showBtn">かけ算を表示</button>
+    </div>
+    <div class="options">
+      <label class="toggle">
+        <input id="toggleNumbering" type="checkbox" checked>
+        <span>ナンバリングを表示</span>
+      </label>
+    </div>
+    <div class="palette" aria-label="色を選ぶ">
+      <span class="palette-label">色をえらぶ:</span>
+      <div id="colorPalette" class="palette-swatches" role="group"></div>
+    </div>
+  </header>
+
+  <main class="board-wrapper">
+    <div class="grid-shell">
+      <div class="corner"></div>
+      <div id="colLabels" class="col-labels"></div>
+      <div id="rowLabels" class="row-labels"></div>
+      <div id="gridHolder" class="grid-holder">
+        <div id="overlay" aria-live="polite"></div>
+        <div id="grid" role="grid" aria-label="掛け算のグリッド"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
+
