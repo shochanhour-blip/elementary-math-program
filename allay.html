@@ -3,35 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>小学校向け 掛け算学習</title>
+  <title><ruby>小学校<rt>しょうがっこう</rt></ruby>むけ <ruby>掛け算<rt>かけざん</rt></ruby>がくしゅう</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="controls">
-    <div class="input-pair">
-      <label>
-        <span>行 (row)</span>
-        <input id="rowInput" type="number" min="1" value="3" aria-label="行の数">
-      </label>
-      <span class="cross">×</span>
-      <label>
-        <span>列 (col)</span>
-        <input id="colInput" type="number" min="1" value="3" aria-label="列の数">
-      </label>
-    </div>
-    <div class="buttons">
-      <button id="generateBtn">実行</button>
-      <button id="showBtn">かけ算を表示</button>
-    </div>
-    <div class="options">
-      <label class="toggle">
-        <input id="toggleNumbering" type="checkbox" checked>
-        <span>ナンバリングを表示</span>
-      </label>
-    </div>
-    <div class="palette" aria-label="色を選ぶ">
-      <span class="palette-label">色をえらぶ:</span>
-      <div id="colorPalette" class="palette-swatches" role="group"></div>
+    <div class="control-row">
+      <div class="control-left">
+        <div class="input-row">
+          <div class="input-pair">
+            <input id="rowInput" type="number" min="1" value="3" aria-label="ぎょうのかず">
+            <span class="cross">×</span>
+            <input id="colInput" type="number" min="1" value="3" aria-label="れつのかず">
+          </div>
+          <button id="generateBtn" class="cat-button" aria-label="じっこう">😸</button>
+        </div>
+        <div class="palette" aria-label="いろをえらぶ">
+          <div id="colorPalette" class="palette-swatches" role="group"></div>
+        </div>
+      </div>
+      <div class="button-stack">
+        <div class="buttons">
+          <button id="showBtn">かけ算を ひょうじ</button>
+          <button id="groupingBtn">かこいを ひょうじ</button>
+          <button id="swapBtn">いれかえる</button>
+        </div>
+        <div class="toggle-row">
+          <label class="toggle">
+            <input id="toggleNumbering" type="checkbox" checked>
+            <span>ナンバリングを ひょうじ</span>
+          </label>
+        </div>
+      </div>
     </div>
   </header>
 

@@ -26,14 +26,39 @@ body {
 }
 
 .controls {
-  width: min(960px, 100%);
+  width: fit-content;
+  max-width: 100%;
+  display: flex;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  align-self: center;
+  justify-content: center;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.control-left {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: var(--panel);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
+  gap: 8px;
+  align-items: center;
+}
+
+.input-row {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .input-pair {
@@ -51,9 +76,9 @@ label {
 }
 
 input[type="number"] {
-  width: 96px;
-  font-size: 20px;
-  padding: 8px 10px;
+  width: 86px;
+  font-size: 18px;
+  padding: 6px 8px;
   border: 2px solid #d0d7e2;
   border-radius: 10px;
   text-align: center;
@@ -72,13 +97,22 @@ input[type="number"]:focus {
 .buttons {
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-.options {
+.button-stack {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.toggle-row {
+  display: flex;
+  gap: 12px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 /* シンプルなトグル */
@@ -207,6 +241,14 @@ button:active {
   pointer-events: none;
 }
 
+.overlay-group {
+  position: absolute;
+  border: 2px solid #333;
+  border-radius: 10px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
 .overlay-box {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -229,26 +271,23 @@ button:active {
 .palette {
   display: flex;
   align-items: center;
-  gap: 10px;
   justify-content: center;
+  gap: 8px;
   flex-wrap: wrap;
-}
-
-.palette-label {
-  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .palette-swatches {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .color-swatch {
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  border: 3px solid #e4e7ed;
+  border: 2px solid #e4e7ed;
   cursor: pointer;
   outline: none;
   padding: 0;
@@ -263,6 +302,21 @@ button:active {
 
 .color-swatch:active {
   transform: translateY(1px);
+}
+
+.cat-button {
+  padding: 10px 14px;
+  font-size: 32px;
+  line-height: 1;
+  min-width: 64px;
+  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  box-shadow: none;
+  border: none;
+  border-radius: 12px;
 }
 
 @media (max-width: 640px) {
