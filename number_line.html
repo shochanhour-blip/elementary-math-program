@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数直線ドロー</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --panel: #fff;
+      --text: #1f2933;
+      --border: #d0d7e2;
+      --shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      background: #f7f9fc;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 24px 12px 48px;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      flex-wrap: wrap;
+    }
+    .input-pair {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+    input[type="number"] {
+      width: 96px;
+      padding: 8px 10px;
+      font-size: 18px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      text-align: center;
+      background: #fdfdff;
+    }
+    input[type="number"]:focus { outline: 2px solid #94b7ff; }
+    .cat-button {
+      padding: 10px 14px;
+      font-size: 28px;
+      line-height: 1;
+      min-width: 60px;
+      height: 60px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 0.05s ease;
+    }
+    .cat-button:active { transform: translateY(1px); }
+    .canvas-wrap {
+      width: 100%;
+      height: 420px;
+      overflow: hidden;
+      position: relative;
+    }
+    canvas {
+      display: block;
+      background: #fff;
+      cursor: grab;
+      touch-action: none;
+    }
+    canvas:active {
+      cursor: grabbing;
+    }
+  </style>
+</head>
+<body>
+  <header class="controls">
+    <div class="input-pair">
+      <label for="maxInput">0から</label>
+      <input id="maxInput" type="number" min="1" aria-label="さいだいち">
+      <span>まで</span>
+    </div>
+    <div class="input-pair">
+      <input id="stepInput" type="number" min="1" aria-label="ぞうかりょう">
+      <span>ずつ</span>
+    </div>
+    <div class="input-pair">
+      <label for="divisionInput">分割：</label>
+      <input id="divisionInput" type="number" min="0" aria-label="ぶんかつすう">
+    </div>
+    <button id="drawBtn" class="cat-button" aria-label="えがく">😸</button>
+  </header>
+
+  <main class="canvas-wrap">
+    <canvas id="canvas" width="800" height="420" aria-label="数直線キャンバス"></canvas>
+  </main>
+
+  <script>
+    const maxInput = document.getElementById("maxInput");
+    const stepInput = document.getElementById("stepInput");
+    const divisionInput = document.getElementById("divisionInput");
+    const drawBtn = document.getElementById("drawBtn");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const canvasWrap = document.querySelector(".canvas-wrap");
+
+    let maxValue = 10;
+    let stepValue = 1;
+    let divisionValue = 0;
+    let scale = 1.0; // ズーム倍率
+    let offsetX = 0; // 左右のオフセット
+
+    // ドラッグ用の状態
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartOffsetX = 0;
+
+    // ピンチズーム用の状態
+    let initialPinchDistance = null;
+    let initialPinchScale = null;
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    function drawNumberLine() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const lineY = h / 2;
+
+      // 目盛りの数を計算
+      const numTicks = Math.floor(maxValue / stepValue) + 1;
+
+      // 基準となる1ステップあたりのピクセル数（スケール適用前）
+      const baseStepWidth = w / (numTicks + 1); // 両端に余裕を持たせる
+      const stepWidth = baseStepWidth * scale;
+
+      // 0の位置を計算
+      const zeroX = w / 2 + offsetX;
+
+      // 主線を描画（0からmaxValueまで）
+      const lineStartX = zeroX;
+      const lineEndX = zeroX + maxValue * (stepWidth / stepValue);
+
+      ctx.beginPath();
+      ctx.moveTo(lineStartX, lineY);
+      ctx.lineTo(lineEndX, lineY);
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // 目盛りと数字を描画
+      for (let i = 0; i * stepValue <= maxValue; i++) {
+        const value = i * stepValue;
+        const x = zeroX + i * stepWidth;
+
+        // 画面外は描画スキップ（パフォーマンス向上）
+        if (x < -100 || x > w + 100) continue;
+
+        // 主目盛り
+        ctx.beginPath();
+        ctx.moveTo(x, lineY - 15);
+        ctx.lineTo(x, lineY + 15);
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // 数字
+        ctx.font = "bold 20px 'Noto Sans JP', Arial";
+        ctx.fillStyle = "#000";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(value.toString(), x, lineY + 25);
+      }
+
+      // 補助線を描画
+      if (divisionValue > 0) {
+        ctx.strokeStyle = "#999";
+        ctx.lineWidth = 1;
+
+        for (let i = 0; i * stepValue < maxValue; i++) {
+          for (let j = 1; j <= divisionValue; j++) {
+            const subStepWidth = stepWidth / (divisionValue + 1);
+            const x = zeroX + i * stepWidth + j * subStepWidth;
+
+            // 画面外は描画スキップ
+            if (x < -100 || x > w + 100) continue;
+
+            ctx.beginPath();
+            ctx.moveTo(x, lineY - 8);
+            ctx.lineTo(x, lineY + 8);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    drawBtn.addEventListener("click", () => {
+      maxValue = Math.max(1, Math.floor(Number(maxInput.value) || 1));
+      stepValue = Math.max(1, Math.floor(Number(stepInput.value) || 1));
+      divisionValue = Math.max(0, Math.floor(Number(divisionInput.value) || 0));
+      scale = 1.0;
+
+      // 数直線の中央値が画面中央に来るようにオフセットを計算
+      resizeCanvas();
+      const w = canvas.width;
+      const numTicks = Math.floor(maxValue / stepValue) + 1;
+      const baseStepWidth = w / (numTicks + 1);
+      const centerTickIndex = Math.floor(numTicks / 2);
+      offsetX = -centerTickIndex * baseStepWidth;
+
+      drawNumberLine();
+    });
+
+    // マウスホイールでズーム
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+
+      // マウス位置での数値を計算
+      const w = canvas.width;
+      const numTicks = Math.floor(maxValue / stepValue) + 1;
+      const baseStepWidth = w / (numTicks + 1);
+      const stepWidth = baseStepWidth * scale;
+      const zeroX = w / 2 + offsetX;
+      const mouseTickIndex = (mouseX - zeroX) / stepWidth;
+
+      // ズーム係数
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      const newScale = scale * zoomFactor;
+
+      // 最小・最大スケール制限
+      scale = Math.max(0.1, Math.min(20, newScale));
+
+      // マウス位置が変わらないようにオフセットを調整
+      const newStepWidth = baseStepWidth * scale;
+      const newZeroX = mouseX - mouseTickIndex * newStepWidth;
+      offsetX = newZeroX - w / 2;
+
+      drawNumberLine();
+    });
+
+    // ドラッグでパン
+    canvas.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      dragStartX = e.clientX;
+      dragStartOffsetX = offsetX;
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+
+      const deltaX = e.clientX - dragStartX;
+      offsetX = dragStartOffsetX + deltaX;
+
+      drawNumberLine();
+    });
+
+    canvas.addEventListener("mouseup", () => {
+      isDragging = false;
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      isDragging = false;
+    });
+
+    // タッチでパン＆ピンチズーム
+    canvas.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) {
+        // シングルタッチ：パン開始
+        isDragging = true;
+        dragStartX = e.touches[0].clientX;
+        dragStartOffsetX = offsetX;
+      } else if (e.touches.length === 2) {
+        // ピンチズーム開始
+        isDragging = false;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        initialPinchDistance = Math.sqrt(dx * dx + dy * dy);
+        initialPinchScale = scale;
+      }
+    });
+
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+
+      if (e.touches.length === 1 && isDragging) {
+        // パン
+        const deltaX = e.touches[0].clientX - dragStartX;
+        offsetX = dragStartOffsetX + deltaX;
+
+        drawNumberLine();
+      } else if (e.touches.length === 2 && initialPinchDistance !== null) {
+        // ピンチズーム
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+        const zoomFactor = currentDistance / initialPinchDistance;
+        const newScale = initialPinchScale * zoomFactor;
+
+        // 最小・最大スケール制限
+        scale = Math.max(0.1, Math.min(20, newScale));
+
+        drawNumberLine();
+      }
+    });
+
+    canvas.addEventListener("touchend", () => {
+      isDragging = false;
+      initialPinchDistance = null;
+      initialPinchScale = null;
+    });
+
+    // ウィンドウリサイズ時にキャンバスをリサイズ
+    window.addEventListener("resize", () => {
+      resizeCanvas();
+      drawNumberLine();
+    });
+
+    // 初期化
+    resizeCanvas();
+  </script>
+</body>
+</html>

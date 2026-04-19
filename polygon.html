@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>正多角形ドロー</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --panel: #fff;
+      --text: #1f2933;
+      --border: #d0d7e2;
+      --shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      background: #f7f9fc;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 24px 12px 48px;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .input-pair {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+    input[type="number"] {
+      width: 96px;
+      padding: 8px 10px;
+      font-size: 18px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      text-align: center;
+      background: #fdfdff;
+    }
+    input[type="number"]:focus { outline: 2px solid #94b7ff; }
+    .cat-button {
+      padding: 10px 14px;
+      font-size: 28px;
+      line-height: 1;
+      min-width: 60px;
+      height: 60px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 0.05s ease;
+    }
+    .cat-button:active { transform: translateY(1px); }
+    .toggle-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .toggle-btn {
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform 0.05s ease;
+    }
+    .toggle-btn:active { transform: translateY(1px); }
+    .canvas-wrap {
+      width: min(720px, 100%);
+      background: var(--panel);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      width: 100%;
+      aspect-ratio: 800 / 420;
+      height: auto;
+      border-radius: 12px;
+      background: #fff;
+      border: 2px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header class="controls">
+    <div class="input-pair">
+      <label for="sideInput">正</label>
+      <input id="sideInput" type="number" min="3" aria-label="かくのかず">
+      <span>角形</span>
+    </div>
+    <button id="drawBtn" class="cat-button" aria-label="えがく">😸</button>
+    <div class="toggle-buttons">
+      <button id="vertexBtn" class="toggle-btn">頂点を ひょうじ</button>
+      <button id="circleBtn" class="toggle-btn">円を ひょうじ</button>
+      <button id="radiusBtn" class="toggle-btn">半径を ひょうじ</button>
+    </div>
+  </header>
+
+  <main class="canvas-wrap">
+    <canvas id="canvas" width="800" height="420" aria-label="正多角形キャンバス"></canvas>
+  </main>
+
+  <script>
+    const sideInput = document.getElementById("sideInput");
+    const drawBtn = document.getElementById("drawBtn");
+    const vertexBtn = document.getElementById("vertexBtn");
+    const circleBtn = document.getElementById("circleBtn");
+    const radiusBtn = document.getElementById("radiusBtn");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let showVertices = false;
+    let showCircle = false;
+    let showRadius = false;
+
+    function drawPolygon(n) {
+      const sides = Math.max(3, Math.floor(n));
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const radius = Math.min(w, h) * 0.35;
+      const cx = w / 2;
+      const cy = h / 2;
+      // 正四角形だけは辺を水平・垂直に揃える
+      const startAngle = sides === 4 ? Math.PI / 4 : -Math.PI / 2;
+
+      ctx.beginPath();
+      for (let i = 0; i < sides; i++) {
+        const angle = startAngle + (i * 2 * Math.PI) / sides;
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#000";
+      ctx.stroke();
+
+      // 中心点を表示
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#000";
+      ctx.fill();
+
+       // 円を表示（頂点が円周に乗る半径）
+      if (showCircle) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // 頂点を表示（青）
+      if (showVertices) {
+        ctx.fillStyle = "blue";
+        for (let i = 0; i < sides; i++) {
+          const angle = startAngle + (i * 2 * Math.PI) / sides;
+          const x = cx + radius * Math.cos(angle);
+          const y = cy + radius * Math.sin(angle);
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // 半径を表示（緑）
+      if (showRadius) {
+        ctx.strokeStyle = "green";
+        ctx.lineWidth = 2;
+        for (let i = 0; i < sides; i++) {
+          const angle = startAngle + (i * 2 * Math.PI) / sides;
+          const x = cx + radius * Math.cos(angle);
+          const y = cy + radius * Math.sin(angle);
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    drawBtn.addEventListener("click", () => {
+      const n = Number(sideInput.value) || 3;
+      drawPolygon(n);
+    });
+
+    function updateVertexLabel() {
+      vertexBtn.textContent = showVertices ? "頂点を けす" : "頂点を ひょうじ";
+    }
+
+    function updateCircleLabel() {
+      circleBtn.textContent = showCircle ? "円を けす" : "円を ひょうじ";
+    }
+
+    function updateRadiusLabel() {
+      radiusBtn.textContent = showRadius ? "半径を けす" : "半径を ひょうじ";
+    }
+
+    vertexBtn.addEventListener("click", () => {
+      showVertices = !showVertices;
+      updateVertexLabel();
+      drawPolygon(Number(sideInput.value) || 3);
+    });
+
+    circleBtn.addEventListener("click", () => {
+      showCircle = !showCircle;
+      updateCircleLabel();
+      drawPolygon(Number(sideInput.value) || 3);
+    });
+
+    radiusBtn.addEventListener("click", () => {
+      showRadius = !showRadius;
+      updateRadiusLabel();
+      drawPolygon(Number(sideInput.value) || 3);
+    });
+
+    // ラベルの初期化
+    updateVertexLabel();
+    updateCircleLabel();
+    updateRadiusLabel();
+  </script>
+</body>
+</html>
