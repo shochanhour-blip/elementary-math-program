@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小学校むけ さんすう教材</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      background: #f7f9fc;
+      color: #1f2933;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 48px 16px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    p.sub {
+      color: #6b7a8d;
+      margin: 0 0 40px;
+      text-align: center;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      justify-content: center;
+      max-width: 800px;
+    }
+    a.card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 220px;
+      padding: 32px 16px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      text-decoration: none;
+      color: #1f2933;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    a.card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+    }
+    .card .icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
+    .card .title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .card .desc {
+      font-size: 0.85rem;
+      color: #6b7a8d;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>小学校むけ さんすう教材</h1>
+  <p class="sub">きょうざいをえらんでね</p>
+  <div class="cards">
+    <a class="card" href="allay.html">
+      <div class="icon">😸</div>
+      <div class="title">かけ算がくしゅう</div>
+      <div class="desc">アレイ図でかけ算をかんがえよう</div>
+    </a>
+    <a class="card" href="number_line.html">
+      <div class="icon">📏</div>
+      <div class="title">数直線ドロー</div>
+      <div class="desc">数直線をつかって数をあらわそう</div>
+    </a>
+    <a class="card" href="polygon.html">
+      <div class="icon">🔷</div>
+      <div class="title">正多角形ドロー</div>
+      <div class="desc">いろいろなかたちをかいてみよう</div>
+    </a>
+  </div>
+</body>
+</html>
