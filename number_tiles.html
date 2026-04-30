@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>かず タイル</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --tile: clamp(64px, calc((100vw - 120px) / 10), 84px);
+      --tile-r: 16px;
+      --gap: 10px;
+      --bg: #f0f7ff;
+      --header-bg: #3b82f6;
+      --accent: #2563eb;
+    }
+
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+    }
+
+    body {
+      font-family: 'Hiragino Maru Gothic ProN', 'BIZ UDPGothic', 'Meiryo', sans-serif;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      background: var(--header-bg);
+      color: white;
+      padding: 14px 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0,0,0,.2);
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: clamp(1.2rem, 4vw, 1.8rem);
+      letter-spacing: .04em;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.2);
+    }
+
+    #kurai-btn {
+      background: white;
+      border: none;
+      border-radius: 50px;
+      padding: 10px 20px;
+      font-size: clamp(.9rem, 2vw, 1.05rem);
+      color: var(--accent);
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,.15);
+      transition: background .15s, color .15s, transform .1s;
+      touch-action: manipulation;
+    }
+
+    #kurai-btn.off {
+      background: rgba(255,255,255,.22);
+      color: white;
+    }
+
+    #kurai-btn:active { transform: scale(.95); }
+
+    /* ===== SOURCE TILES ===== */
+    .source-area {
+      padding: 16px 16px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .section-label {
+      font-size: .75rem;
+      font-weight: bold;
+      color: #9ca3af;
+      letter-spacing: .06em;
+    }
+
+    .source-tiles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--gap);
+      justify-content: center;
+    }
+
+    .source-tile {
+      width: var(--tile);
+      height: var(--tile);
+      border-radius: var(--tile-r);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: calc(var(--tile) * .56);
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 6px 0 rgba(0,0,0,.18);
+      transition: transform .1s, box-shadow .1s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+    }
+
+    .source-tile:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 rgba(0,0,0,.18);
+    }
+
+    /* ===== DIVIDER ===== */
+    .divider {
+      width: calc(100% - 32px);
+      height: 2px;
+      background: #e2e8f0;
+      border-radius: 2px;
+      margin: 0 auto;
+      flex-shrink: 0;
+    }
+
+    /* ===== BUILDING AREA ===== */
+    .building-wrapper {
+      flex: 1;
+      padding: 12px 16px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .building-scroll {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      display: flex;
+      justify-content: center;
+    }
+
+    .building-area {
+      background: white;
+      border-radius: 22px;
+      padding: 18px 22px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.1);
+      min-width: 260px;
+      min-height: calc(var(--tile) + 56px);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--gap);
+      position: relative;
+      border: 3px dashed transparent;
+      transition: border-color .18s, background .18s;
+    }
+
+    .building-area.drag-over {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .building-area.empty::after {
+      content: 'かずをドラッグしてならべよう';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #cbd5e1;
+      font-size: clamp(.85rem, 2.5vw, 1.05rem);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* ===== PLACED TILE ===== */
+    .placed-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      touch-action: none;
+      user-select: none;
+      cursor: grab;
+      transition: opacity .15s;
+    }
+
+    .placed-wrapper:active { cursor: grabbing; }
+    .placed-wrapper.is-dragging { opacity: .25; }
+
+    .placed-tile {
+      width: var(--tile);
+      height: var(--tile);
+      border-radius: var(--tile-r);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: calc(var(--tile) * .56);
+      font-weight: 900;
+      color: white;
+      box-shadow: 0 5px 0 rgba(0,0,0,.2);
+      position: relative;
+      pointer-events: none; /* events on wrapper */
+    }
+
+    /* ✕ badge — always visible on tablets (no hover) */
+    .placed-tile .x-badge {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 22px;
+      height: 22px;
+      background: rgba(0,0,0,.38);
+      border-radius: 50%;
+      font-size: .58rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      line-height: 1;
+    }
+
+    .place-label {
+      font-size: clamp(1.3rem, 3.2vw, 1.6rem);
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: .06em;
+      -webkit-text-stroke: .5px #0f172a;
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      width: 2em;
+      min-height: 4em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity .22s;
+    }
+
+    .place-label.hidden { opacity: 0; }
+
+    /* ===== DROP INDICATOR ===== */
+    .drop-indicator {
+      width: 5px;
+      height: var(--tile);
+      background: #3b82f6;
+      border-radius: 4px;
+      flex-shrink: 0;
+      box-shadow: 0 0 12px #3b82f680;
+      animation: di-pulse .5s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    @keyframes di-pulse {
+      from { opacity: .65; transform: scaleY(.92); }
+      to   { opacity: 1;   transform: scaleY(1.06); box-shadow: 0 0 18px #3b82f6aa; }
+    }
+
+    /* ===== DRAG GHOST ===== */
+    .drag-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      border-radius: var(--tile-r);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      transform: translate(-50%, -50%) scale(1.15) rotate(3deg);
+      box-shadow: 0 14px 30px rgba(0,0,0,.35);
+      opacity: .92;
+    }
+
+    /* ===== CONTROLS ===== */
+    .controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    #clear-btn {
+      background: #f1f5f9;
+      color: #64748b;
+      border: none;
+      border-radius: 14px;
+      padding: 12px 36px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      transition: background .15s, transform .1s;
+      touch-action: manipulation;
+    }
+
+    #clear-btn:active {
+      background: #e2e8f0;
+      transform: scale(.97);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🔢 かず タイル</h1>
+  <button id="kurai-btn">位をかくす</button>
+</header>
+
+<div class="source-area">
+  <div class="section-label">タップまたはドラッグ</div>
+  <div class="source-tiles" id="source-tiles"></div>
+</div>
+
+<div class="divider"></div>
+
+<div class="building-wrapper">
+  <div class="section-label">ならべたかず　（タップでけす・ドラッグで入れかえ）</div>
+  <div class="building-scroll">
+    <div class="building-area empty" id="building-area"></div>
+  </div>
+  <div class="controls">
+    <button id="clear-btn">ぜんぶけす</button>
+  </div>
+</div>
+
+<script>
+  /* ===== CONSTANTS ===== */
+  const DIGIT_COLORS = [
+    '#ef4444', // 0
+    '#f97316', // 1
+    '#d97706', // 2
+    '#16a34a', // 3
+    '#0d9488', // 4
+    '#2563eb', // 5
+    '#7c3aed', // 6
+    '#db2777', // 7
+    '#475569', // 8
+    '#0284c7', // 9
+  ];
+
+  const PLACE_NAMES = [
+    '一の位','十の位','百の位','千の位',
+    '万の位','十万の位','百万の位','千万の位',
+    '億の位','十億の位',
+  ];
+
+  /* ===== STATE ===== */
+  let placedDigits = [];
+  let showKurai = true;
+
+  /* ===== DOM ===== */
+  const buildingArea  = document.getElementById('building-area');
+  const sourceTilesEl = document.getElementById('source-tiles');
+
+  /* ===== DROP INDICATOR ===== */
+  const dropIndicator = document.createElement('div');
+  dropIndicator.className = 'drop-indicator';
+
+  function showDropAt(dropIdx, excludeWrapper) {
+    const siblings = nonDraggingWrappers(excludeWrapper);
+    if (dropIdx >= siblings.length) {
+      buildingArea.appendChild(dropIndicator);
+    } else {
+      buildingArea.insertBefore(dropIndicator, siblings[dropIdx]);
+    }
+  }
+
+  function hideDropIndicator() {
+    dropIndicator.remove();
+  }
+
+  function nonDraggingWrappers(exclude) {
+    return [...buildingArea.querySelectorAll('.placed-wrapper')]
+      .filter(w => w !== exclude);
+  }
+
+  /* ===== DROP INDEX CALC ===== */
+  function getDropIdx(clientX, excludeWrapper) {
+    const siblings = nonDraggingWrappers(excludeWrapper);
+    for (let i = 0; i < siblings.length; i++) {
+      const r = siblings[i].getBoundingClientRect();
+      if (clientX < r.left + r.width / 2) return i;
+    }
+    return siblings.length;
+  }
+
+  /* ===== GHOST ===== */
+  function createGhost(digit) {
+    const sz = parseFloat(getComputedStyle(document.documentElement)
+                  .getPropertyValue('--tile')) || 76;
+    const el = document.createElement('div');
+    el.className = 'drag-ghost';
+    el.style.cssText =
+      `width:${sz}px;height:${sz}px;` +
+      `font-size:${(sz * .38).toFixed(0)}px;` +
+      `background:${DIGIT_COLORS[digit]};`;
+    el.textContent = digit;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function moveGhost(ghost, x, y) {
+    ghost.style.left = x + 'px';
+    ghost.style.top  = y + 'px';
+  }
+
+  /* ===== DATA OPERATIONS ===== */
+  function addDigitAt(digit, idx) {
+    placedDigits.splice(idx, 0, digit);
+    renderBuilding();
+  }
+
+  function removeDigit(idx) {
+    placedDigits.splice(idx, 1);
+    renderBuilding();
+  }
+
+  function moveDigit(fromIdx, toIdx) {
+    if (fromIdx === toIdx) return;
+    const d = placedDigits.splice(fromIdx, 1)[0];
+    placedDigits.splice(toIdx, 0, d);
+    renderBuilding();
+  }
+
+  /* ===== RENDER ===== */
+  function renderBuilding() {
+    buildingArea.innerHTML = '';
+    const n = placedDigits.length;
+
+    if (n === 0) {
+      buildingArea.classList.add('empty');
+      return;
+    }
+    buildingArea.classList.remove('empty');
+
+    placedDigits.forEach((digit, idx) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'placed-wrapper';
+
+      const tile = document.createElement('div');
+      tile.className = 'placed-tile';
+      tile.textContent = digit;
+      tile.style.background = DIGIT_COLORS[digit];
+
+      const badge = document.createElement('span');
+      badge.className = 'x-badge';
+      badge.textContent = '✕';
+      tile.appendChild(badge);
+
+      const placeIdx = n - 1 - idx;
+      const label = document.createElement('div');
+      label.className = 'place-label' + (showKurai ? '' : ' hidden');
+      label.textContent = placeIdx < PLACE_NAMES.length
+        ? PLACE_NAMES[placeIdx]
+        : (placeIdx + 1) + 'けた目';
+
+      wrapper.appendChild(tile);
+      wrapper.appendChild(label);
+
+      /* placed-tile drag / tap */
+      wrapper.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        startPlacedDrag(e, idx, wrapper, digit);
+      });
+
+      buildingArea.appendChild(wrapper);
+    });
+  }
+
+  /* ===== SOURCE DRAG ===== */
+  function startSourceDrag(e, digit, tileEl) {
+    const sx = e.clientX, sy = e.clientY;
+    let dragging = false;
+    let ghost = null;
+    let dropIdx = placedDigits.length;
+
+    tileEl.setPointerCapture(e.pointerId);
+
+    function onMove(ev) {
+      if (!dragging && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 8) {
+        dragging = true;
+        ghost = createGhost(digit);
+      }
+      if (!dragging) return;
+
+      moveGhost(ghost, ev.clientX, ev.clientY);
+
+      const r = buildingArea.getBoundingClientRect();
+      const inArea = ev.clientX >= r.left && ev.clientX <= r.right &&
+                     ev.clientY >= r.top  && ev.clientY <= r.bottom;
+
+      buildingArea.classList.toggle('drag-over', inArea && placedDigits.length === 0);
+
+      if (inArea) {
+        dropIdx = getDropIdx(ev.clientX, null);
+        showDropAt(dropIdx, null);
+      } else {
+        hideDropIndicator();
+        dropIdx = -1;
+      }
+    }
+
+    function onEnd(ev) {
+      cleanup();
+      hideDropIndicator();
+      buildingArea.classList.remove('drag-over');
+
+      if (dragging) {
+        ghost.remove();
+        if (ev.type !== 'pointercancel') {
+          const r = buildingArea.getBoundingClientRect();
+          const inArea = ev.clientX >= r.left && ev.clientX <= r.right &&
+                         ev.clientY >= r.top  && ev.clientY <= r.bottom;
+          if (inArea) {
+            addDigitAt(digit, getDropIdx(ev.clientX, null));
+          }
+        }
+      } else if (ev.type !== 'pointercancel') {
+        /* タップ → 末尾に追加 */
+        addDigitAt(digit, placedDigits.length);
+      }
+    }
+
+    function cleanup() {
+      tileEl.removeEventListener('pointermove', onMove);
+      tileEl.removeEventListener('pointerup',   onEnd);
+      tileEl.removeEventListener('pointercancel', onEnd);
+    }
+
+    tileEl.addEventListener('pointermove', onMove);
+    tileEl.addEventListener('pointerup',   onEnd);
+    tileEl.addEventListener('pointercancel', onEnd);
+  }
+
+  /* ===== PLACED DRAG (reorder / tap-to-remove) ===== */
+  function startPlacedDrag(e, fromIdx, wrapperEl, digit) {
+    const sx = e.clientX, sy = e.clientY;
+    let dragging = false;
+    let ghost = null;
+    let dropIdx = fromIdx;
+
+    wrapperEl.setPointerCapture(e.pointerId);
+
+    function onMove(ev) {
+      if (!dragging && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 10) {
+        dragging = true;
+        ghost = createGhost(digit);
+        wrapperEl.classList.add('is-dragging');
+      }
+      if (!dragging) return;
+
+      moveGhost(ghost, ev.clientX, ev.clientY);
+      dropIdx = getDropIdx(ev.clientX, wrapperEl);
+      showDropAt(dropIdx, wrapperEl);
+    }
+
+    function onEnd(ev) {
+      cleanup();
+      hideDropIndicator();
+
+      if (dragging) {
+        ghost.remove();
+        wrapperEl.classList.remove('is-dragging');
+        if (ev.type !== 'pointercancel') {
+          moveDigit(fromIdx, dropIdx); // safe even if fromIdx === dropIdx
+        } else {
+          renderBuilding(); // restore
+        }
+      } else if (ev.type !== 'pointercancel') {
+        /* tap → remove */
+        removeDigit(fromIdx);
+      }
+    }
+
+    function cleanup() {
+      wrapperEl.removeEventListener('pointermove', onMove);
+      wrapperEl.removeEventListener('pointerup',   onEnd);
+      wrapperEl.removeEventListener('pointercancel', onEnd);
+    }
+
+    wrapperEl.addEventListener('pointermove', onMove);
+    wrapperEl.addEventListener('pointerup',   onEnd);
+    wrapperEl.addEventListener('pointercancel', onEnd);
+  }
+
+  /* ===== SOURCE TILES ===== */
+  for (let i = 0; i <= 9; i++) {
+    const tile = document.createElement('div');
+    tile.className = 'source-tile';
+    tile.textContent = i;
+    tile.style.background = DIGIT_COLORS[i];
+    tile.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      startSourceDrag(e, i, tile);
+    });
+    sourceTilesEl.appendChild(tile);
+  }
+
+  /* ===== 位 TOGGLE ===== */
+  document.getElementById('kurai-btn').addEventListener('click', () => {
+    showKurai = !showKurai;
+    const btn = document.getElementById('kurai-btn');
+    btn.textContent = showKurai ? '位をかくす' : '位をみせる';
+    btn.classList.toggle('off', !showKurai);
+    document.querySelectorAll('.place-label').forEach(el => {
+      el.classList.toggle('hidden', !showKurai);
+    });
+  });
+
+  /* ===== CLEAR ===== */
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    placedDigits = [];
+    renderBuilding();
+  });
+
+  /* ===== INIT ===== */
+  renderBuilding();
+</script>
+</body>
+</html>
