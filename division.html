@@ -325,6 +325,42 @@
     .tray-4 { background: #ede9fe; border-color: #c4b5fd; }
     .tray-5 { background: #cffafe; border-color: #67e8f9; }
 
+    /* ── りょうがえゾーン ── */
+    .zone-exchange {
+      background: #fdf4ff;
+      border: 3px dashed #c084fc;
+    }
+    .zone-exchange .zone-title { color: #7c3aed; }
+    .exchange-area {
+      min-height: 64px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-content: flex-start;
+      border-radius: 12px;
+      padding: 8px;
+      transition: background .15s;
+    }
+    .exchange-area.drag-over {
+      background: #ede9fe;
+      border-radius: 12px;
+    }
+    .exchange-hint {
+      color: #a78bfa;
+      font-size: 13px;
+      font-weight: 700;
+      align-self: center;
+    }
+    /* りょうがえされたグループの枠 */
+    .exchange-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 8px;
+      border-radius: 12px;
+      border: 3px solid;
+    }
+
     /* ── ゴースト ── */
     .ghost {
       position: fixed;
@@ -372,6 +408,13 @@
   </div>
 </section>
 
+<section class="zone zone-exchange" id="exchangeZone" style="display:none">
+  <div class="zone-title">🔄 りょうがえ</div>
+  <div id="exchangeArea" class="exchange-area">
+    <span class="exchange-hint">⑩ や 百 をここにドロップすると、一つ下の位にりょうがえします</span>
+  </div>
+</section>
+
 <section class="zone zone-people">
   <div class="zone-title">わける</div>
   <div id="peopleZone" class="people-zone">
@@ -391,7 +434,8 @@
     kuriMode:     false,
     items:        [],
     nextId:       0,
-    personIcons:  [],   // 人ごとに固定した絵文字
+    nextGroupId:  0,
+    personIcons:  [],
   };
 
   function getPersonIcon(i) {
@@ -413,6 +457,8 @@
   const kuriBtn          = document.getElementById('kuriBtn');
   const feedbackEl       = document.getElementById('feedback');
   const objectsArea      = document.getElementById('objectsArea');
+  const exchangeZone     = document.getElementById('exchangeZone');
+  const exchangeArea     = document.getElementById('exchangeArea');
   const peopleZone       = document.getElementById('peopleZone');
 
   function getInt(el) {
@@ -488,7 +534,24 @@
       objectsArea.innerHTML = '<span class="placeholder" style="color:#16a34a;font-weight:800;">ぜんぶくばりおわりました！</span>';
       return;
     }
-    pool.forEach(item => objectsArea.appendChild(makeDotEl(item)));
+
+    // グループなしのアイテムをそのまま描画
+    pool.filter(i => i.groupId === undefined).forEach(item => objectsArea.appendChild(makeDotEl(item)));
+
+    // グループ化されたアイテムを色枠で囲んで描画
+    const groups = new Map();
+    pool.filter(i => i.groupId !== undefined).forEach(item => {
+      if (!groups.has(item.groupId)) groups.set(item.groupId, []);
+      groups.get(item.groupId).push(item);
+    });
+    groups.forEach(items => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'exchange-group';
+      wrapper.style.borderColor = items[0].groupColor;
+      wrapper.style.background  = items[0].groupColor + '22';
+      items.forEach(item => wrapper.appendChild(makeDotEl(item)));
+      objectsArea.appendChild(wrapper);
+    });
   }
 
   function renderPeople() {
@@ -573,24 +636,33 @@
         ghost.style.pointerEvents = 'none';
         const under = document.elementFromPoint(ev.clientX, ev.clientY);
         ghost.style.pointerEvents = '';
-        document.querySelectorAll('.person-tray,.objects-area').forEach(t => t.classList.remove('drag-over'));
-        const tray = under?.closest('.person-tray');
-        const pool = under?.closest('.objects-area');
-        if (tray) tray.classList.add('drag-over');
-        else if (pool) pool.classList.add('drag-over');
+        document.querySelectorAll('.person-tray,.objects-area,.exchange-area').forEach(t => t.classList.remove('drag-over'));
+        const tray     = under?.closest('.person-tray');
+        const pool     = under?.closest('.objects-area');
+        const exchange = under?.closest('.exchange-area');
+        if (tray)          tray.classList.add('drag-over');
+        else if (exchange && item.value > 1) exchange.classList.add('drag-over');
+        else if (pool)     pool.classList.add('drag-over');
       }
 
       function onEnd(ev) {
         ghost.style.pointerEvents = 'none';
-        const under = document.elementFromPoint(ev.clientX, ev.clientY);
-        const tray  = under?.closest('.person-tray');
-        const pool  = under?.closest('.objects-area');
-        if (tray)       item.location = parseInt(tray.dataset.tray, 10);
-        else if (pool)  item.location = 'pool';
+        const under    = document.elementFromPoint(ev.clientX, ev.clientY);
+        const tray     = under?.closest('.person-tray');
+        const pool     = under?.closest('.objects-area');
+        const exchange = under?.closest('.exchange-area');
+
+        if (exchange && item.value > 1) {
+          exchangeItem(item);
+        } else if (tray) {
+          item.location = parseInt(tray.dataset.tray, 10);
+        } else if (pool) {
+          item.location = 'pool';
+        }
 
         ghost.remove();
         el.classList.remove('dragging');
-        document.querySelectorAll('.person-tray,.objects-area').forEach(t => t.classList.remove('drag-over'));
+        document.querySelectorAll('.person-tray,.objects-area,.exchange-area').forEach(t => t.classList.remove('drag-over'));
         el.removeEventListener('pointermove',  onMove);
         el.removeEventListener('pointerup',    onEnd);
         el.removeEventListener('pointercancel', onEnd);
@@ -617,10 +689,22 @@
 
   [totalInput, peopleInput, perInput].forEach(el => el.addEventListener('input', onInput));
 
+  /* ── りょうがえ ── */
+  function exchangeItem(item) {
+    const newValue   = item.value / 10;           // 100→10, 10→1
+    const groupColor = item.value === 100 ? '#7c3aed' : '#f59e0b';
+    const groupId    = state.nextGroupId++;
+    state.items = state.items.filter(i => i.id !== item.id);
+    for (let j = 0; j < 10; j++) {
+      state.items.push({ id: state.nextId++, value: newValue, location: 'pool', groupId, groupColor });
+    }
+  }
+
   /* ── 位の見方 ── */
   kuriBtn.addEventListener('click', () => {
     state.kuriMode = !state.kuriMode;
     kuriBtn.classList.toggle('on', state.kuriMode);
+    exchangeZone.style.display = state.kuriMode ? '' : 'none';
     buildItems();
     hideFeedback();
     renderAll();
@@ -681,8 +765,10 @@
     state.total = state.people = state.perPerson = null;
     state.extraPeople = 1;
     state.kuriMode = false;
+    state.nextGroupId = 0;
     state.personIcons = [];
     kuriBtn.classList.remove('on');
+    exchangeZone.style.display = 'none';
     buildItems();
     remainderDisplay.style.display = 'none';
     checkBtn.disabled = true;
