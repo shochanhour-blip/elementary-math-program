@@ -411,7 +411,7 @@
 <section class="zone zone-exchange" id="exchangeZone" style="display:none">
   <div class="zone-title">🔄 りょうがえ</div>
   <div id="exchangeArea" class="exchange-area">
-    <span class="exchange-hint">⑩ や 百 をここにドロップすると、一つ下の位にりょうがえします</span>
+    <span class="exchange-hint">10 や 100 をここにドロップすると、一つ下の位にりょうがえします</span>
   </div>
 </section>
 
@@ -513,9 +513,9 @@
               : ('one' + (state.kuriMode ? ' kurai' : ''));
     el.className  = 'dot ' + cls;
     el.dataset.id = item.id;
-    el.textContent = item.value === 100 ? '百'
-                   : item.value === 10  ? '⑩'
-                   : (state.kuriMode    ? '①' : '●');
+    el.textContent = item.value === 100 ? '100'
+                   : item.value === 10  ? '10'
+                   : (state.kuriMode    ? '1' : '●');
     attachDrag(el, item);
     return el;
   }
