@@ -229,10 +229,19 @@
       border-radius: 14px;
       box-shadow: 0 4px 0 #b45309;
     }
+    .dot.hundred {
+      width: 76px; height: 76px;
+      font-size: 28px;
+      background: #7c3aed;
+      color: #fff;
+      border-radius: 16px;
+      box-shadow: 0 5px 0 #4c1d95;
+    }
     /* トレイ内は小さめ */
-    .person-tray .dot.one { width: 36px; height: 36px; font-size: 20px; box-shadow: 0 2px 0 #b91c1c; }
+    .person-tray .dot.one     { width: 36px; height: 36px; font-size: 20px; box-shadow: 0 2px 0 #b91c1c; }
     .person-tray .dot.one.kurai { box-shadow: 0 2px 0 #5b21b6; font-size: 16px; }
-    .person-tray .dot.ten { width: 48px; height: 48px; font-size: 24px; box-shadow: 0 3px 0 #b45309; }
+    .person-tray .dot.ten     { width: 48px; height: 48px; font-size: 24px; box-shadow: 0 3px 0 #b45309; }
+    .person-tray .dot.hundred { width: 60px; height: 60px; font-size: 22px; box-shadow: 0 3px 0 #4c1d95; }
     .dot.dragging { opacity: .2; }
 
     /* ── 人ゾーン ── */
@@ -333,7 +342,7 @@
   <div class="inputs-row">
     <div class="input-chip chip-total">
       <label for="totalInput">ぜんぶの数</label>
-      <input id="totalInput" type="number" min="1" max="100">
+      <input id="totalInput" type="number" min="1" max="999">
     </div>
     <div class="input-chip chip-people">
       <label for="peopleInput">人数</label>
@@ -439,10 +448,12 @@
     const total = state.total || 0;
     if (!total) return;
     if (state.kuriMode) {
-      const tens = Math.floor(total / 10);
-      const ones = total % 10;
-      for (let i = 0; i < tens; i++) state.items.push({ id: state.nextId++, value: 10, location: 'pool' });
-      for (let i = 0; i < ones; i++) state.items.push({ id: state.nextId++, value: 1,  location: 'pool' });
+      const hundreds = Math.floor(total / 100);
+      const tens     = Math.floor((total % 100) / 10);
+      const ones     = total % 10;
+      for (let i = 0; i < hundreds; i++) state.items.push({ id: state.nextId++, value: 100, location: 'pool' });
+      for (let i = 0; i < tens;     i++) state.items.push({ id: state.nextId++, value: 10,  location: 'pool' });
+      for (let i = 0; i < ones;     i++) state.items.push({ id: state.nextId++, value: 1,   location: 'pool' });
     } else {
       for (let i = 0; i < total; i++) state.items.push({ id: state.nextId++, value: 1, location: 'pool' });
     }
@@ -451,9 +462,14 @@
   /* ── ドット要素 ── */
   function makeDotEl(item) {
     const el = document.createElement('div');
-    el.className = 'dot ' + (item.value === 10 ? 'ten' : ('one' + (state.kuriMode ? ' kurai' : '')));
+    const cls = item.value === 100 ? 'hundred'
+              : item.value === 10  ? 'ten'
+              : ('one' + (state.kuriMode ? ' kurai' : ''));
+    el.className  = 'dot ' + cls;
     el.dataset.id = item.id;
-    el.textContent = item.value === 10 ? '⑩' : (state.kuriMode ? '①' : '●');
+    el.textContent = item.value === 100 ? '百'
+                   : item.value === 10  ? '⑩'
+                   : (state.kuriMode    ? '①' : '●');
     attachDrag(el, item);
     return el;
   }
