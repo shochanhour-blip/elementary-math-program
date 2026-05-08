@@ -242,7 +242,13 @@
     .person-tray .dot.one.kurai { box-shadow: 0 2px 0 #5b21b6; font-size: 16px; }
     .person-tray .dot.ten     { width: 48px; height: 48px; font-size: 24px; box-shadow: 0 3px 0 #b45309; }
     .person-tray .dot.hundred { width: 60px; height: 60px; font-size: 22px; box-shadow: 0 3px 0 #4c1d95; }
-    .dot.dragging { opacity: .2; }
+    .dot.dragging  { opacity: .2; }
+    .dot.dot-empty {
+      background:  transparent !important;
+      box-shadow:  none !important;
+      border:      2px dashed rgba(0,0,0,.18);
+      cursor:      default;
+    }
 
     /* ── 人ゾーン ── */
     .zone-people {
@@ -464,6 +470,7 @@
     items:        [],
     nextId:       0,
     nextGroupId:  0,
+    groups:       new Map(),  // groupId → { color, capacity, itemValue }
     personIcons:  [],
   };
 
@@ -520,6 +527,8 @@
   function buildItems() {
     state.items = [];
     state.nextId = 0;
+    state.nextGroupId = 0;
+    state.groups.clear();
     const total = state.total || 0;
     if (!total) return;
     if (state.kuriMode) {
@@ -567,18 +576,35 @@
     // グループなしのアイテムをそのまま描画
     pool.filter(i => i.groupId === undefined).forEach(item => objectsArea.appendChild(makeDotEl(item)));
 
-    // グループ化されたアイテムを色枠で囲んで描画
-    const groups = new Map();
+    // グループ化されたアイテムを色枠で囲んで描画（空白スロット付き）
+    const poolGroups = new Map();
     pool.filter(i => i.groupId !== undefined).forEach(item => {
-      if (!groups.has(item.groupId)) groups.set(item.groupId, []);
-      groups.get(item.groupId).push(item);
+      if (!poolGroups.has(item.groupId)) poolGroups.set(item.groupId, []);
+      poolGroups.get(item.groupId).push(item);
     });
-    groups.forEach(items => {
-      const wrapper = document.createElement('div');
+
+    state.groups.forEach((meta, groupId) => {
+      // プールにいなくなったグループ（全員トレイへ）は非表示
+      if (!poolGroups.has(groupId)) return;
+
+      const poolItems = poolGroups.get(groupId);
+      const wrapper   = document.createElement('div');
       wrapper.className = 'exchange-group';
-      wrapper.style.borderColor = items[0].groupColor;
-      wrapper.style.background  = items[0].groupColor + '22';
-      items.forEach(item => wrapper.appendChild(makeDotEl(item)));
+      wrapper.style.borderColor = meta.color;
+      wrapper.style.background  = meta.color + '18';
+
+      // 実アイテム
+      poolItems.forEach(item => wrapper.appendChild(makeDotEl(item)));
+
+      // 空白スロット（プールから出たぶん）
+      const emptyCls = meta.itemValue === 10 ? 'ten' : meta.itemValue === 100 ? 'hundred' : 'one kurai';
+      const emptyCount = meta.capacity - poolItems.length;
+      for (let k = 0; k < emptyCount; k++) {
+        const empty = document.createElement('div');
+        empty.className = `dot dot-empty ${emptyCls}`;
+        wrapper.appendChild(empty);
+      }
+
       objectsArea.appendChild(wrapper);
     });
   }
@@ -720,10 +746,16 @@
 
   /* ── りょうがえ ── */
   function exchangeItem(item) {
-    const newValue   = item.value / 10;           // 100→10, 10→1
-    const groupColor = item.value === 100 ? '#7c3aed' : '#f59e0b';
+    // state から最新のアイテムを参照し直す（再描画後の古い参照対策）
+    const src = state.items.find(i => i.id === item.id);
+    if (!src || src.value <= 1) return;
+
+    const newValue   = src.value / 10;
+    const groupColor = src.value === 100 ? '#7c3aed' : '#f59e0b';
     const groupId    = state.nextGroupId++;
-    state.items = state.items.filter(i => i.id !== item.id);
+
+    state.groups.set(groupId, { color: groupColor, capacity: 10, itemValue: newValue });
+    state.items = state.items.filter(i => i.id !== src.id);
     for (let j = 0; j < 10; j++) {
       state.items.push({ id: state.nextId++, value: newValue, location: 'pool', groupId, groupColor });
     }
@@ -795,6 +827,7 @@
     state.extraPeople = 1;
     state.kuriMode = false;
     state.nextGroupId = 0;
+    state.groups.clear();
     state.personIcons = [];
     kuriBtn.classList.remove('on');
     exchangeZone.classList.remove('visible');
