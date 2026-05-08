@@ -325,31 +325,56 @@
     .tray-4 { background: #ede9fe; border-color: #c4b5fd; }
     .tray-5 { background: #cffafe; border-color: #67e8f9; }
 
-    /* ── りょうがえゾーン ── */
+    /* ── ぜんぶの数 + りょうがえ の横並び行 ── */
+    .zone-row {
+      width: min(920px, 100%);
+      display: flex;
+      gap: 0;
+      align-items: stretch;
+    }
+    .zone-row > .zone-objects {
+      flex: 1 1 auto;
+      min-width: 0;
+      width: auto;           /* .zone の width: min(...) を上書き */
+    }
+    /* りょうがえスライダー（幅アニメーション用ラッパー） */
+    .exchange-slider {
+      flex: 0 0 0px;
+      overflow: hidden;
+      transition: flex-basis .3s ease, margin-left .3s ease;
+      margin-left: 0;
+    }
+    .exchange-slider.visible {
+      flex: 0 0 180px;
+      margin-left: 14px;
+    }
+
+    /* ── りょうがえゾーン（内側） ── */
     .zone-exchange {
+      width: 180px;          /* slider に合わせた固定幅 */
+      height: 100%;
       background: #fdf4ff;
       border: 3px dashed #c084fc;
     }
-    .zone-exchange .zone-title { color: #7c3aed; }
+    .zone-exchange .zone-title { color: #7c3aed; font-size: 12px; }
     .exchange-area {
-      min-height: 64px;
+      min-height: 60px;
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       align-content: flex-start;
-      border-radius: 12px;
-      padding: 8px;
+      border-radius: 10px;
+      padding: 6px;
       transition: background .15s;
     }
     .exchange-area.drag-over {
       background: #ede9fe;
-      border-radius: 12px;
     }
     .exchange-hint {
       color: #a78bfa;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 700;
-      align-self: center;
+      line-height: 1.4;
     }
     /* りょうがえされたグループの枠 */
     .exchange-group {
@@ -401,19 +426,23 @@
 
 <div id="feedback" class="feedback"></div>
 
-<section class="zone zone-objects">
-  <div class="zone-title">ぜんぶの数</div>
-  <div id="objectsArea" class="objects-area">
-    <span class="placeholder">「ぜんぶの数」を入力すると●があらわれます</span>
-  </div>
-</section>
+<div class="zone-row">
+  <section class="zone zone-objects">
+    <div class="zone-title">ぜんぶの数</div>
+    <div id="objectsArea" class="objects-area">
+      <span class="placeholder">「ぜんぶの数」を入力すると●があらわれます</span>
+    </div>
+  </section>
 
-<section class="zone zone-exchange" id="exchangeZone" style="display:none">
-  <div class="zone-title">🔄 りょうがえ</div>
-  <div id="exchangeArea" class="exchange-area">
-    <span class="exchange-hint">10 や 100 をここにドロップすると、一つ下の位にりょうがえします</span>
+  <div class="exchange-slider" id="exchangeZone">
+    <section class="zone zone-exchange">
+      <div class="zone-title">🔄 りょうがえ</div>
+      <div id="exchangeArea" class="exchange-area">
+        <span class="exchange-hint">10 や 100 をここにドロップ</span>
+      </div>
+    </section>
   </div>
-</section>
+</div>
 
 <section class="zone zone-people">
   <div class="zone-title">わける</div>
@@ -704,7 +733,7 @@
   kuriBtn.addEventListener('click', () => {
     state.kuriMode = !state.kuriMode;
     kuriBtn.classList.toggle('on', state.kuriMode);
-    exchangeZone.style.display = state.kuriMode ? '' : 'none';
+    exchangeZone.classList.toggle('visible', state.kuriMode);
     buildItems();
     hideFeedback();
     renderAll();
@@ -768,7 +797,7 @@
     state.nextGroupId = 0;
     state.personIcons = [];
     kuriBtn.classList.remove('on');
-    exchangeZone.style.display = 'none';
+    exchangeZone.classList.remove('visible');
     buildItems();
     remainderDisplay.style.display = 'none';
     checkBtn.disabled = true;
