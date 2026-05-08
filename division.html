@@ -154,15 +154,14 @@
     /* ── フィードバック ── */
     .feedback {
       width: min(920px,100%);
-      padding: 13px 20px;
+      padding: 16px 24px;
       border-radius: 14px;
-      font-size: 18px;
+      font-size: 36px;
       font-weight: 800;
       text-align: center;
       display: none;
     }
-    .feedback.correct { display:block; background:#dcfce7; color:#15803d; border:3px solid #86efac; }
-    .feedback.wrong   { display:block; background:#fff7ed; color:#c2410c; border:3px solid #fdba74; }
+    .feedback.show { display:block; background:#f0f4ff; color:#1f2933; border:3px solid #93c5fd; }
 
     /* ── ゾーン共通 ── */
     .zone {
@@ -351,7 +350,7 @@
   <div class="controls-actions">
     <button id="kuriBtn" class="kurai-btn">位の見方</button>
     <button id="resetBtn" class="reset-btn">リセット</button>
-    <button id="checkBtn" class="check-btn" disabled>答えを確認</button>
+    <button id="checkBtn" class="check-btn" disabled>式を確認</button>
   </div>
 </header>
 
@@ -626,28 +625,16 @@
       const poolOk = poolSum() === remainder;
 
       showRemainder(remainder);
-      if (allOk && poolOk) {
-        showFeedback('correct', `せいかい！　${formula}　🎉`);
-      } else if (!allOk) {
-        showFeedback('wrong', `もう一度くばってみよう。　${formula}　だよ。`);
-      } else {
-        showFeedback('wrong', `あまりが ${remainder}こ になるようにプールに残してみよう。　${formula}`);
-      }
+      showFeedback(formula);
 
     } else {
       const expected  = Math.floor(state.total / state.perPerson);
       const remainder = state.total % state.perPerson;
       const remStr    = remainder > 0 ? ` あまり ${remainder}` : '';
       const formula   = `${state.total} ÷ ${state.perPerson} = ${expected}${remStr}`;
-      const fullTrays = Array.from({ length: count }, (_, i) => traySum(i))
-        .filter(s => s === state.perPerson).length;
 
       showRemainder(remainder);
-      if (fullTrays === expected && poolSum() === remainder) {
-        showFeedback('correct', `せいかい！　${formula}　🎉`);
-      } else {
-        showFeedback('wrong', `もう一度くばってみよう。　${formula}　だよ。`);
-      }
+      showFeedback(formula);
     }
   });
 
@@ -660,9 +647,9 @@
     }
   }
 
-  function showFeedback(type, msg) {
-    feedbackEl.className = 'feedback ' + type;
-    feedbackEl.textContent = msg;
+  function showFeedback(formula) {
+    feedbackEl.className = 'feedback show';
+    feedbackEl.textContent = formula;
   }
   function hideFeedback() {
     feedbackEl.className = 'feedback';
