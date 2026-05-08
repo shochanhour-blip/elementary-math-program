@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>わり算 — 具体物で考えよう</title>
+  <style>
+    :root {
+      --panel:   #fff;
+      --text:    #1f2933;
+      --shadow:  0 6px 18px rgba(0,0,0,0.08);
+      /* 入力欄の色 */
+      --c-total:  #ef4444;   /* 赤 — ぜんぶの数 */
+      --c-people: #3b82f6;   /* 青 — 人数 */
+      --c-per:    #22c55e;   /* 緑 — 1人分の数 */
+      --c-rem:    #f97316;   /* 橙 — あまり */
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Noto Sans JP","Helvetica Neue",Arial,sans-serif;
+      background: #f3f4f6;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 12px 56px;
+    }
+
+    /* ── コントロールパネル ── */
+    .controls {
+      width: min(920px,100%);
+      padding: 16px 20px;
+      border-radius: 20px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .inputs-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    /* ラベル＋入力を横並び */
+    .input-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 50px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .input-chip label {
+      white-space: nowrap;
+      font-size: 15px;
+      font-weight: 800;
+    }
+    .input-chip input {
+      width: 76px;
+      padding: 6px 8px;
+      font-size: 22px;
+      font-weight: 700;
+      border: 3px solid currentColor;
+      border-radius: 12px;
+      text-align: center;
+      background: #fff;
+      transition: box-shadow .15s;
+    }
+    .input-chip input:focus { outline: none; box-shadow: 0 0 0 3px rgba(0,0,0,.12); }
+
+    /* 色テーマ */
+    .chip-total  { background: #fef2f2; color: var(--c-total); }
+    .chip-people { background: #eff6ff; color: var(--c-people); }
+    .chip-per    { background: #f0fdf4; color: var(--c-per); }
+
+    /* あまり表示 */
+    .remainder-block {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 50px;
+      background: #fff7ed;
+      color: var(--c-rem);
+      font-size: 15px;
+      font-weight: 800;
+    }
+    .remainder-block span {
+      font-size: 22px;
+      background: #fff;
+      border: 3px solid var(--c-rem);
+      border-radius: 10px;
+      padding: 3px 10px;
+      min-width: 44px;
+      text-align: center;
+    }
+
+    /* ボタン行 */
+    .controls-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .kurai-btn {
+      padding: 9px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      border: 2px solid #d1d5db;
+      border-radius: 50px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: transform .05s;
+    }
+    .kurai-btn.on {
+      background: #7c3aed;
+      color: #fff;
+      border-color: #7c3aed;
+    }
+    .kurai-btn:active { transform: translateY(1px); }
+    .reset-btn {
+      padding: 9px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: transform .05s;
+      margin-left: auto;
+    }
+    .reset-btn:active { transform: translateY(1px); }
+    .check-btn {
+      padding: 9px 22px;
+      font-size: 15px;
+      font-weight: 800;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg,#fbbf24,#f97316);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform .05s, opacity .15s;
+    }
+    .check-btn:active { transform: translateY(1px); }
+    .check-btn:disabled { opacity: .35; cursor: default; }
+
+    /* ── フィードバック ── */
+    .feedback {
+      width: min(920px,100%);
+      padding: 13px 20px;
+      border-radius: 14px;
+      font-size: 18px;
+      font-weight: 800;
+      text-align: center;
+      display: none;
+    }
+    .feedback.correct { display:block; background:#dcfce7; color:#15803d; border:3px solid #86efac; }
+    .feedback.wrong   { display:block; background:#fff7ed; color:#c2410c; border:3px solid #fdba74; }
+
+    /* ── ゾーン共通 ── */
+    .zone {
+      width: min(920px,100%);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 16px 18px;
+    }
+    .zone-title {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      margin-bottom: 12px;
+    }
+    .placeholder { color: #bbb; font-size: 14px; }
+
+    /* ── ぜんぶの数ゾーン ── */
+    .zone-objects {
+      background: #fff1f1;
+      border: 3px solid #fca5a5;
+    }
+    .zone-objects .zone-title { color: var(--c-total); }
+    .objects-area {
+      min-height: 70px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-content: flex-start;
+      border-radius: 12px;
+      padding: 6px;
+      transition: background .15s;
+    }
+    .objects-area.drag-over { background: #fecaca; }
+
+    /* ── ドット ── */
+    .dot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      font-weight: 800;
+      transition: transform .08s;
+    }
+    .dot:active { cursor: grabbing; }
+    .dot.one {
+      width: 46px; height: 46px;
+      font-size: 26px;
+      background: var(--c-total);
+      color: #fff;
+      border-radius: 50%;
+      box-shadow: 0 3px 0 #b91c1c;
+    }
+    .dot.one.kurai {
+      background: #7c3aed;
+      box-shadow: 0 3px 0 #5b21b6;
+      font-size: 22px;
+    }
+    .dot.ten {
+      width: 60px; height: 60px;
+      font-size: 30px;
+      background: #f59e0b;
+      color: #fff;
+      border-radius: 14px;
+      box-shadow: 0 4px 0 #b45309;
+    }
+    /* トレイ内は小さめ */
+    .person-tray .dot.one { width: 36px; height: 36px; font-size: 20px; box-shadow: 0 2px 0 #b91c1c; }
+    .person-tray .dot.one.kurai { box-shadow: 0 2px 0 #5b21b6; font-size: 16px; }
+    .person-tray .dot.ten { width: 48px; height: 48px; font-size: 24px; box-shadow: 0 3px 0 #b45309; }
+    .dot.dragging { opacity: .2; }
+
+    /* ── 人ゾーン ── */
+    .zone-people {
+      background: #eff6ff;
+      border: 3px solid #93c5fd;
+    }
+    .zone-people .zone-title { color: var(--c-people); }
+    .people-zone {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .people-adjuster {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 800;
+      width: 100%;
+      margin-bottom: 6px;
+      color: var(--c-people);
+    }
+    .adj-btn {
+      width: 36px; height: 36px;
+      font-size: 22px;
+      border: 3px solid var(--c-people);
+      border-radius: 50%;
+      background: #fff;
+      color: var(--c-people);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      transition: transform .05s;
+    }
+    .adj-btn:active { transform: translateY(1px); }
+    .person-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    .person-icon { font-size: 42px; line-height: 1; user-select: none; }
+    .person-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--c-people);
+    }
+    .person-tray {
+      min-width: 86px;
+      min-height: 60px;
+      border: 3px dashed #93c5fd;
+      border-radius: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 6px;
+      align-content: flex-start;
+      transition: background .12s, border-color .12s;
+    }
+    .person-tray.drag-over {
+      background: #bfdbfe;
+      border-color: var(--c-people);
+      border-style: solid;
+    }
+    .tray-count {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--c-people);
+      min-height: 20px;
+    }
+
+    /* トレイカラー（人ごと） */
+    .tray-0 { background: #fef9c3; border-color: #fde047; }
+    .tray-1 { background: #fce7f3; border-color: #f9a8d4; }
+    .tray-2 { background: #dcfce7; border-color: #86efac; }
+    .tray-3 { background: #ffedd5; border-color: #fdba74; }
+    .tray-4 { background: #ede9fe; border-color: #c4b5fd; }
+    .tray-5 { background: #cffafe; border-color: #67e8f9; }
+
+    /* ── ゴースト ── */
+    .ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: .9;
+      transform: scale(1.18) rotate(6deg);
+      transition: none;
+    }
+  </style>
+</head>
+<body>
+
+<header class="controls">
+  <div class="inputs-row">
+    <div class="input-chip chip-total">
+      <label for="totalInput">ぜんぶの数</label>
+      <input id="totalInput" type="number" min="1" max="100">
+    </div>
+    <div class="input-chip chip-people">
+      <label for="peopleInput">人数</label>
+      <input id="peopleInput" type="number" min="1" max="30">
+    </div>
+    <div class="input-chip chip-per">
+      <label for="perInput">１人分の数</label>
+      <input id="perInput" type="number" min="1" max="100">
+    </div>
+    <div id="remainderDisplay" class="remainder-block">
+      あまり <span id="remainderValue">0</span>
+    </div>
+  </div>
+  <div class="controls-actions">
+    <button id="kuriBtn" class="kurai-btn">位の見方</button>
+    <button id="resetBtn" class="reset-btn">リセット</button>
+    <button id="checkBtn" class="check-btn" disabled>答えを確認</button>
+  </div>
+</header>
+
+<div id="feedback" class="feedback"></div>
+
+<section class="zone zone-objects">
+  <div class="zone-title">ぜんぶの数</div>
+  <div id="objectsArea" class="objects-area">
+    <span class="placeholder">「ぜんぶの数」を入力すると●があらわれます</span>
+  </div>
+</section>
+
+<section class="zone zone-people">
+  <div class="zone-title">わける</div>
+  <div id="peopleZone" class="people-zone">
+    <span class="placeholder">「人数」または「１人分の数」を入力すると人があらわれます</span>
+  </div>
+</section>
+
+<script>
+  const TRAY_COLORS = ['tray-0','tray-1','tray-2','tray-3','tray-4','tray-5'];
+  const ANIMALS = ['😺','🐱','😼','🐶','🐭','🐹','🐰','🐙','🐣','🐼','🐷','🙈','🙉','🦁'];
+
+  const state = {
+    total:        null,
+    people:       null,
+    perPerson:    null,
+    extraPeople:  1,
+    kuriMode:     false,
+    items:        [],
+    nextId:       0,
+    personIcons:  [],   // 人ごとに固定した絵文字
+  };
+
+  function getPersonIcon(i) {
+    if (!state.personIcons[i]) {
+      const pool = ANIMALS.filter(a => !state.personIcons.includes(a));
+      const src  = pool.length > 0 ? pool : ANIMALS;
+      state.personIcons[i] = src[Math.floor(Math.random() * src.length)];
+    }
+    return state.personIcons[i];
+  }
+
+  const totalInput       = document.getElementById('totalInput');
+  const peopleInput      = document.getElementById('peopleInput');
+  const perInput         = document.getElementById('perInput');
+  const remainderDisplay = document.getElementById('remainderDisplay');
+  const remainderValue   = document.getElementById('remainderValue');
+  const checkBtn         = document.getElementById('checkBtn');
+  const resetBtn         = document.getElementById('resetBtn');
+  const kuriBtn          = document.getElementById('kuriBtn');
+  const feedbackEl       = document.getElementById('feedback');
+  const objectsArea      = document.getElementById('objectsArea');
+  const peopleZone       = document.getElementById('peopleZone');
+
+  function getInt(el) {
+    const v = parseInt(el.value, 10);
+    return (Number.isFinite(v) && v > 0) ? v : null;
+  }
+
+  function deriveMode() {
+    if (state.total && state.people)    return 'equal-share';
+    if (state.total && state.perPerson) return 'measurement';
+    return null;
+  }
+
+  function getPeopleCount() {
+    const m = deriveMode();
+    if (m === 'equal-share') return state.people;
+    if (m === 'measurement') return state.extraPeople;
+    return 0;
+  }
+
+  function traySum(idx) {
+    return state.items.filter(i => i.location === idx).reduce((a, i) => a + i.value, 0);
+  }
+
+  function poolSum() {
+    return state.items.filter(i => i.location === 'pool').reduce((a, i) => a + i.value, 0);
+  }
+
+  /* ── アイテム構築 ── */
+  function buildItems() {
+    state.items = [];
+    state.nextId = 0;
+    const total = state.total || 0;
+    if (!total) return;
+    if (state.kuriMode) {
+      const tens = Math.floor(total / 10);
+      const ones = total % 10;
+      for (let i = 0; i < tens; i++) state.items.push({ id: state.nextId++, value: 10, location: 'pool' });
+      for (let i = 0; i < ones; i++) state.items.push({ id: state.nextId++, value: 1,  location: 'pool' });
+    } else {
+      for (let i = 0; i < total; i++) state.items.push({ id: state.nextId++, value: 1, location: 'pool' });
+    }
+  }
+
+  /* ── ドット要素 ── */
+  function makeDotEl(item) {
+    const el = document.createElement('div');
+    el.className = 'dot ' + (item.value === 10 ? 'ten' : ('one' + (state.kuriMode ? ' kurai' : '')));
+    el.dataset.id = item.id;
+    el.textContent = item.value === 10 ? '⑩' : (state.kuriMode ? '①' : '●');
+    attachDrag(el, item);
+    return el;
+  }
+
+  /* ── レンダリング ── */
+  function renderAll() { renderObjects(); renderPeople(); }
+
+  function renderObjects() {
+    objectsArea.innerHTML = '';
+    const pool = state.items.filter(i => i.location === 'pool');
+    if (!state.total) {
+      objectsArea.innerHTML = '<span class="placeholder">「ぜんぶの数」を入力すると●があらわれます</span>';
+      return;
+    }
+    if (pool.length === 0) {
+      objectsArea.innerHTML = '<span class="placeholder" style="color:#16a34a;font-weight:800;">ぜんぶくばりおわりました！</span>';
+      return;
+    }
+    pool.forEach(item => objectsArea.appendChild(makeDotEl(item)));
+  }
+
+  function renderPeople() {
+    peopleZone.innerHTML = '';
+    const mode = deriveMode();
+    if (!mode) {
+      peopleZone.innerHTML = '<span class="placeholder">「人数」または「１人分の数」を入力すると人があらわれます</span>';
+      return;
+    }
+
+    if (mode === 'measurement') {
+      const adj = document.createElement('div');
+      adj.className = 'people-adjuster';
+      const minus = document.createElement('button');
+      minus.className = 'adj-btn';
+      minus.textContent = '－';
+      minus.onclick = () => {
+        if (state.extraPeople <= 1) return;
+        const last = state.extraPeople - 1;
+        state.items.forEach(i => { if (i.location === last) i.location = 'pool'; });
+        state.extraPeople--;
+        hideFeedback();
+        renderAll();
+      };
+      const lbl = document.createElement('span');
+      lbl.textContent = `${state.extraPeople}人`;
+      const plus = document.createElement('button');
+      plus.className = 'adj-btn';
+      plus.textContent = '＋';
+      plus.onclick = () => { state.extraPeople++; hideFeedback(); renderAll(); };
+      adj.append(minus, lbl, plus);
+      peopleZone.appendChild(adj);
+    }
+
+    const count = getPeopleCount();
+    for (let i = 0; i < count; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'person-slot';
+
+      const icon = document.createElement('div');
+      icon.className = 'person-icon';
+      icon.textContent = getPersonIcon(i);
+
+      const name = document.createElement('div');
+      name.className = 'person-name';
+      name.textContent = `${i + 1}人め`;
+
+      const tray = document.createElement('div');
+      tray.className = 'person-tray ' + TRAY_COLORS[i % TRAY_COLORS.length];
+      tray.dataset.tray = i;
+      state.items.filter(it => it.location === i).forEach(it => tray.appendChild(makeDotEl(it)));
+
+      const sum = traySum(i);
+      const countLbl = document.createElement('div');
+      countLbl.className = 'tray-count';
+      countLbl.textContent = sum > 0 ? `${sum}こ` : '';
+
+      slot.append(icon, name, tray, countLbl);
+      peopleZone.appendChild(slot);
+    }
+  }
+
+  /* ── ドラッグ & ドロップ ── */
+  function attachDrag(el, item) {
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const offX = e.clientX - rect.left;
+      const offY = e.clientY - rect.top;
+
+      const ghost = el.cloneNode(true);
+      ghost.className = el.className + ' ghost';
+      ghost.style.cssText += `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;`;
+      document.body.appendChild(ghost);
+
+      el.classList.add('dragging');
+      el.setPointerCapture(e.pointerId);
+
+      function onMove(ev) {
+        ghost.style.left = (ev.clientX - offX) + 'px';
+        ghost.style.top  = (ev.clientY - offY) + 'px';
+        ghost.style.pointerEvents = 'none';
+        const under = document.elementFromPoint(ev.clientX, ev.clientY);
+        ghost.style.pointerEvents = '';
+        document.querySelectorAll('.person-tray,.objects-area').forEach(t => t.classList.remove('drag-over'));
+        const tray = under?.closest('.person-tray');
+        const pool = under?.closest('.objects-area');
+        if (tray) tray.classList.add('drag-over');
+        else if (pool) pool.classList.add('drag-over');
+      }
+
+      function onEnd(ev) {
+        ghost.style.pointerEvents = 'none';
+        const under = document.elementFromPoint(ev.clientX, ev.clientY);
+        const tray  = under?.closest('.person-tray');
+        const pool  = under?.closest('.objects-area');
+        if (tray)       item.location = parseInt(tray.dataset.tray, 10);
+        else if (pool)  item.location = 'pool';
+
+        ghost.remove();
+        el.classList.remove('dragging');
+        document.querySelectorAll('.person-tray,.objects-area').forEach(t => t.classList.remove('drag-over'));
+        el.removeEventListener('pointermove',  onMove);
+        el.removeEventListener('pointerup',    onEnd);
+        el.removeEventListener('pointercancel', onEnd);
+        hideFeedback();
+        renderAll();
+      }
+
+      el.addEventListener('pointermove',  onMove);
+      el.addEventListener('pointerup',    onEnd);
+      el.addEventListener('pointercancel', onEnd);
+    });
+  }
+
+  /* ── 入力イベント ── */
+  function onInput() {
+    state.total     = getInt(totalInput);
+    state.people    = getInt(peopleInput);
+    state.perPerson = getInt(perInput);
+    buildItems();
+    checkBtn.disabled = !deriveMode();
+    hideFeedback();
+    renderAll();
+  }
+
+  [totalInput, peopleInput, perInput].forEach(el => el.addEventListener('input', onInput));
+
+  /* ── 位の見方 ── */
+  kuriBtn.addEventListener('click', () => {
+    state.kuriMode = !state.kuriMode;
+    kuriBtn.classList.toggle('on', state.kuriMode);
+    buildItems();
+    hideFeedback();
+    renderAll();
+  });
+
+  /* ── 答えを確認 ── */
+  checkBtn.addEventListener('click', () => {
+    const mode = deriveMode();
+    if (!mode) return;
+    const count = getPeopleCount();
+
+    if (mode === 'equal-share') {
+      const expected  = Math.floor(state.total / state.people);
+      const remainder = state.total % state.people;
+      const remStr    = remainder > 0 ? ` あまり ${remainder}` : '';
+      const formula   = `${state.total} ÷ ${state.people} = ${expected}${remStr}`;
+      const allOk  = Array.from({ length: count }, (_, i) => traySum(i)).every(s => s === expected);
+      const poolOk = poolSum() === remainder;
+
+      showRemainder(remainder);
+      if (allOk && poolOk) {
+        showFeedback('correct', `せいかい！　${formula}　🎉`);
+      } else if (!allOk) {
+        showFeedback('wrong', `もう一度くばってみよう。　${formula}　だよ。`);
+      } else {
+        showFeedback('wrong', `あまりが ${remainder}こ になるようにプールに残してみよう。　${formula}`);
+      }
+
+    } else {
+      const expected  = Math.floor(state.total / state.perPerson);
+      const remainder = state.total % state.perPerson;
+      const remStr    = remainder > 0 ? ` あまり ${remainder}` : '';
+      const formula   = `${state.total} ÷ ${state.perPerson} = ${expected}${remStr}`;
+      const fullTrays = Array.from({ length: count }, (_, i) => traySum(i))
+        .filter(s => s === state.perPerson).length;
+
+      showRemainder(remainder);
+      if (fullTrays === expected && poolSum() === remainder) {
+        showFeedback('correct', `せいかい！　${formula}　🎉`);
+      } else {
+        showFeedback('wrong', `もう一度くばってみよう。　${formula}　だよ。`);
+      }
+    }
+  });
+
+  function showRemainder(rem) {
+    if (rem > 0) {
+      remainderValue.textContent = rem;
+      remainderDisplay.style.display = 'flex';
+    } else {
+      remainderDisplay.style.display = 'none';
+    }
+  }
+
+  function showFeedback(type, msg) {
+    feedbackEl.className = 'feedback ' + type;
+    feedbackEl.textContent = msg;
+  }
+  function hideFeedback() {
+    feedbackEl.className = 'feedback';
+    feedbackEl.textContent = '';
+    remainderDisplay.style.display = 'none';
+  }
+
+  /* ── リセット ── */
+  resetBtn.addEventListener('click', () => {
+    totalInput.value  = '';
+    peopleInput.value = '';
+    perInput.value    = '';
+    state.total = state.people = state.perPerson = null;
+    state.extraPeople = 1;
+    state.kuriMode = false;
+    state.personIcons = [];
+    kuriBtn.classList.remove('on');
+    buildItems();
+    remainderDisplay.style.display = 'none';
+    checkBtn.disabled = true;
+    hideFeedback();
+    renderAll();
+  });
+</script>
+</body>
+</html>
