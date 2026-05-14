@@ -401,6 +401,101 @@
       transform: scale(1.18) rotate(6deg);
       transition: none;
     }
+
+    /* ── 筆算モード レイアウト ── */
+    .app-layout {
+      width: min(920px, 100%);
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .left-pane {
+      flex: 1 1 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: flex-basis .35s ease;
+      min-width: 0;
+    }
+    .app-layout.hissan-active .left-pane {
+      flex: 0 0 320px;
+    }
+    .right-pane {
+      flex: 0 0 0px;
+      overflow: hidden;
+      opacity: 0;
+      transition: flex-basis .35s ease, opacity .3s ease;
+    }
+    .app-layout.hissan-active .right-pane {
+      flex: 1 1 auto;
+      overflow: visible;
+      opacity: 1;
+      min-width: 0;
+    }
+
+    /* 筆算ボタン */
+    .hissan-btn {
+      padding: 9px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      border: 2px solid #d1d5db;
+      border-radius: 50px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: transform .05s;
+    }
+    .hissan-btn.on {
+      background: #0ea5e9;
+      color: #fff;
+      border-color: #0ea5e9;
+    }
+    .hissan-btn:active { transform: translateY(1px); }
+
+    /* ── 筆算ゾーン ── */
+    .zone-hissan {
+      background: #f0f9ff;
+      border: 3px solid #7dd3fc;
+      width: 100%;
+      min-width: 260px;
+    }
+    .zone-hissan .zone-title { color: #0284c7; }
+
+    /* ── 筆算 入力バー ── */
+    .hissan-inputs-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      background: #e0f2fe;
+      border-radius: 10px;
+      margin-bottom: 14px;
+    }
+    .hissan-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 40px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .hissan-chip label { white-space: nowrap; }
+    .hissan-chip input {
+      width: 58px;
+      padding: 4px 6px;
+      font-size: 18px;
+      font-weight: 700;
+      border: 2.5px solid currentColor;
+      border-radius: 8px;
+      text-align: center;
+      background: #fff;
+    }
+    .hissan-chip input:focus { outline: none; box-shadow: 0 0 0 3px rgba(0,0,0,.1); }
+    .hissan-chip-total  { background: #fef2f2; color: var(--c-total); }
+    .hissan-chip-people { background: #eff6ff; color: var(--c-people); }
+    .hissan-div-op { font-size: 20px; font-weight: 800; color: #64748b; }
   </style>
 </head>
 <body>
@@ -425,6 +520,7 @@
   </div>
   <div class="controls-actions">
     <button id="kuriBtn" class="kurai-btn">位の見方</button>
+    <button id="hissanBtn" class="hissan-btn">筆算</button>
     <button id="resetBtn" class="reset-btn">リセット</button>
     <button id="checkBtn" class="check-btn" disabled>式を確認</button>
   </div>
@@ -432,30 +528,44 @@
 
 <div id="feedback" class="feedback"></div>
 
-<div class="zone-row">
-  <section class="zone zone-objects">
-    <div class="zone-title">ぜんぶの数</div>
-    <div id="objectsArea" class="objects-area">
-      <span class="placeholder">「ぜんぶの数」を入力すると●があらわれます</span>
-    </div>
-  </section>
+<div class="app-layout" id="appLayout">
+  <div class="left-pane">
+    <div class="zone-row">
+      <section class="zone zone-objects">
+        <div class="zone-title">ぜんぶの数</div>
+        <div id="objectsArea" class="objects-area">
+          <span class="placeholder">「ぜんぶの数」を入力すると●があらわれます</span>
+        </div>
+      </section>
 
-  <div class="exchange-slider" id="exchangeZone">
-    <section class="zone zone-exchange">
-      <div class="zone-title">🔄 りょうがえ</div>
-      <div id="exchangeArea" class="exchange-area">
-        <span class="exchange-hint">10 や 100 をここにドロップ</span>
+      <div class="exchange-slider" id="exchangeZone">
+        <section class="zone zone-exchange">
+          <div class="zone-title">🔄 りょうがえ</div>
+          <div id="exchangeArea" class="exchange-area">
+            <span class="exchange-hint">10 や 100 をここにドロップ</span>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <section class="zone zone-people">
+      <div class="zone-title">わける</div>
+      <div id="peopleZone" class="people-zone">
+        <span class="placeholder">「人数」または「１人分の数」を入力すると人があらわれます</span>
+      </div>
+    </section>
+  </div>
+
+  <div class="right-pane" id="rightPane">
+    <section class="zone zone-hissan">
+      <div class="zone-title">筆算</div>
+      <div id="hissanDisplay">
+        <div id="hissanInputsBar"></div>
+        <div id="hissanBracketDisplay"></div>
       </div>
     </section>
   </div>
 </div>
-
-<section class="zone zone-people">
-  <div class="zone-title">わける</div>
-  <div id="peopleZone" class="people-zone">
-    <span class="placeholder">「人数」または「１人分の数」を入力すると人があらわれます</span>
-  </div>
-</section>
 
 <script>
   const TRAY_COLORS = ['tray-0','tray-1','tray-2','tray-3','tray-4','tray-5'];
@@ -467,6 +577,9 @@
     perPerson:    null,
     extraPeople:  1,
     kuriMode:     false,
+    hissanMode:    false,
+    hissanStepIdx: -1,
+    hissanFrames:  [],
     items:        [],
     nextId:       0,
     nextGroupId:  0,
@@ -491,6 +604,8 @@
   const checkBtn         = document.getElementById('checkBtn');
   const resetBtn         = document.getElementById('resetBtn');
   const kuriBtn          = document.getElementById('kuriBtn');
+  const hissanBtn        = document.getElementById('hissanBtn');
+  const appLayout        = document.getElementById('appLayout');
   const feedbackEl       = document.getElementById('feedback');
   const objectsArea      = document.getElementById('objectsArea');
   const exchangeZone     = document.getElementById('exchangeZone');
@@ -559,7 +674,7 @@
   }
 
   /* ── レンダリング ── */
-  function renderAll() { renderObjects(); renderPeople(); }
+  function renderAll() { renderObjects(); renderPeople(); renderHissan(); }
 
   function renderObjects() {
     objectsArea.innerHTML = '';
@@ -736,6 +851,7 @@
     state.total     = getInt(totalInput);
     state.people    = getInt(peopleInput);
     state.perPerson = getInt(perInput);
+    state.hissanStepIdx = -1; state.hissanFrames = [];
     buildItems();
     checkBtn.disabled = !deriveMode();
     hideFeedback();
@@ -758,6 +874,455 @@
     state.items = state.items.filter(i => i.id !== src.id);
     for (let j = 0; j < 10; j++) {
       state.items.push({ id: state.nextId++, value: newValue, location: 'pool', groupId, groupColor });
+    }
+  }
+
+  /* ── 筆算モード ── */
+  hissanBtn.addEventListener('click', () => {
+    state.hissanMode = !state.hissanMode;
+    hissanBtn.classList.toggle('on', state.hissanMode);
+    appLayout.classList.toggle('hissan-active', state.hissanMode);
+    if (state.hissanMode && !state.kuriMode) {
+      state.kuriMode = true;
+      kuriBtn.classList.add('on');
+      exchangeZone.classList.add('visible');
+      buildItems();
+    }
+    hideFeedback();
+    renderAll();
+  });
+
+  function hissanDivisorFromState() {
+    var mode = deriveMode();
+    if (mode === 'equal-share') return state.people;
+    if (mode === 'measurement') return state.perPerson;
+    return state.people || state.perPerson || null;
+  }
+
+  function hissanDivisorLabel() {
+    var mode = deriveMode();
+    if (mode === 'equal-share') return '人数';
+    if (mode === 'measurement') return '1人分の数';
+    return state.perPerson ? '1人分の数' : '人数';
+  }
+
+  function renderHissan() {
+    if (!state.hissanMode) return;
+    var ib = document.getElementById('hissanInputsBar');
+    if (!ib) return;
+    ib.innerHTML = buildHissanInputsBarHTML(state.total, hissanDivisorFromState(), hissanDivisorLabel());
+    var divIn    = ib.querySelector('#hissanDividendInput');
+    var divsrIn  = ib.querySelector('#hissanDivisorInput');
+    if (divIn)   divIn.addEventListener('input',   onHissanDividendInput);
+    if (divsrIn) divsrIn.addEventListener('input', onHissanDivisorInput);
+    renderHissanBracket();
+  }
+
+  function renderHissanBracket() {
+    var bd = document.getElementById('hissanBracketDisplay');
+    if (!bd) return;
+    var dividend = state.total;
+    var divisor  = hissanDivisorFromState();
+    var nd = dividend ? String(dividend).length : 2;
+    if (!dividend || !divisor) { bd.innerHTML = buildHissanShell(divisor, nd); return; }
+    if (state.hissanStepIdx < 0) {
+      var q = Math.floor(dividend / divisor);
+      var r = dividend % divisor;
+      bd.innerHTML = buildHissanFull(dividend, divisor, q, r) + buildStepCtrl(true, -1, 0);
+    } else {
+      if (!state.hissanFrames.length)
+        state.hissanFrames = computeHissanFrames(dividend, divisor);
+      var frame = state.hissanFrames[state.hissanStepIdx];
+      bd.innerHTML = buildMsgBubble(frame)
+        + buildHissanStepped(frame, dividend, divisor)
+        + buildStepCtrl(true, state.hissanStepIdx, state.hissanFrames.length);
+    }
+    var nb = bd.querySelector('#hissanNextBtn');
+    var bb = bd.querySelector('#hissanStepResetBtn');
+    var sb = bd.querySelector('#hissanStartBtn');
+    if (nb) nb.addEventListener('click', onHissanNext);
+    if (bb) bb.addEventListener('click', onHissanBack);
+    if (sb) sb.addEventListener('click', onHissanStart);
+  }
+
+  function onHissanNext() {
+    if (state.hissanStepIdx < state.hissanFrames.length - 1) {
+      state.hissanStepIdx++;
+      renderHissanBracket();
+      syncLeftPane();
+    }
+  }
+  function onHissanBack() {
+    state.hissanStepIdx = -1; state.hissanFrames = [];
+    renderHissanBracket();
+    buildItems(); renderObjects(); renderPeople();
+  }
+  function onHissanStart() {
+    var dividend = state.total, divisor = hissanDivisorFromState();
+    if (!dividend || !divisor) return;
+    state.hissanFrames  = computeHissanFrames(dividend, divisor);
+    state.hissanStepIdx = 0;
+    buildItems(); // 手順開始時にリセット
+    renderHissanBracket();
+    syncLeftPane();
+  }
+
+  function computeHissanFrames(dividend, divisor) {
+    var ds = computeDivisionSteps(dividend, divisor);
+    var digits = ds.digits, n = ds.n, steps = ds.steps, ns = steps.length;
+
+    function empty() {
+      return { msg:'', msgType:'normal', bdStep:-1,
+        qShow: new Array(n).fill(false), hlDiv: [],
+        pShow: new Array(ns).fill(false), lShow: new Array(ns).fill(false),
+        rShow: new Array(ns).fill(false), ptShow: new Array(ns).fill(false) };
+    }
+    function clone(f) {
+      return { msg:f.msg, msgType:f.msgType, bdStep:f.bdStep,
+        qShow:f.qShow.slice(), hlDiv:f.hlDiv.slice(),
+        pShow:f.pShow.slice(), lShow:f.lShow.slice(),
+        rShow:f.rShow.slice(), ptShow:f.ptShow.slice() };
+    }
+
+    var frames = [], cur = empty();
+    cur.msg = '「→」を押して筆算を進めよう！'; frames.push(clone(cur));
+
+    steps.forEach(function(step, i) {
+      cur = clone(frames[frames.length - 1]); cur.bdStep = -1;
+
+      if (i === 0) {
+        if (step.col > 0) {
+          for (var dc = 0; dc < step.col; dc++) {
+            var fa = clone(cur); fa.hlDiv = [dc];
+            fa.msg = digits[dc] + ' は ' + divisor + ' よりちいさいね。つぎの位もいっしょに見よう。';
+            fa.msgType = 'question'; frames.push(fa); cur = clone(fa);
+          }
+          var hlR = []; for (var c = 0; c <= step.col; c++) hlR.push(c);
+          var fb = clone(cur); fb.hlDiv = hlR;
+          fb.msg = String(step.partial) + ' は ' + divisor + ' でわれるかな？';
+          fb.msgType = 'question'; frames.push(fb); cur = clone(fb);
+        } else {
+          var fc = clone(cur); fc.hlDiv = [0];
+          fc.msg = digits[0] + ' は ' + divisor + ' でわれるかな？';
+          fc.msgType = 'question'; frames.push(fc); cur = clone(fc);
+        }
+      } else {
+        var fd = clone(cur); fd.ptShow[i] = true; fd.bdStep = i - 1;
+        fd.msg = '「' + digits[step.col] + '」をおろそう。'; fd.msgType = 'normal';
+        frames.push(fd); cur = clone(fd);
+        var fe = clone(cur);
+        fe.msg = String(step.partial) + ' は ' + divisor + ' でわれるかな？';
+        fe.msgType = 'question'; frames.push(fe); cur = clone(fe);
+      }
+
+      var fq = clone(cur); fq.qShow[step.col] = true; fq.hlDiv = [];
+      fq.msg = String(step.partial) + ' ÷ ' + divisor + ' = ' + step.q + '　→　「' + step.q + '」を上に書こう！';
+      fq.msgType = 'correct'; frames.push(fq); cur = clone(fq);
+
+      var fp = clone(cur); fp.pShow[i] = true;
+      fp.msg = step.q + ' × ' + divisor + ' = ' + step.product + '　→　下に書こう。';
+      fp.msgType = 'normal'; frames.push(fp); cur = clone(fp);
+
+      var fl = clone(cur); fl.lShow[i] = true;
+      var isLast = (i === steps.length - 1);
+      if (isLast) {
+        fl.rShow[i] = true;
+        fl.msg = step.partial + ' − ' + step.product + ' = ' + step.remainder
+          + (step.remainder > 0 ? '　あまり ' + step.remainder + '！' : '　ぴったり！');
+        fl.msgType = 'correct';
+      } else {
+        fl.msg = step.partial + ' − ' + step.product + ' = ' + step.remainder + '。つぎの位をおろそう。';
+        fl.msgType = 'normal';
+      }
+      frames.push(fl); cur = clone(fl);
+    });
+
+    var qq = Math.floor(dividend / divisor), rr = dividend % divisor;
+    var done = clone(cur); done.hlDiv = [];
+    done.msg = 'こたえ：' + dividend + ' ÷ ' + divisor + ' = ' + (rr > 0 ? qq + ' あまり ' + rr : qq);
+    done.msgType = 'complete'; frames.push(done);
+    return frames;
+  }
+
+  function buildHissanStepped(frame, dividend, divisor) {
+    var ds = computeDivisionSteps(dividend, divisor);
+    var digits = ds.digits, n = ds.n, steps = ds.steps;
+    var C = 36, BL = 10, LEAD = C + BL;
+    var hlSet = {}; frame.hlDiv.forEach(function(c) { hlSet[c] = true; });
+
+    function cell(ch, color, size, hl, vis) {
+      size = size || 22;
+      var bg = hl ? 'rgba(251,191,36,0.55)' : 'transparent';
+      var v  = vis === false ? 'hidden' : 'visible';
+      return '<div style="width:' + C + 'px;text-align:center;font-size:' + size + 'px;'
+        + 'font-weight:800;color:' + color + ';visibility:' + v + ';background:' + bg + ';border-radius:6px;transition:background .2s;">'
+        + (ch !== null ? ch : '0') + '</div>';
+    }
+    function placeRow(num, rightCol, color, vis) {
+      var s = String(num), lc = Math.max(0, rightCol - s.length + 1);
+      var cells = new Array(n).fill(null);
+      s.split('').forEach(function(ch, i) { if (lc + i < n) cells[lc + i] = ch; });
+      return cells.map(function(ch) { return cell(ch, color, 22, false, vis && ch !== null); }).join('');
+    }
+    function hline(vis) {
+      return '<div style="border-top:2.5px solid #94a3b8;width:' + (n * C) + 'px;margin:2px 0;visibility:' + (vis ? 'visible' : 'hidden') + ';"></div>';
+    }
+
+    var qArr = new Array(n).fill(null);
+    steps.forEach(function(s) { qArr[s.col] = s.q; });
+    var qRowHTML = qArr.map(function(q, col) {
+      return cell(q !== null ? String(q) : '0', '#16a34a', 22, false, q !== null && frame.qShow[col]);
+    }).join('');
+    var divRowHTML = digits.map(function(d, col) {
+      return cell(String(d), '#ef4444', 24, !!hlSet[col], true);
+    }).join('');
+
+    var stHTML = '';
+    steps.forEach(function(step, i) {
+      if (i > 0) {
+        var prevCol = steps[i - 1].col;
+        var len = step.col - prevCol + 1;
+        var pStr = String(step.partial).padStart(len, '0');
+        var pcells = new Array(n).fill(null);
+        pStr.split('').forEach(function(ch, k) { pcells[prevCol + k] = ch; });
+        var isBd = frame.bdStep === i - 1;
+        stHTML += '<div style="display:flex;">'
+          + pcells.map(function(ch, col) {
+              var isNew = isBd && col === step.col;
+              return cell(ch, isNew ? '#f97316' : '#1f2933', 22, isNew, frame.ptShow[i] && ch !== null);
+            }).join('') + '</div>';
+      }
+      stHTML += '<div style="display:flex;">' + placeRow(step.product, step.col, '#1f2933', frame.pShow[i]) + '</div>';
+      stHTML += hline(frame.lShow[i]);
+      if (i === steps.length - 1) {
+        var rc = step.remainder > 0 ? '#f97316' : '#94a3b8';
+        stHTML += '<div style="display:flex;">' + placeRow(step.remainder, step.col, rc, frame.rShow[i]) + '</div>';
+      }
+    });
+
+    return '<div style="padding:16px 20px;display:inline-flex;flex-direction:column;font-family:monospace;">'
+      + '<div style="display:flex;margin-left:' + LEAD + 'px;">' + qRowHTML + '</div>'
+      + '<div style="display:flex;align-items:stretch;">'
+      + '<div style="width:' + C + 'px;font-size:24px;font-weight:800;color:#1f2933;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;">' + divisor + '</div>'
+      + '<div style="border-left:4px solid #1f2933;border-top:4px solid #1f2933;padding:4px 4px 0 6px;display:flex;">' + divRowHTML + '</div>'
+      + '</div>'
+      + '<div style="margin-left:' + LEAD + 'px;display:flex;flex-direction:column;">' + stHTML + '</div>'
+      + '</div>';
+  }
+
+  function buildMsgBubble(frame) {
+    var col = { question:{bg:'#fef9c3',bd:'#fde047'}, correct:{bg:'#dcfce7',bd:'#86efac'},
+                complete:{bg:'#dbeafe',bd:'#93c5fd'}, normal:{bg:'#f1f5f9',bd:'#e2e8f0'} };
+    var c = col[frame.msgType] || col.normal;
+    return '<div style="margin:0 0 10px;padding:10px 14px;background:' + c.bg + ';border:2px solid ' + c.bd
+      + ';border-radius:12px;font-size:15px;font-weight:700;color:#1f2933;line-height:1.5;">'
+      + frame.msg + '</div>';
+  }
+
+  function buildStepCtrl(canStart, stepIdx, total) {
+    if (!canStart) return '';
+    var pb = 'padding:8px 18px;font-size:14px;font-weight:800;border:none;border-radius:10px;cursor:pointer;';
+    var sb = 'padding:8px 14px;font-size:13px;font-weight:700;border:2px solid #d1d5db;border-radius:10px;background:#fff;color:#555;cursor:pointer;';
+    if (stepIdx < 0)
+      return '<div style="margin-top:12px;display:flex;gap:8px;align-items:center;">'
+        + '<button id="hissanStartBtn" style="' + pb + 'background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#fff;">手順を見る ▶</button></div>';
+    var isLast = stepIdx >= total - 1;
+    return '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+      + (isLast ? '' : '<button id="hissanNextBtn" style="' + pb + 'background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#fff;">→ 次へ</button>')
+      + '<button id="hissanStepResetBtn" style="' + sb + '">' + (isLast ? '↩ 最初から' : '↩ 筆算に戻る') + '</button>'
+      + '<span style="font-size:12px;color:#94a3b8;">' + (stepIdx + 1) + ' / ' + total + '</span>'
+      + '</div>';
+  }
+
+  function onHissanDividendInput() {
+    state.hissanStepIdx = -1; state.hissanFrames = [];
+    var v = parseInt(this.value, 10);
+    state.total = (Number.isFinite(v) && v > 0) ? v : null;
+    totalInput.value = state.total != null ? state.total : '';
+    buildItems();
+    hideFeedback();
+    checkBtn.disabled = !deriveMode();
+    renderObjects();
+    renderPeople();
+    renderHissanBracket();
+  }
+
+  function onHissanDivisorInput() {
+    state.hissanStepIdx = -1; state.hissanFrames = [];
+    var v = parseInt(this.value, 10);
+    var val = (Number.isFinite(v) && v > 0) ? v : null;
+    var mode = deriveMode();
+    if (mode === 'measurement') {
+      state.perPerson = val;
+      perInput.value = val != null ? val : '';
+    } else {
+      state.people = val;
+      peopleInput.value = val != null ? val : '';
+    }
+    buildItems();
+    hideFeedback();
+    checkBtn.disabled = !deriveMode();
+    renderObjects();
+    renderPeople();
+    renderHissanBracket();
+  }
+
+  function buildHissanInputsBarHTML(dividend, divisor, divisorLabel) {
+    var dv  = dividend != null ? dividend : '';
+    var dvs = divisor  != null ? divisor  : '';
+    return '<div class="hissan-inputs-bar">'
+      + '<div class="hissan-chip hissan-chip-total">'
+      + '<label>ぜんぶの数</label>'
+      + '<input id="hissanDividendInput" type="number" min="1" max="999" value="' + dv + '" placeholder="？">'
+      + '</div>'
+      + '<span class="hissan-div-op">÷</span>'
+      + '<div class="hissan-chip hissan-chip-people">'
+      + '<label>' + divisorLabel + '</label>'
+      + '<input id="hissanDivisorInput" type="number" min="1" max="99" value="' + dvs + '" placeholder="？">'
+      + '</div>'
+      + '</div>';
+  }
+
+  function computeDivisionSteps(dividend, divisor) {
+    const digits = String(dividend).split('').map(Number);
+    const n = digits.length;
+    const steps = [];
+    let cur = 0;
+    for (let col = 0; col < n; col++) {
+      cur = cur * 10 + digits[col];
+      if (cur < divisor && col < n - 1) continue;
+      const q = Math.floor(cur / divisor);
+      const p = q * divisor;
+      steps.push({ col, partial: cur, q, product: p, remainder: cur - p });
+      cur = cur - p;
+    }
+    return { digits, n, steps };
+  }
+
+  function buildHissanShell(divisor, numDigits) {
+    var C  = 36;
+    var nd = numDigits || 2;
+    var dv = divisor != null ? divisor : '?';
+    var cells = '';
+    for (var i = 0; i < nd; i++)
+      cells += '<div style="width:' + C + 'px;text-align:center;font-size:22px;color:#cbd5e1;">―</div>';
+    return '<div style="padding:16px 20px;display:inline-flex;flex-direction:column;font-family:monospace;">'
+      + '<div style="display:flex;align-items:stretch;">'
+      + '<div style="width:' + C + 'px;font-size:24px;font-weight:800;color:#94a3b8;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;">' + dv + '</div>'
+      + '<div style="border-left:4px solid #94a3b8;border-top:4px solid #94a3b8;padding:4px 12px 4px 6px;display:flex;">'
+      + cells
+      + '</div></div></div>';
+  }
+
+  function buildHissanFull(dividend, divisor, quotient, remainder) {
+    const { digits, n, steps } = computeDivisionSteps(dividend, divisor);
+    const C = 36, BL = 10, LEAD = C + BL;
+
+    const qArr = new Array(n).fill(null);
+    steps.forEach(function(s) { qArr[s.col] = s.q; });
+
+    function cell(ch, color, size) {
+      var sz = size || 22;
+      var vis = ch !== null ? 'visible' : 'hidden';
+      return '<div style="width:' + C + 'px;text-align:center;font-size:' + sz + 'px;font-weight:800;color:' + color + ';visibility:' + vis + ';">' + (ch !== null ? ch : '0') + '</div>';
+    }
+
+    function placeRow(num, rightCol, color, size) {
+      var s = String(num);
+      var lc = Math.max(0, rightCol - s.length + 1);
+      var cells = new Array(n).fill(null);
+      s.split('').forEach(function(ch, i) { if (lc + i < n) cells[lc + i] = ch; });
+      return cells.map(function(ch) { return cell(ch, color, size); }).join('');
+    }
+
+    function hline() {
+      return '<div style="border-top:2.5px solid #94a3b8;width:' + (n * C) + 'px;margin:2px 0;"></div>';
+    }
+
+    var qRow   = qArr.map(function(q) { return cell(q !== null ? String(q) : null, '#16a34a'); }).join('');
+    var divRow = digits.map(function(d) { return cell(String(d), '#ef4444', 24); }).join('');
+
+    var stHTML = '';
+    steps.forEach(function(step, i) {
+      if (i > 0) {
+        var prevCol = steps[i - 1].col;
+        var len = step.col - prevCol + 1;
+        var pStr = String(step.partial).padStart(len, '0');
+        var cells = new Array(n).fill(null);
+        pStr.split('').forEach(function(ch, k) { cells[prevCol + k] = ch; });
+        stHTML += '<div style="display:flex;">' + cells.map(function(ch) { return cell(ch, '#1f2933'); }).join('') + '</div>';
+      }
+      stHTML += '<div style="display:flex;">' + placeRow(step.product, step.col, '#1f2933') + '</div>';
+      stHTML += hline();
+      if (i === steps.length - 1) {
+        var rc = step.remainder > 0 ? '#f97316' : '#94a3b8';
+        stHTML += '<div style="display:flex;">' + placeRow(step.remainder, step.col, rc) + '</div>';
+      }
+    });
+
+    var remNote = remainder > 0
+      ? '<div style="margin-top:6px;font-size:13px;font-weight:800;color:#f97316;padding-left:' + LEAD + 'px;">あまり ' + remainder + '</div>'
+      : '';
+
+    return '<div style="padding:16px 20px;display:inline-flex;flex-direction:column;font-family:monospace;">'
+      + '<div style="display:flex;margin-left:' + LEAD + 'px;">' + qRow + '</div>'
+      + '<div style="display:flex;align-items:stretch;">'
+      + '<div style="width:' + C + 'px;font-size:24px;font-weight:800;color:#1f2933;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;">' + divisor + '</div>'
+      + '<div style="border-left:4px solid #1f2933;border-top:4px solid #1f2933;padding:4px 4px 0 6px;display:flex;">' + divRow + '</div>'
+      + '</div>'
+      + '<div style="margin-left:' + LEAD + 'px;display:flex;flex-direction:column;">' + stHTML + '</div>'
+      + remNote
+      + '</div>';
+  }
+
+  /* ── 左ペイン連動 ── */
+  function syncLeftPane() {
+    if (!state.hissanMode || state.hissanStepIdx < 0) return;
+    if (deriveMode() !== 'equal-share') return;
+    var dividend = state.total;
+    var divisor  = hissanDivisorFromState();
+    if (!dividend || !divisor) return;
+    var frame = state.hissanFrames[state.hissanStepIdx];
+    if (!frame) return;
+    syncLeftPaneToFrame(frame, computeDivisionSteps(dividend, divisor), divisor);
+    renderObjects();
+    renderPeople();
+  }
+
+  function exchangePoolByDenom(d) {
+    state.items
+      .filter(function(it) { return it.value === d && it.location === 'pool'; })
+      .map(function(it) { return it.id; })
+      .forEach(function(id) {
+        var it = state.items.find(function(x) { return x.id === id; });
+        if (it) exchangeItem(it);
+      });
+  }
+
+  function syncLeftPaneToFrame(frame, ds, divisor) {
+    var n = ds.n, steps = ds.steps;
+    buildItems();
+
+    // コミット済みステップ：必要なら上位タイルを両替してから配る
+    steps.forEach(function(step, i) {
+      if (!frame.lShow[i]) return;
+      var denom = Math.pow(10, n - 1 - step.col);
+      // この位より大きいタイルをすべて両替（カスケード）
+      [100, 10].forEach(function(d) { if (d > denom) exchangePoolByDenom(d); });
+      // 各トレイへ配る
+      for (var p = 0; p < divisor; p++) {
+        var given = 0;
+        for (var j = 0; j < state.items.length && given < step.q; j++) {
+          var it = state.items[j];
+          if (it.value === denom && it.location === 'pool') { it.location = p; given++; }
+        }
+      }
+    });
+
+    // おろすステップ：次の位へ向けて残タイルを両替（視覚的な両替演出）
+    if (frame.bdStep >= 0 && frame.bdStep + 1 < steps.length) {
+      var nextDenom = Math.pow(10, n - 1 - steps[frame.bdStep + 1].col);
+      [100, 10].forEach(function(d) { if (d > nextDenom) exchangePoolByDenom(d); });
     }
   }
 
@@ -825,11 +1390,16 @@
     perInput.value    = '';
     state.total = state.people = state.perPerson = null;
     state.extraPeople = 1;
-    state.kuriMode = false;
+    state.kuriMode     = false;
+    state.hissanMode   = false;
+    state.hissanStepIdx = -1;
+    state.hissanFrames  = [];
     state.nextGroupId = 0;
     state.groups.clear();
     state.personIcons = [];
     kuriBtn.classList.remove('on');
+    hissanBtn.classList.remove('on');
+    appLayout.classList.remove('hissan-active');
     exchangeZone.classList.remove('visible');
     buildItems();
     remainderDisplay.style.display = 'none';
