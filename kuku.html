@@ -9,230 +9,221 @@
 
     body {
       font-family: 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif;
-      background: #f8fafc;
+      background: linear-gradient(160deg, #fdf4ff 0%, #f0f9ff 55%, #fefce8 100%);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px 16px 40px;
+      padding: 20px 16px 52px;
     }
 
-    /* 右上ボタン群 */
-    .top-right {
-      position: fixed;
-      top: 14px;
-      right: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-      align-items: flex-end;
-      z-index: 100;
+    /* ── Top card ────────────────────────────────────── */
+    .top-card {
+      width: 100%;
+      max-width: 780px;
+      background: white;
+      border-radius: 24px;
+      padding: 20px 20px 14px;
+      box-shadow: 0 4px 28px rgba(139,92,246,0.10), 0 1px 6px rgba(0,0,0,0.04);
+      margin-bottom: 18px;
     }
 
     .stage-label {
-      font-size: 13px;
-      font-weight: 700;
-      color: #94a3b8;
-      letter-spacing: 0.08em;
-      margin-bottom: 8px;
       text-align: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: #a78bfa;
+      letter-spacing: 0.18em;
+      margin-bottom: 12px;
     }
 
     .stage-buttons {
       display: flex;
-      gap: 10px;
+      gap: 7px;
       justify-content: center;
       flex-wrap: wrap;
-      margin-bottom: 36px;
     }
 
     .stage-btn {
-      width: 52px;
-      height: 52px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
-      border: 2.5px solid #cbd5e1;
-      background: white;
-      font-size: 22px;
+      border: 2.5px solid #e2e8f0;
+      background: #f8fafc;
+      font-size: 21px;
       font-weight: 800;
-      color: #475569;
+      color: #64748b;
       cursor: pointer;
-      transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
+      transition: transform 0.15s, border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .stage-btn:hover { transform: scale(1.12); border-color: #a78bfa; color: #7c3aed; background: white; }
+
+    .stage-btn[data-stage="1"].active { background:#ef4444; border-color:#ef4444; color:white; box-shadow:0 4px 14px rgba(239,68,68,.40); }
+    .stage-btn[data-stage="2"].active { background:#f97316; border-color:#f97316; color:white; box-shadow:0 4px 14px rgba(249,115,22,.40); }
+    .stage-btn[data-stage="3"].active { background:#f59e0b; border-color:#f59e0b; color:white; box-shadow:0 4px 14px rgba(245,158,11,.40); }
+    .stage-btn[data-stage="4"].active { background:#22c55e; border-color:#22c55e; color:white; box-shadow:0 4px 14px rgba(34,197,94,.40); }
+    .stage-btn[data-stage="5"].active { background:#06b6d4; border-color:#06b6d4; color:white; box-shadow:0 4px 14px rgba(6,182,212,.40); }
+    .stage-btn[data-stage="6"].active { background:#3b82f6; border-color:#3b82f6; color:white; box-shadow:0 4px 14px rgba(59,130,246,.40); }
+    .stage-btn[data-stage="7"].active { background:#8b5cf6; border-color:#8b5cf6; color:white; box-shadow:0 4px 14px rgba(139,92,246,.40); }
+    .stage-btn[data-stage="8"].active { background:#ec4899; border-color:#ec4899; color:white; box-shadow:0 4px 14px rgba(236,72,153,.40); }
+    .stage-btn[data-stage="9"].active { background:#f43f5e; border-color:#f43f5e; color:white; box-shadow:0 4px 14px rgba(244,63,94,.40); }
+
+    /* ── Sub-controls: right-aligned below stage buttons ── */
+    .sub-controls {
       display: flex;
-      align-items: center;
-      justify-content: center;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 14px;
     }
 
-    .stage-btn:hover {
-      border-color: #3b82f6;
-      color: #3b82f6;
-      background: #eff6ff;
+    .toggle-btn {
+      padding: 5px 13px;
+      border-radius: 20px;
+      border: 2px solid #e2e8f0;
+      background: #f8fafc;
+      font-size: 12px;
+      font-weight: 700;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+    .toggle-btn:hover { border-color: #c4b5fd; color: #7c3aed; background: white; }
+    .toggle-btn.active {
+      border-color: #a78bfa;
+      background: #faf5ff;
+      color: #7c3aed;
+    }
+    .toggle-btn.answers-btn.active {
+      border-color: #fb923c;
+      background: #fff7ed;
+      color: #ea580c;
     }
 
-    .stage-btn.active {
-      background: #3b82f6;
-      border-color: #3b82f6;
-      color: white;
-      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
-    }
-
+    /* ── Viz area ────────────────────────────────────── */
     #viz-container {
       width: 100%;
       max-width: 780px;
     }
+    #viz-svg { width: 100%; display: block; overflow: visible; }
 
-    #viz-svg {
-      width: 100%;
-      display: block;
-      overflow: visible;
-    }
-
-    .toggle-btn {
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 2px solid #cbd5e1;
-      background: white;
-      font-size: 13px;
-      font-weight: 700;
-      color: #64748b;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s, color 0.15s;
-      letter-spacing: 0.03em;
-      white-space: nowrap;
-    }
-
-    .toggle-btn:hover { border-color: #94a3b8; }
-
-    .toggle-btn.active {
-      border-color: #10b981;
-      background: #ecfdf5;
-      color: #059669;
-    }
-
-    .toggle-btn.quiz-btn.active {
-      border-color: #8b5cf6;
-      background: #f5f3ff;
-      color: #7c3aed;
-    }
-
-    /* ── Numpad ─────────────────────────────────── */
+    /* ── Numpad ──────────────────────────────────────── */
     .numpad-wrap {
       display: none;
       flex-direction: column;
       align-items: center;
-      margin-top: 20px;
+      margin-top: 22px;
       gap: 14px;
     }
     .numpad-wrap.visible { display: flex; }
 
     .numpad-display {
-      font-size: 38px;
+      font-size: 44px;
       font-weight: 900;
       color: #1e293b;
-      min-width: 140px;
-      min-height: 52px;
+      min-width: 150px;
+      min-height: 58px;
       text-align: center;
-      letter-spacing: 0.1em;
-      border-bottom: 3px solid #cbd5e1;
+      letter-spacing: 0.12em;
+      border-bottom: 3px solid #e2e8f0;
       padding-bottom: 6px;
       transition: color 0.15s;
     }
-    .numpad-display.wrong { color: #ef4444; }
-    .numpad-display.correct { color: #16a34a; }
+    .numpad-display.wrong   { color: #ef4444; }
+    .numpad-display.correct { color: #22c55e; }
 
     .numpad-grid {
       display: grid;
-      grid-template-columns: repeat(3, 68px);
-      gap: 8px;
+      grid-template-columns: repeat(3, 70px);
+      gap: 10px;
     }
 
     .np-btn {
-      height: 64px;
-      border-radius: 14px;
-      border: 2px solid #e2e8f0;
+      height: 66px;
+      border-radius: 18px;
+      border: none;
       background: white;
-      font-size: 26px;
-      font-weight: 700;
-      color: #1e293b;
-      cursor: pointer;
-      transition: background 0.1s, border-color 0.1s, transform 0.08s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-    }
-    .np-btn:hover  { background: #f1f5f9; border-color: #94a3b8; }
-    .np-btn:active { transform: scale(0.93); background: #e2e8f0; }
-
-    .np-btn.enter-btn {
-      background: #3b82f6;
-      border-color: #3b82f6;
-      color: white;
-      font-size: 22px;
-    }
-    .np-btn.enter-btn:hover  { background: #2563eb; border-color: #2563eb; }
-    .np-btn.del-btn   { color: #ef4444; font-size: 22px; }
-
-    .quiz-feedback {
       font-size: 28px;
       font-weight: 800;
-      min-height: 40px;
-      letter-spacing: 0.04em;
-    }
-    .quiz-feedback.correct { color: #16a34a; }
-    .quiz-feedback.wrong   { color: #ef4444; }
-
-    /* ── Formula / hint ─────────────────────────── */
-    .formula-area {
-      margin-top: 28px;
-      min-height: 60px;
+      color: #334155;
+      cursor: pointer;
+      transition: transform 0.08s, box-shadow 0.08s;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.09), 0 1px 3px rgba(0,0,0,0.05);
+      user-select: none;
       display: flex;
       align-items: center;
       justify-content: center;
     }
+    .np-btn:hover  { box-shadow: 0 6px 18px rgba(0,0,0,0.13); transform: translateY(-1px); }
+    .np-btn:active { transform: scale(0.91); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
 
+    .np-btn.enter-btn {
+      background: linear-gradient(135deg, #4ade80, #16a34a);
+      color: white;
+      font-size: 24px;
+      box-shadow: 0 4px 14px rgba(22,163,74,0.35);
+    }
+    .np-btn.enter-btn:hover { box-shadow: 0 6px 20px rgba(22,163,74,0.45); }
+    .np-btn.del-btn { color: #f87171; font-size: 22px; }
+
+    .quiz-feedback {
+      font-size: 24px;
+      font-weight: 800;
+      min-height: 38px;
+      letter-spacing: 0.04em;
+    }
+    .quiz-feedback.correct { color: #22c55e; }
+    .quiz-feedback.wrong   { color: #ef4444; }
+
+    /* ── Formula ─────────────────────────────────────── */
+    .formula-area {
+      margin-top: 26px;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .formula-text {
-      font-size: 44px;
+      font-size: 46px;
       font-weight: 900;
       color: #f97316;
       letter-spacing: 0.06em;
     }
-
     .quiz-hint {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
-      color: #94a3b8;
+      color: #a78bfa;
       text-align: center;
-      margin-top: 4px;
+      margin-top: 6px;
     }
   </style>
 </head>
 <body>
 
-  <!-- 右上のボタン群 -->
-  <div class="top-right">
-    <button class="toggle-btn" id="subtick-toggle">ほじょめもり</button>
-    <button class="toggle-btn quiz-btn" id="quiz-toggle">こたえを見る</button>
-  </div>
-
-  <p class="stage-label">九九のだん</p>
-
-  <div class="stage-buttons" id="stage-btns">
-    <button class="stage-btn" data-stage="1">1</button>
-    <button class="stage-btn" data-stage="2">2</button>
-    <button class="stage-btn" data-stage="3">3</button>
-    <button class="stage-btn" data-stage="4">4</button>
-    <button class="stage-btn" data-stage="5">5</button>
-    <button class="stage-btn" data-stage="6">6</button>
-    <button class="stage-btn" data-stage="7">7</button>
-    <button class="stage-btn" data-stage="8">8</button>
-    <button class="stage-btn" data-stage="9">9</button>
+  <div class="top-card">
+    <p class="stage-label">九九のだん</p>
+    <div class="stage-buttons" id="stage-btns">
+      <button class="stage-btn" data-stage="1">1</button>
+      <button class="stage-btn" data-stage="2">2</button>
+      <button class="stage-btn" data-stage="3">3</button>
+      <button class="stage-btn" data-stage="4">4</button>
+      <button class="stage-btn" data-stage="5">5</button>
+      <button class="stage-btn" data-stage="6">6</button>
+      <button class="stage-btn" data-stage="7">7</button>
+      <button class="stage-btn" data-stage="8">8</button>
+      <button class="stage-btn" data-stage="9">9</button>
+    </div>
+    <div class="sub-controls">
+      <button class="toggle-btn" id="subtick-toggle">ほじょめもり</button>
+      <button class="toggle-btn answers-btn" id="quiz-toggle">こたえを見る</button>
+    </div>
   </div>
 
   <div id="viz-container">
     <svg id="viz-svg"></svg>
   </div>
 
-  <!-- Numpad (visible only in quiz mode when a box is active) -->
   <div class="numpad-wrap" id="numpad-wrap">
     <div class="numpad-display" id="numpad-display">　</div>
     <div class="numpad-grid">
@@ -258,181 +249,176 @@
   <div class="quiz-hint" id="quiz-hint"></div>
 
   <script>
+    // ── Stage accent colors (index = stage number) ──────────────────
+    var STAGE_COLORS = [
+      '', '#ef4444','#f97316','#f59e0b','#22c55e',
+      '#06b6d4','#3b82f6','#8b5cf6','#ec4899','#f43f5e'
+    ];
+
     var state = {
-      stage: null,
+      stage:       null,
       selected:    null,   // こたえを見るモードで選択中
       showSubTicks: false,
       quizMode:    true,   // デフォルトは入力モード（□表示）
-      activeIdx:   null,   // 入力中の mark（1〜9）
+      activeIdx:   null,
       inputValue:  '',
-      results:     {},     // { idx: 'correct' | 'wrong' | null }
+      results:     {},
     };
 
-    // ── Fixed layout constants ──────────────────────────────────────
-    var LM = 52;   // left margin (axis labels)
-    var RM = 12;   // right margin
-    var N  = 9;    // marks per line (1〜9)
-    var UPPER_Y = 95;
-    var LOWER_Y = 210;
-    var VH      = 290;
-    var TICK_H  = 14;
-    var STUB_H  = 6;
+    // ── Layout constants ────────────────────────────────────────────
+    var LM = 52, RM = 12, N = 9;
+    var UPPER_Y = 95, LOWER_Y = 210, VH = 290;
+    var TICK_H = 14, STUB_H = 6;
 
-    // ── SVG builder helpers ─────────────────────────────────────────
+    // ── SVG helpers ─────────────────────────────────────────────────
     function mkLine(x1, y1, x2, y2, stroke, sw, extra) {
-      var attr = 'x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"'
-               + ' stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linecap="round"';
-      if (extra) attr += ' ' + extra;
-      return '<line ' + attr + '/>';
+      return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"'
+           + ' stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linecap="round"'
+           + (extra ? ' ' + extra : '') + '/>';
+    }
+    function mkText(x, y, txt, size, fill, anchor, weight) {
+      return '<text x="' + x + '" y="' + y + '" font-size="' + size + '"'
+           + ' font-weight="' + (weight || '700') + '" fill="' + fill + '"'
+           + ' text-anchor="' + (anchor || 'middle') + '" dominant-baseline="central"'
+           + ' font-family="Hiragino Sans,Meiryo,sans-serif">' + txt + '</text>';
+    }
+    function mkCircle(cx, cy, r, fill, stroke, sw) {
+      return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + fill + '"'
+           + (stroke ? ' stroke="' + stroke + '" stroke-width="' + (sw||2) + '"' : '') + '/>';
+    }
+    function mkClickRect(x, cy, attr, r) {
+      return '<rect x="' + (x-r) + '" y="' + (cy-r) + '" width="' + (r*2) + '" height="' + (r*2) + '"'
+           + ' fill="transparent" style="cursor:pointer;" ' + attr + '/>';
     }
 
-    function mkText(x, y, content, size, fill, anchor, weight) {
-      return '<text x="' + x + '" y="' + y + '"'
-           + ' font-size="' + size + '" font-weight="' + (weight || '700') + '"'
-           + ' fill="' + fill + '" text-anchor="' + (anchor || 'middle') + '"'
-           + ' dominant-baseline="central"'
-           + ' font-family="Hiragino Sans,Meiryo,sans-serif">'
-           + content + '</text>';
-    }
-
-    function mkCircle(cx, cy, r, fill) {
-      return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + fill + '"/>';
-    }
-
-    function mkClickRect(x, cy, idx, r) {
-      return '<rect x="' + (x - r) + '" y="' + (cy - r) + '"'
-           + ' width="' + (r * 2) + '" height="' + (r * 2) + '"'
-           + ' fill="transparent" style="cursor:pointer;" data-idx="' + idx + '"/>';
-    }
-
-    // ── Main render (recomputes layout from container width each time) ─
+    // ── Render ──────────────────────────────────────────────────────
     function render() {
       var container = document.getElementById('viz-container');
-      var W = container.clientWidth || 760;
+      var W       = container.clientWidth || 760;
       var spacing = (W - LM - RM) / N;
-
-      // Font size scales with mark spacing, clamped to a readable range
       var fontSize = Math.min(20, Math.max(12, Math.round(spacing * 0.28)));
-      // Clickable radius: half the spacing (touch-friendly, no overlap)
-      var clickR = Math.min(32, Math.floor(spacing * 0.46));
+      var clickR   = Math.min(32, Math.floor(spacing * 0.46));
+      var accentColor = state.stage ? STAGE_COLORS[state.stage] : '#8b5cf6';
 
       function xOf(i) { return LM + i * spacing; }
 
       var svg = document.getElementById('viz-svg');
-      svg.setAttribute('width',  W);
+      svg.setAttribute('width', W);
       svg.setAttribute('height', VH);
       svg.removeAttribute('viewBox');
 
       var p = [];
 
-      // Axis lines (extend slightly beyond first/last mark)
+      // ── Axis lines ──
       var lineX1 = xOf(1) - spacing * 0.45;
       var lineX2 = xOf(N) + spacing * 0.30;
-      p.push(mkLine(lineX1, UPPER_Y, lineX2, UPPER_Y, '#94a3b8', 2.5));
-      p.push(mkLine(lineX1, LOWER_Y, lineX2, LOWER_Y, '#94a3b8', 2.5));
+      // Upper: colored with accent, lower: slate
+      p.push(mkLine(lineX1, UPPER_Y, lineX2, UPPER_Y, state.stage ? accentColor + '55' : '#e2e8f0', 3));
+      p.push(mkLine(lineX1, LOWER_Y, lineX2, LOWER_Y, '#cbd5e1', 3));
 
       // Axis labels
       var labelX = LM * 0.44;
-      var lblSz  = Math.min(14, Math.max(10, Math.round(fontSize * 0.72)));
-      p.push(mkText(labelX, UPPER_Y, '積', lblSz, '#64748b', 'middle', '700'));
-      p.push(mkText(labelX, LOWER_Y - lblSz * 0.9, 'かける', lblSz, '#64748b', 'middle', '600'));
-      p.push(mkText(labelX, LOWER_Y + lblSz * 0.9, '数',     lblSz, '#64748b', 'middle', '600'));
+      var lblSz  = Math.min(13, Math.max(10, Math.round(fontSize * 0.7)));
+      p.push(mkText(labelX, UPPER_Y, '積', lblSz, '#a78bfa', 'middle', '800'));
+      p.push(mkText(labelX, LOWER_Y - lblSz, 'かける', lblSz, '#94a3b8', 'middle', '700'));
+      p.push(mkText(labelX, LOWER_Y + lblSz, '数',     lblSz, '#94a3b8', 'middle', '700'));
 
       if (state.stage !== null) {
 
-        // Sub-ticks on product line
+        // Sub-ticks (上の数直線のみ)
         if (state.showSubTicks && state.stage > 1) {
           for (var i = 1; i < N; i++) {
             var x0 = xOf(i), x1 = xOf(i + 1);
             for (var k = 1; k < state.stage; k++) {
               var stX = x0 + (x1 - x0) * k / state.stage;
-              p.push(mkLine(stX, UPPER_Y - STUB_H, stX, UPPER_Y + STUB_H, '#c7d2da', 1.2));
+              p.push(mkLine(stX, UPPER_Y - STUB_H, stX, UPPER_Y + STUB_H, accentColor + '44', 1.5));
             }
           }
         }
 
-        // Dotted connecting lines
-        if (state.selected !== null) {
-          var si = state.selected;
+        // Dotted lines (こたえを見るモード)
+        if (!state.quizMode && state.selected !== null) {
+          var si   = state.selected;
           var dash = 'stroke-dasharray="8,5"';
-          p.push(mkLine(xOf(1),  UPPER_Y, xOf(si), LOWER_Y, '#f97316', 2.5, dash));
-          if (si !== 1) {
-            p.push(mkLine(xOf(si), LOWER_Y, xOf(si), UPPER_Y, '#f97316', 2.5, dash));
-          }
+          p.push(mkLine(xOf(1), UPPER_Y, xOf(si), LOWER_Y, '#f97316', 2.5, dash));
+          if (si !== 1) p.push(mkLine(xOf(si), LOWER_Y, xOf(si), UPPER_Y, '#f97316', 2.5, dash));
         }
 
-        // Upper marks (積)
+        // ── Upper marks (積) ──
         for (var i = 1; i <= N; i++) {
-          var x     = xOf(i);
-          var isSel = (state.selected === i);
+          var x = xOf(i);
 
           if (state.quizMode) {
             var res      = state.results[i];
             var isActive = (state.activeIdx === i);
-            var mc = res === 'correct' ? '#16a34a' : isActive ? '#f97316' : '#475569';
-            p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, mc, isActive ? 3 : 2));
+            var tickC    = res === 'correct' ? '#22c55e' : isActive ? accentColor : '#94a3b8';
+            p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, tickC, isActive ? 3 : 2));
 
             if (res === 'correct') {
-              // 正解済み：緑でラベル表示
-              p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, '#16a34a'));
+              p.push(mkCircle(x, UPPER_Y, 5, accentColor + '22', accentColor, 1.5));
+              p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, '#22c55e'));
             } else {
-              // 未回答 or 不正解：□ ボックス
-              var bW = Math.max(32, fontSize * 2.0);
-              var bH = Math.max(26, fontSize * 1.5);
-              var bX = x - bW / 2;
-              var bY = UPPER_Y - TICK_H - bH - 6;
-              var strokeC = isActive ? '#f97316' : (res === 'wrong' ? '#ef4444' : '#94a3b8');
-              var fillC   = isActive ? 'rgba(251,191,36,0.12)' : (res === 'wrong' ? 'rgba(239,68,68,0.08)' : 'white');
+              var bW = Math.max(32, fontSize * 2.1);
+              var bH = Math.max(24, fontSize * 1.45);
+              var bX = x - bW / 2, bY = UPPER_Y - TICK_H - bH - 6;
+              var strokeC = isActive ? accentColor : (res === 'wrong' ? '#ef4444' : '#cbd5e1');
+              var fillC   = isActive ? (accentColor + '18') : (res === 'wrong' ? '#fef2f2' : 'white');
               p.push('<rect x="' + bX + '" y="' + bY + '" width="' + bW + '" height="' + bH + '"'
-                   + ' rx="5" fill="' + fillC + '" stroke="' + strokeC + '" stroke-width="2"'
+                   + ' rx="6" fill="' + fillC + '" stroke="' + strokeC + '" stroke-width="2"'
                    + ' style="cursor:pointer;" data-quiz-idx="' + i + '"/>');
               var dispVal = (isActive && state.inputValue) ? state.inputValue : '';
-              p.push(mkText(x, bY + bH / 2, dispVal, fontSize * 0.95,
-                            isActive ? '#f97316' : '#94a3b8'));
+              p.push(mkText(x, bY + bH / 2, dispVal, fontSize, isActive ? accentColor : '#cbd5e1'));
             }
           } else {
-            // 通常モード
-            var mc = isSel ? '#f97316' : '#475569';
-            var tc = isSel ? '#f97316' : '#1e293b';
-            p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, mc, isSel ? 3 : 2));
-            p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, tc));
-            if (isSel) p.push(mkCircle(x, UPPER_Y, 7, '#f97316'));
+            var isSel = (state.selected === i);
+            var tickC = isSel ? '#f97316' : '#94a3b8';
+            var textC = isSel ? '#f97316' : '#334155';
+            p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, tickC, isSel ? 3 : 2));
+            p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, textC));
+            if (isSel) {
+              p.push(mkCircle(x, UPPER_Y, 7, '#f97316'));
+              p.push(mkCircle(x, UPPER_Y, 11, 'rgba(249,115,22,0.18)'));
+            } else {
+              p.push(mkCircle(x, UPPER_Y, 4, accentColor + '55'));
+            }
           }
         }
 
-        // Lower marks (かける数)
+        // ── Lower marks (かける数) ──
         for (var i = 1; i <= N; i++) {
           var x     = xOf(i);
-          var isSel = (state.selected === i);
-          var mc    = isSel ? '#f97316' : '#475569';
-          var tc    = isSel ? '#f97316' : '#1e293b';
-          p.push(mkLine(x, LOWER_Y - TICK_H, x, LOWER_Y + TICK_H, mc, isSel ? 3 : 2));
-          p.push(mkText(x, LOWER_Y + TICK_H + fontSize, String(i), fontSize, tc));
-          if (isSel) p.push(mkCircle(x, LOWER_Y, 7, '#f97316'));
+          var isSel = (!state.quizMode && state.selected === i);
+          var isAct = (state.quizMode && state.activeIdx === i);
+          var dotC  = isSel ? '#f97316' : isAct ? accentColor : '#94a3b8';
+          var textC = isSel ? '#f97316' : isAct ? accentColor : '#475569';
+          p.push(mkLine(x, LOWER_Y - TICK_H, x, LOWER_Y + TICK_H, dotC, (isSel || isAct) ? 3 : 2));
+          p.push(mkText(x, LOWER_Y + TICK_H + fontSize, String(i), fontSize, textC, 'middle', '800'));
+          if (isSel) {
+            p.push(mkCircle(x, LOWER_Y, 7, '#f97316'));
+            p.push(mkCircle(x, LOWER_Y, 11, 'rgba(249,115,22,0.18)'));
+          } else {
+            p.push(mkCircle(x, LOWER_Y, 4, '#94a3b8' + '88'));
+          }
         }
 
-        // Clickable areas (topmost layer)
+        // ── Clickable areas ──
         for (var i = 1; i <= N; i++) {
           var x = xOf(i);
-          p.push(mkClickRect(x, UPPER_Y, i, clickR));
-          p.push(mkClickRect(x, LOWER_Y, i, clickR));
+          p.push(mkClickRect(x, UPPER_Y, 'data-idx="' + i + '"', clickR));
+          p.push(mkClickRect(x, LOWER_Y, 'data-idx="' + i + '"', clickR));
         }
       }
 
       svg.innerHTML = p.join('\n');
 
-      // 通常モード：かける数 / 積 タップ
       svg.querySelectorAll('[data-idx]').forEach(function(el) {
         el.addEventListener('click', function() {
           if (state.quizMode) return;
           var idx = parseInt(this.getAttribute('data-idx'));
           state.selected = (state.selected === idx) ? null : idx;
-          updateFormula();
-          render();
+          updateFormula(); render();
         });
       });
-
-      // クイズモード：□ ボックスをタップしてアクティブにする
       svg.querySelectorAll('[data-quiz-idx]').forEach(function(el) {
         el.addEventListener('click', function() {
           var idx = parseInt(this.getAttribute('data-quiz-idx'));
@@ -442,13 +428,13 @@
       });
     }
 
-    // Debounced resize
     var resizeTimer;
     window.addEventListener('resize', function() {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(render, 80);
     });
 
+    // ── Formula / hint ──────────────────────────────────────────────
     function updateFormula() {
       var fEl = document.getElementById('formula');
       var hEl = document.getElementById('quiz-hint');
@@ -465,22 +451,16 @@
         }
       } else {
         hEl.textContent = '';
-        if (state.stage === null || state.selected === null) {
-          fEl.textContent = '';
-        } else {
-          fEl.textContent = state.stage + ' × ' + state.selected + ' =';
-        }
+        fEl.textContent = (state.stage && state.selected)
+          ? state.stage + ' × ' + state.selected + ' ='
+          : '';
       }
     }
 
-    // ── クイズ関数 ──────────────────────────────────────────────────
+    // ── Quiz helpers ────────────────────────────────────────────────
     function setActiveIdx(idx) {
-      state.activeIdx  = idx;
-      state.inputValue = '';
-      clearFeedback();
-      updateNumpad();
-      updateFormula();
-      render();
+      state.activeIdx = idx; state.inputValue = '';
+      clearFeedback(); updateNumpad(); updateFormula(); render();
     }
 
     function updateNumpad() {
@@ -496,85 +476,71 @@
     }
 
     function handleDigit(d) {
-      if (state.activeIdx === null || !state.quizMode) return;
-      if (state.inputValue.length >= 3) return; // max 3 digits (81 max)
+      if (!state.quizMode || state.activeIdx === null) return;
+      if (state.inputValue.length >= 3) return;
       state.inputValue += d;
-      updateNumpad();
-      updateFormula();
+      updateNumpad(); updateFormula();
     }
 
     function handleDelete() {
-      if (state.activeIdx === null || !state.quizMode) return;
+      if (!state.quizMode || state.activeIdx === null) return;
       state.inputValue = state.inputValue.slice(0, -1);
       updateNumpad();
     }
 
     function submitAnswer() {
       if (!state.quizMode || state.activeIdx === null || state.inputValue === '') return;
-      var answer  = parseInt(state.inputValue, 10);
-      var correct = answer === state.stage * state.activeIdx;
-
+      var correct = parseInt(state.inputValue, 10) === state.stage * state.activeIdx;
       if (correct) {
         state.results[state.activeIdx] = 'correct';
-        showFeedback(true);
-        render();
-        // 次の未回答へ自動移動
+        showFeedback(true); render();
         var next = nextUnanswered(state.activeIdx);
         if (next !== null) {
           setTimeout(function() { setActiveIdx(next); }, 500);
         } else {
-          // 全問正解
-          state.activeIdx  = null;
-          state.inputValue = '';
-          updateNumpad();
-          updateFormula();
-          showFeedback('all');
+          state.activeIdx = null; state.inputValue = '';
+          updateNumpad(); updateFormula(); showFeedback('all');
         }
       } else {
         state.results[state.activeIdx] = 'wrong';
-        showFeedback(false);
-        render();
+        showFeedback(false); render();
         setTimeout(function() {
           state.results[state.activeIdx] = null;
           state.inputValue = '';
-          updateNumpad();
-          clearFeedback();
-          render();
+          updateNumpad(); clearFeedback(); render();
         }, 700);
       }
     }
 
-    function nextUnanswered(fromIdx) {
-      for (var i = fromIdx + 1; i <= N; i++) {
-        if (state.results[i] !== 'correct') return i;
-      }
-      for (var i = 1; i < fromIdx; i++) {
-        if (state.results[i] !== 'correct') return i;
-      }
+    function nextUnanswered(from) {
+      for (var i = from + 1; i <= N; i++) if (state.results[i] !== 'correct') return i;
+      for (var i = 1; i < from;   i++) if (state.results[i] !== 'correct') return i;
       return null;
     }
 
     function showFeedback(type) {
-      var el = document.getElementById('quiz-feedback');
+      var el   = document.getElementById('quiz-feedback');
       var disp = document.getElementById('numpad-display');
       if (type === true) {
-        el.textContent = '⭕　せいかい！';
-        el.className = 'quiz-feedback correct';
+        el.textContent = '⭕　せいかい！'; el.className = 'quiz-feedback correct';
         if (disp) { disp.textContent = String(state.stage * state.activeIdx); disp.className = 'numpad-display correct'; }
       } else if (type === false) {
-        el.textContent = '✕　もういちど！';
-        el.className = 'quiz-feedback wrong';
+        el.textContent = '✕　もういちど！'; el.className = 'quiz-feedback wrong';
         if (disp) { disp.textContent = state.inputValue; disp.className = 'numpad-display wrong'; }
-      } else if (type === 'all') {
-        el.textContent = '🎉　ぜんぶせいかい！';
-        el.className = 'quiz-feedback correct';
+      } else {
+        el.textContent = '🎉　ぜんぶせいかい！'; el.className = 'quiz-feedback correct';
       }
     }
 
     function clearFeedback() {
       var el = document.getElementById('quiz-feedback');
-      el.textContent = '';
-      el.className = 'quiz-feedback';
+      el.textContent = ''; el.className = 'quiz-feedback';
+    }
+
+    function resetQuizState() {
+      state.selected = null; state.activeIdx = null;
+      state.inputValue = ''; state.results = {};
+      clearFeedback(); updateNumpad(); updateFormula();
     }
 
     // ── Stage buttons ───────────────────────────────────────────────
@@ -582,75 +548,42 @@
       btn.addEventListener('click', function() {
         var stage = parseInt(this.getAttribute('data-stage'));
         document.querySelectorAll('.stage-btn').forEach(function(b) { b.classList.remove('active'); });
-        if (state.stage === stage) {
-          state.stage = null;
-        } else {
-          state.stage = stage;
-          this.classList.add('active');
-        }
-        // 段が変わったらリセット
-        state.selected   = null;
-        state.activeIdx  = null;
-        state.inputValue = '';
-        state.results    = {};
-        clearFeedback();
-        updateNumpad();
-        updateFormula();
-        render();
+        state.stage = (state.stage === stage) ? null : stage;
+        if (state.stage) this.classList.add('active');
+        resetQuizState(); render();
       });
     });
 
     // ── Sub-tick toggle ─────────────────────────────────────────────
     document.getElementById('subtick-toggle').addEventListener('click', function() {
       state.showSubTicks = !state.showSubTicks;
-      this.classList.toggle('active');
+      this.classList.toggle('active', state.showSubTicks);
       render();
     });
 
-    // ── こたえを見る トグル（active = 答え表示モード = quizMode false）──
+    // ── こたえを見る toggle ─────────────────────────────────────────
     document.getElementById('quiz-toggle').addEventListener('click', function() {
       state.quizMode = !state.quizMode;
-      // quizMode=false（答え表示）のとき active
       this.classList.toggle('active', !state.quizMode);
-      state.selected   = null;
-      state.activeIdx  = null;
-      state.inputValue = '';
-      state.results    = {};
-      clearFeedback();
-      updateNumpad();
-      updateFormula();
-      render();
+      resetQuizState(); render();
     });
 
-    // ── Numpad buttons ──────────────────────────────────────────────
+    // ── Numpad ──────────────────────────────────────────────────────
     document.querySelectorAll('.np-btn[data-digit]').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        handleDigit(this.getAttribute('data-digit'));
-        render(); // □内の入力値を更新
-      });
+      btn.addEventListener('click', function() { handleDigit(this.getAttribute('data-digit')); render(); });
     });
-    document.getElementById('np-del').addEventListener('click', function() {
-      handleDelete();
-      render();
-    });
+    document.getElementById('np-del').addEventListener('click',   function() { handleDelete(); render(); });
     document.getElementById('np-enter').addEventListener('click', submitAnswer);
 
     // ── Keyboard ────────────────────────────────────────────────────
     document.addEventListener('keydown', function(e) {
       if (!state.quizMode || state.activeIdx === null) return;
-      if (e.key >= '0' && e.key <= '9') {
-        handleDigit(e.key);
-        render();
-      } else if (e.key === 'Backspace') {
-        e.preventDefault();
-        handleDelete();
-        render();
-      } else if (e.key === 'Enter') {
-        submitAnswer();
-      }
+      if (e.key >= '0' && e.key <= '9') { handleDigit(e.key); render(); }
+      else if (e.key === 'Backspace')   { e.preventDefault(); handleDelete(); render(); }
+      else if (e.key === 'Enter')       { submitAnswer(); }
     });
 
-    // Initial render
+    // ── Init ────────────────────────────────────────────────────────
     render();
     updateFormula();
   </script>
