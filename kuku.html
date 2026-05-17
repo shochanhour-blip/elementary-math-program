@@ -147,19 +147,15 @@
   <script>
     var state = { stage: null, selected: null, showSubTicks: false };
 
-    // ── SVG layout (viewBox units) ──────────────────────────────────
-    var VW = 800, VH = 290;
-    var LM = 78;   // left margin (for axis labels)
-    var RM = 16;   // right margin
+    // ── Fixed layout constants ──────────────────────────────────────
+    var LM = 52;   // left margin (axis labels)
+    var RM = 12;   // right margin
     var N  = 9;    // marks per line (1〜9)
-    var UPPER_Y  = 95;
-    var LOWER_Y  = 210;
-    var TICK_H   = 14;  // main tick half-height
-    var STUB_H   = 6;   // sub-tick half-height
-
-    var spacing  = (VW - LM - RM) / N;  // distance between adjacent marks
-
-    function xOf(i) { return LM + i * spacing; }  // i: 1〜9
+    var UPPER_Y = 95;
+    var LOWER_Y = 210;
+    var VH      = 290;
+    var TICK_H  = 14;
+    var STUB_H  = 6;
 
     // ── SVG builder helpers ─────────────────────────────────────────
     function mkLine(x1, y1, x2, y2, stroke, sw, extra) {
@@ -182,19 +178,31 @@
       return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + fill + '"/>';
     }
 
-    function mkClickRect(x, cy, idx) {
-      var r = 30;
+    function mkClickRect(x, cy, idx, r) {
       return '<rect x="' + (x - r) + '" y="' + (cy - r) + '"'
            + ' width="' + (r * 2) + '" height="' + (r * 2) + '"'
            + ' fill="transparent" style="cursor:pointer;" data-idx="' + idx + '"/>';
     }
 
-    // ── Main render ─────────────────────────────────────────────────
+    // ── Main render (recomputes layout from container width each time) ─
     function render() {
-      var svg = document.getElementById('viz-svg');
-      svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
+      var container = document.getElementById('viz-container');
+      var W = container.clientWidth || 760;
+      var spacing = (W - LM - RM) / N;
 
-      var p = []; // SVG parts, in draw order
+      // Font size scales with mark spacing, clamped to a readable range
+      var fontSize = Math.min(20, Math.max(12, Math.round(spacing * 0.28)));
+      // Clickable radius: half the spacing (touch-friendly, no overlap)
+      var clickR = Math.min(32, Math.floor(spacing * 0.46));
+
+      function xOf(i) { return LM + i * spacing; }
+
+      var svg = document.getElementById('viz-svg');
+      svg.setAttribute('width',  W);
+      svg.setAttribute('height', VH);
+      svg.removeAttribute('viewBox');
+
+      var p = [];
 
       // Axis lines (extend slightly beyond first/last mark)
       var lineX1 = xOf(1) - spacing * 0.45;
@@ -202,15 +210,16 @@
       p.push(mkLine(lineX1, UPPER_Y, lineX2, UPPER_Y, '#94a3b8', 2.5));
       p.push(mkLine(lineX1, LOWER_Y, lineX2, LOWER_Y, '#94a3b8', 2.5));
 
-      // Axis labels (left of each line)
-      var labelX = LM * 0.42;
-      p.push(mkText(labelX, UPPER_Y, '積', 15, '#64748b', 'middle', '700'));
-      p.push(mkText(labelX, LOWER_Y - 11, 'かける', 12, '#64748b', 'middle', '600'));
-      p.push(mkText(labelX, LOWER_Y + 11, '数', 12, '#64748b', 'middle', '600'));
+      // Axis labels
+      var labelX = LM * 0.44;
+      var lblSz  = Math.min(14, Math.max(10, Math.round(fontSize * 0.72)));
+      p.push(mkText(labelX, UPPER_Y, '積', lblSz, '#64748b', 'middle', '700'));
+      p.push(mkText(labelX, LOWER_Y - lblSz * 0.9, 'かける', lblSz, '#64748b', 'middle', '600'));
+      p.push(mkText(labelX, LOWER_Y + lblSz * 0.9, '数',     lblSz, '#64748b', 'middle', '600'));
 
       if (state.stage !== null) {
 
-        // ── Sub-ticks on product line (between consecutive marks) ──
+        // Sub-ticks on product line
         if (state.showSubTicks && state.stage > 1) {
           for (var i = 1; i < N; i++) {
             var x0 = xOf(i), x1 = xOf(i + 1);
@@ -221,55 +230,48 @@
           }
         }
 
-        // ── Dotted connecting lines (drawn before marks so marks sit on top) ──
+        // Dotted connecting lines
         if (state.selected !== null) {
           var si = state.selected;
-          var xA = xOf(1),  yA = UPPER_Y;   // 積の1メモリ目
-          var xB = xOf(si), yB = LOWER_Y;   // タップしたかける数
-          var xC = xOf(si), yC = UPPER_Y;   // 対応する積
-
           var dash = 'stroke-dasharray="8,5"';
-          p.push(mkLine(xA, yA, xB, yB, '#f97316', 2.5, dash));
+          p.push(mkLine(xOf(1),  UPPER_Y, xOf(si), LOWER_Y, '#f97316', 2.5, dash));
           if (si !== 1) {
-            p.push(mkLine(xB, yB, xC, yC, '#f97316', 2.5, dash));
+            p.push(mkLine(xOf(si), LOWER_Y, xOf(si), UPPER_Y, '#f97316', 2.5, dash));
           }
         }
 
-        // ── Upper marks (積) ──
+        // Upper marks (積)
         for (var i = 1; i <= N; i++) {
-          var x      = xOf(i);
-          var isSel  = (state.selected === i);
-          var mColor = isSel ? '#f97316' : '#475569';
-          var tColor = isSel ? '#f97316' : '#1e293b';
-
-          p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, mColor, isSel ? 3 : 2));
-          p.push(mkText(x, UPPER_Y - TICK_H - 16, String(state.stage * i), 19, tColor));
+          var x     = xOf(i);
+          var isSel = (state.selected === i);
+          var mc    = isSel ? '#f97316' : '#475569';
+          var tc    = isSel ? '#f97316' : '#1e293b';
+          p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, mc, isSel ? 3 : 2));
+          p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, tc));
           if (isSel) p.push(mkCircle(x, UPPER_Y, 7, '#f97316'));
         }
 
-        // ── Lower marks (かける数) ──
+        // Lower marks (かける数)
         for (var i = 1; i <= N; i++) {
-          var x      = xOf(i);
-          var isSel  = (state.selected === i);
-          var mColor = isSel ? '#f97316' : '#475569';
-          var tColor = isSel ? '#f97316' : '#1e293b';
-
-          p.push(mkLine(x, LOWER_Y - TICK_H, x, LOWER_Y + TICK_H, mColor, isSel ? 3 : 2));
-          p.push(mkText(x, LOWER_Y + TICK_H + 18, String(i), 19, tColor));
+          var x     = xOf(i);
+          var isSel = (state.selected === i);
+          var mc    = isSel ? '#f97316' : '#475569';
+          var tc    = isSel ? '#f97316' : '#1e293b';
+          p.push(mkLine(x, LOWER_Y - TICK_H, x, LOWER_Y + TICK_H, mc, isSel ? 3 : 2));
+          p.push(mkText(x, LOWER_Y + TICK_H + fontSize, String(i), fontSize, tc));
           if (isSel) p.push(mkCircle(x, LOWER_Y, 7, '#f97316'));
         }
 
-        // ── Clickable areas (topmost layer) ──
+        // Clickable areas (topmost layer)
         for (var i = 1; i <= N; i++) {
           var x = xOf(i);
-          p.push(mkClickRect(x, UPPER_Y, i));
-          p.push(mkClickRect(x, LOWER_Y, i));
+          p.push(mkClickRect(x, UPPER_Y, i, clickR));
+          p.push(mkClickRect(x, LOWER_Y, i, clickR));
         }
       }
 
       svg.innerHTML = p.join('\n');
 
-      // Attach click handlers
       svg.querySelectorAll('[data-idx]').forEach(function(el) {
         el.addEventListener('click', function() {
           var idx = parseInt(this.getAttribute('data-idx'));
@@ -279,6 +281,13 @@
         });
       });
     }
+
+    // Debounced resize
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(render, 80);
+    });
 
     function updateFormula() {
       var el = document.getElementById('formula');
