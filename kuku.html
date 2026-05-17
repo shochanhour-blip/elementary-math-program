@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>九九の学習</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif;
+      background: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 16px 40px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 24px;
+      letter-spacing: 0.06em;
+    }
+
+    .stage-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 36px;
+    }
+
+    .stage-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2.5px solid #cbd5e1;
+      background: white;
+      font-size: 22px;
+      font-weight: 800;
+      color: #475569;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stage-btn:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .stage-btn.active {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+    }
+
+    #viz-container {
+      width: 100%;
+      max-width: 780px;
+    }
+
+    #viz-svg {
+      width: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .toggle-btn {
+      padding: 9px 22px;
+      border-radius: 24px;
+      border: 2px solid #cbd5e1;
+      background: white;
+      font-size: 14px;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      letter-spacing: 0.03em;
+    }
+
+    .toggle-btn:hover { border-color: #94a3b8; }
+
+    .toggle-btn.active {
+      border-color: #10b981;
+      background: #ecfdf5;
+      color: #059669;
+    }
+
+    .formula-area {
+      margin-top: 32px;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .formula-text {
+      font-size: 44px;
+      font-weight: 900;
+      color: #f97316;
+      letter-spacing: 0.06em;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>九九の学習</h1>
+
+  <div class="stage-buttons" id="stage-btns">
+    <button class="stage-btn" data-stage="1">1</button>
+    <button class="stage-btn" data-stage="2">2</button>
+    <button class="stage-btn" data-stage="3">3</button>
+    <button class="stage-btn" data-stage="4">4</button>
+    <button class="stage-btn" data-stage="5">5</button>
+    <button class="stage-btn" data-stage="6">6</button>
+    <button class="stage-btn" data-stage="7">7</button>
+    <button class="stage-btn" data-stage="8">8</button>
+    <button class="stage-btn" data-stage="9">9</button>
+  </div>
+
+  <div id="viz-container">
+    <svg id="viz-svg"></svg>
+  </div>
+
+  <div class="controls">
+    <button class="toggle-btn" id="subtick-toggle">補助目盛り：オフ</button>
+  </div>
+
+  <div class="formula-area">
+    <div class="formula-text" id="formula"></div>
+  </div>
+
+  <script>
+    var state = { stage: null, selected: null, showSubTicks: false };
+
+    // ── SVG layout (viewBox units) ──────────────────────────────────
+    var VW = 800, VH = 290;
+    var LM = 78;   // left margin (for axis labels)
+    var RM = 16;   // right margin
+    var N  = 9;    // marks per line (1〜9)
+    var UPPER_Y  = 95;
+    var LOWER_Y  = 210;
+    var TICK_H   = 14;  // main tick half-height
+    var STUB_H   = 6;   // sub-tick half-height
+
+    var spacing  = (VW - LM - RM) / N;  // distance between adjacent marks
+
+    function xOf(i) { return LM + i * spacing; }  // i: 1〜9
+
+    // ── SVG builder helpers ─────────────────────────────────────────
+    function mkLine(x1, y1, x2, y2, stroke, sw, extra) {
+      var attr = 'x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"'
+               + ' stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linecap="round"';
+      if (extra) attr += ' ' + extra;
+      return '<line ' + attr + '/>';
+    }
+
+    function mkText(x, y, content, size, fill, anchor, weight) {
+      return '<text x="' + x + '" y="' + y + '"'
+           + ' font-size="' + size + '" font-weight="' + (weight || '700') + '"'
+           + ' fill="' + fill + '" text-anchor="' + (anchor || 'middle') + '"'
+           + ' dominant-baseline="central"'
+           + ' font-family="Hiragino Sans,Meiryo,sans-serif">'
+           + content + '</text>';
+    }
+
+    function mkCircle(cx, cy, r, fill) {
+      return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + fill + '"/>';
+    }
+
+    function mkClickRect(x, cy, idx) {
+      var r = 30;
+      return '<rect x="' + (x - r) + '" y="' + (cy - r) + '"'
+           + ' width="' + (r * 2) + '" height="' + (r * 2) + '"'
+           + ' fill="transparent" style="cursor:pointer;" data-idx="' + idx + '"/>';
+    }
+
+    // ── Main render ─────────────────────────────────────────────────
+    function render() {
+      var svg = document.getElementById('viz-svg');
+      svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
+
+      var p = []; // SVG parts, in draw order
+
+      // Axis lines (extend slightly beyond first/last mark)
+      var lineX1 = xOf(1) - spacing * 0.45;
+      var lineX2 = xOf(N) + spacing * 0.30;
+      p.push(mkLine(lineX1, UPPER_Y, lineX2, UPPER_Y, '#94a3b8', 2.5));
+      p.push(mkLine(lineX1, LOWER_Y, lineX2, LOWER_Y, '#94a3b8', 2.5));
+
+      // Axis labels (left of each line)
+      var labelX = LM * 0.42;
+      p.push(mkText(labelX, UPPER_Y, '積', 15, '#64748b', 'middle', '700'));
+      p.push(mkText(labelX, LOWER_Y - 11, 'かける', 12, '#64748b', 'middle', '600'));
+      p.push(mkText(labelX, LOWER_Y + 11, '数', 12, '#64748b', 'middle', '600'));
+
+      if (state.stage !== null) {
+
+        // ── Sub-ticks on product line (between consecutive marks) ──
+        if (state.showSubTicks && state.stage > 1) {
+          for (var i = 1; i < N; i++) {
+            var x0 = xOf(i), x1 = xOf(i + 1);
+            for (var k = 1; k < state.stage; k++) {
+              var stX = x0 + (x1 - x0) * k / state.stage;
+              p.push(mkLine(stX, UPPER_Y - STUB_H, stX, UPPER_Y + STUB_H, '#c7d2da', 1.2));
+            }
+          }
+        }
+
+        // ── Dotted connecting lines (drawn before marks so marks sit on top) ──
+        if (state.selected !== null) {
+          var si = state.selected;
+          var xA = xOf(1),  yA = UPPER_Y;   // 積の1メモリ目
+          var xB = xOf(si), yB = LOWER_Y;   // タップしたかける数
+          var xC = xOf(si), yC = UPPER_Y;   // 対応する積
+
+          var dash = 'stroke-dasharray="8,5"';
+          p.push(mkLine(xA, yA, xB, yB, '#f97316', 2.5, dash));
+          if (si !== 1) {
+            p.push(mkLine(xB, yB, xC, yC, '#f97316', 2.5, dash));
+          }
+        }
+
+        // ── Upper marks (積) ──
+        for (var i = 1; i <= N; i++) {
+          var x      = xOf(i);
+          var isSel  = (state.selected === i);
+          var mColor = isSel ? '#f97316' : '#475569';
+          var tColor = isSel ? '#f97316' : '#1e293b';
+
+          p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, mColor, isSel ? 3 : 2));
+          p.push(mkText(x, UPPER_Y - TICK_H - 16, String(state.stage * i), 19, tColor));
+          if (isSel) p.push(mkCircle(x, UPPER_Y, 7, '#f97316'));
+        }
+
+        // ── Lower marks (かける数) ──
+        for (var i = 1; i <= N; i++) {
+          var x      = xOf(i);
+          var isSel  = (state.selected === i);
+          var mColor = isSel ? '#f97316' : '#475569';
+          var tColor = isSel ? '#f97316' : '#1e293b';
+
+          p.push(mkLine(x, LOWER_Y - TICK_H, x, LOWER_Y + TICK_H, mColor, isSel ? 3 : 2));
+          p.push(mkText(x, LOWER_Y + TICK_H + 18, String(i), 19, tColor));
+          if (isSel) p.push(mkCircle(x, LOWER_Y, 7, '#f97316'));
+        }
+
+        // ── Clickable areas (topmost layer) ──
+        for (var i = 1; i <= N; i++) {
+          var x = xOf(i);
+          p.push(mkClickRect(x, UPPER_Y, i));
+          p.push(mkClickRect(x, LOWER_Y, i));
+        }
+      }
+
+      svg.innerHTML = p.join('\n');
+
+      // Attach click handlers
+      svg.querySelectorAll('[data-idx]').forEach(function(el) {
+        el.addEventListener('click', function() {
+          var idx = parseInt(this.getAttribute('data-idx'));
+          state.selected = (state.selected === idx) ? null : idx;
+          updateFormula();
+          render();
+        });
+      });
+    }
+
+    function updateFormula() {
+      var el = document.getElementById('formula');
+      if (state.stage === null || state.selected === null) {
+        el.textContent = '';
+      } else {
+        el.textContent = state.stage + ' × ' + state.selected + ' =';
+      }
+    }
+
+    // ── Stage buttons ───────────────────────────────────────────────
+    document.querySelectorAll('.stage-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var stage = parseInt(this.getAttribute('data-stage'));
+        document.querySelectorAll('.stage-btn').forEach(function(b) { b.classList.remove('active'); });
+        if (state.stage === stage) {
+          state.stage = null;
+          state.selected = null;
+        } else {
+          state.stage = stage;
+          state.selected = null;
+          this.classList.add('active');
+        }
+        updateFormula();
+        render();
+      });
+    });
+
+    // ── Sub-tick toggle ─────────────────────────────────────────────
+    document.getElementById('subtick-toggle').addEventListener('click', function() {
+      state.showSubTicks = !state.showSubTicks;
+      this.classList.toggle('active');
+      this.textContent = '補助目盛り：' + (state.showSubTicks ? 'オン' : 'オフ');
+      render();
+    });
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
