@@ -290,7 +290,7 @@
     };
 
     // ── Layout constants（高さは render() 内で動的計算） ────────────
-    var LM = 52, RM = 12, N = 9;
+    var LM = 24, RM = 24, N = 9;   // 左右マージン縮小でラインを広く
     var TICK_H = 14, STUB_H = 6;
 
     // ── SVG helpers ─────────────────────────────────────────────────
@@ -320,9 +320,10 @@
       var W = container.clientWidth  || 760;
       var H = container.clientHeight || 290;
       var spacing = (W - LM - RM) / N;
-      // UPPER_Y / LOWER_Y をコンテナ高さから比例計算
-      var UPPER_Y = Math.round(H * 0.33);
-      var LOWER_Y = Math.round(H * 0.73);
+      // 2本の数直線の間隔を固定(70〜100px)にして、コンテナ高さによらず一定に見せる
+      var lineGap = Math.max(70, Math.min(100, H * 0.4));
+      var UPPER_Y = Math.round(H * 0.5 - lineGap * 0.5);
+      var LOWER_Y = Math.round(H * 0.5 + lineGap * 0.5);
       var VH = H;
       var fontSize = Math.min(20, Math.max(10, Math.min(
         Math.round(spacing * 0.28),
@@ -347,8 +348,8 @@
       p.push(mkLine(lineX1, UPPER_Y, lineX2, UPPER_Y, state.stage ? accentColor + '55' : '#e2e8f0', 3));
       p.push(mkLine(lineX1, LOWER_Y, lineX2, LOWER_Y, '#cbd5e1', 3));
 
-      // Axis labels
-      var labelX = LM * 0.44;
+      // Axis labels — centered in the space before the first tick
+      var labelX = LM + spacing * 0.25;
       var lblSz  = Math.min(13, Math.max(10, Math.round(fontSize * 0.7)));
       p.push(mkText(labelX, UPPER_Y, '積', lblSz, '#a78bfa', 'middle', '800'));
       p.push(mkText(labelX, LOWER_Y - lblSz, 'かける', lblSz, '#94a3b8', 'middle', '700'));
@@ -386,9 +387,11 @@
             var tickC    = res === 'correct' ? '#22c55e' : isActive ? accentColor : '#94a3b8';
             p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, tickC, isActive ? 3 : 2));
 
+            var emojiSz = Math.min(18, Math.max(13, fontSize + 2));
             if (res === 'correct') {
               p.push(mkCircle(x, UPPER_Y, 5, accentColor + '22', accentColor, 1.5));
               p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, '#22c55e'));
+              p.push(mkText(x, UPPER_Y - TICK_H - fontSize - emojiSz - 2, '⭕', emojiSz, 'inherit'));
             } else {
               var bW = Math.max(32, fontSize * 2.1);
               var bH = Math.max(24, fontSize * 1.45);
@@ -400,6 +403,9 @@
                    + ' style="cursor:pointer;" data-quiz-idx="' + i + '"/>');
               var dispVal = (isActive && state.inputValue) ? state.inputValue : '';
               p.push(mkText(x, bY + bH / 2, dispVal, fontSize, isActive ? accentColor : '#cbd5e1'));
+              if (res === 'wrong') {
+                p.push(mkText(x, bY - emojiSz * 0.4, '❌', emojiSz, 'inherit'));
+              }
             }
           } else {
             var isSel = (state.selected === i);
@@ -447,7 +453,12 @@
         el.addEventListener('click', function() {
           var idx = parseInt(this.getAttribute('data-idx'));
           if (state.quizMode) {
-            if (state.results[idx] !== 'correct') setActiveIdx(idx);
+            if (state.results[idx] === 'correct') return;
+            if (state.activeIdx !== null && state.activeIdx !== idx && state.inputValue !== '') {
+              submitAndMoveTo(idx);
+            } else {
+              setActiveIdx(idx);
+            }
             return;
           }
           state.selected = (state.selected === idx) ? null : idx;
@@ -458,7 +469,11 @@
         el.addEventListener('click', function() {
           var idx = parseInt(this.getAttribute('data-quiz-idx'));
           if (state.results[idx] === 'correct') return;
-          setActiveIdx(idx);
+          if (state.activeIdx !== null && state.activeIdx !== idx && state.inputValue !== '') {
+            submitAndMoveTo(idx);
+          } else {
+            setActiveIdx(idx);
+          }
         });
       });
     }
@@ -495,6 +510,24 @@
     function setActiveIdx(idx) {
       state.activeIdx = idx; state.inputValue = '';
       clearFeedback(); updateNumpad(); updateFormula(); render();
+    }
+
+    // 別の□をタップしたとき：入力があれば即サブミットしてから移動
+    function submitAndMoveTo(nextIdx) {
+      var correct = parseInt(state.inputValue, 10) === state.stage * state.activeIdx;
+      var answeredIdx = state.activeIdx;
+      if (correct) {
+        state.results[answeredIdx] = 'correct';
+      } else {
+        state.results[answeredIdx] = 'wrong';
+        setTimeout(function() {
+          if (state.results[answeredIdx] === 'wrong') {
+            state.results[answeredIdx] = null;
+            render();
+          }
+        }, 700);
+      }
+      setActiveIdx(nextIdx);
     }
 
     function updateNumpad() {
