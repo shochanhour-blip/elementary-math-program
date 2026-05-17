@@ -30,10 +30,10 @@
 
     .stage-label {
       text-align: center;
-      font-size: 11px;
+      font-size: 16px;
       font-weight: 800;
       color: #a78bfa;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.12em;
       margin-bottom: 12px;
     }
 
@@ -336,12 +336,13 @@
           }
         }
 
-        // Dotted lines (こたえを見るモード)
-        if (!state.quizMode && state.selected !== null) {
-          var si   = state.selected;
+        // 点線（両モードで描画）
+        var dotIdx  = state.quizMode ? state.activeIdx : state.selected;
+        var dotColor = state.quizMode ? accentColor : '#f97316';
+        if (dotIdx !== null) {
           var dash = 'stroke-dasharray="8,5"';
-          p.push(mkLine(xOf(1), UPPER_Y, xOf(si), LOWER_Y, '#f97316', 2.5, dash));
-          if (si !== 1) p.push(mkLine(xOf(si), LOWER_Y, xOf(si), UPPER_Y, '#f97316', 2.5, dash));
+          p.push(mkLine(xOf(1), UPPER_Y, xOf(dotIdx), LOWER_Y, dotColor, 2.5, dash));
+          if (dotIdx !== 1) p.push(mkLine(xOf(dotIdx), LOWER_Y, xOf(dotIdx), UPPER_Y, dotColor, 2.5, dash));
         }
 
         // ── Upper marks (積) ──
@@ -413,8 +414,11 @@
 
       svg.querySelectorAll('[data-idx]').forEach(function(el) {
         el.addEventListener('click', function() {
-          if (state.quizMode) return;
           var idx = parseInt(this.getAttribute('data-idx'));
+          if (state.quizMode) {
+            if (state.results[idx] !== 'correct') setActiveIdx(idx);
+            return;
+          }
           state.selected = (state.selected === idx) ? null : idx;
           updateFormula(); render();
         });
