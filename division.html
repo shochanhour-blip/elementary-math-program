@@ -16,6 +16,10 @@
       --c-rem:    #f97316;   /* 橙 — あまり */
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
     body {
       font-family: "Noto Sans JP","Helvetica Neue",Arial,sans-serif;
       background: #f3f4f6;
@@ -23,13 +27,15 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
-      padding: 20px 12px 56px;
+      padding: 0;
+      min-width: 0;
+      height: 100vh;
+      overflow: hidden;
     }
 
     /* ── コントロールパネル ── */
     .controls {
-      width: min(920px,100%);
+      width: 100%;
       padding: 16px 20px;
       border-radius: 20px;
       background: var(--panel);
@@ -106,7 +112,7 @@
       flex-wrap: wrap;
       align-items: center;
     }
-    .kurai-btn {
+    .mode-btn {
       padding: 9px 16px;
       font-size: 14px;
       font-weight: 700;
@@ -115,14 +121,12 @@
       background: #fff;
       color: #555;
       cursor: pointer;
-      transition: transform .05s;
+      transition: transform .05s, background .15s, color .15s, border-color .15s;
     }
-    .kurai-btn.on {
-      background: #7c3aed;
-      color: #fff;
-      border-color: #7c3aed;
-    }
-    .kurai-btn:active { transform: translateY(1px); }
+    .mode-btn:active { transform: translateY(1px); }
+    #maruBtn.on  { background: #16a34a; color: #fff; border-color: #16a34a; }
+    #kuraiBtn.on { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+    #hissanBtn.on { background: #0ea5e9; color: #fff; border-color: #0ea5e9; }
     .reset-btn {
       padding: 9px 18px;
       font-size: 14px;
@@ -153,7 +157,7 @@
 
     /* ── フィードバック ── */
     .feedback {
-      width: min(920px,100%);
+      width: 100%;
       padding: 16px 24px;
       border-radius: 14px;
       font-size: 36px;
@@ -165,7 +169,7 @@
 
     /* ── ゾーン共通 ── */
     .zone {
-      width: min(920px,100%);
+      width: 100%;
       border-radius: 20px;
       box-shadow: var(--shadow);
       padding: 16px 18px;
@@ -182,10 +186,14 @@
     .zone-objects {
       background: #fff1f1;
       border: 3px solid #fca5a5;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
     .zone-objects .zone-title { color: var(--c-total); }
     .objects-area {
-      min-height: 70px;
+      min-height: 40px;
+      flex: 1 1 0;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
@@ -193,6 +201,7 @@
       border-radius: 12px;
       padding: 6px;
       transition: background .15s;
+      overflow: hidden;
     }
     .objects-area.drag-over { background: #fecaca; }
 
@@ -242,6 +251,21 @@
     .person-tray .dot.one.kurai { box-shadow: 0 2px 0 #5b21b6; font-size: 16px; }
     .person-tray .dot.ten     { width: 48px; height: 48px; font-size: 24px; box-shadow: 0 3px 0 #b45309; }
     .person-tray .dot.hundred { width: 60px; height: 60px; font-size: 22px; box-shadow: 0 3px 0 #4c1d95; }
+    /* タイル数が多いときは縮小（5枚〜） */
+    .tray-sm .dot.one     { width: 28px; height: 28px; font-size: 15px; box-shadow: 0 2px 0 #b91c1c; }
+    .tray-sm .dot.one.kurai { font-size: 12px; }
+    .tray-sm .dot.ten     { width: 36px; height: 36px; font-size: 17px; box-shadow: 0 2px 0 #b45309; }
+    .tray-sm .dot.hundred { width: 46px; height: 46px; font-size: 15px; box-shadow: 0 2px 0 #4c1d95; }
+    /* タイル数が多いときは縮小（9枚〜） */
+    .tray-xs .dot.one     { width: 22px; height: 22px; font-size: 11px; box-shadow: 0 1px 0 #b91c1c; }
+    .tray-xs .dot.one.kurai { font-size: 9px; }
+    .tray-xs .dot.ten     { width: 28px; height: 28px; font-size: 13px; box-shadow: 0 1px 0 #b45309; }
+    .tray-xs .dot.hundred { width: 36px; height: 36px; font-size: 12px; box-shadow: 0 2px 0 #4c1d95; }
+    /* タイル数が多いときは縮小（14枚〜） */
+    .tray-xxs .dot.one     { width: 16px; height: 16px; font-size: 8px; box-shadow: none; }
+    .tray-xxs .dot.one.kurai { font-size: 7px; }
+    .tray-xxs .dot.ten     { width: 22px; height: 22px; font-size: 10px; box-shadow: 0 1px 0 #b45309; }
+    .tray-xxs .dot.hundred { width: 28px; height: 28px; font-size: 9px;  box-shadow: 0 1px 0 #4c1d95; }
     .dot.dragging  { opacity: .2; }
     .dot.dot-empty {
       background:  transparent !important;
@@ -254,13 +278,22 @@
     .zone-people {
       background: #eff6ff;
       border: 3px solid #93c5fd;
+      flex: 1 1 50%;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     .zone-people .zone-title { color: var(--c-people); }
     .people-zone {
+      flex: 1 1 0;
+      min-height: 0;
       display: flex;
       gap: 16px;
       flex-wrap: wrap;
       align-items: flex-start;
+      align-content: flex-start;
+      overflow: hidden;
     }
     .people-adjuster {
       display: flex;
@@ -333,15 +366,21 @@
 
     /* ── ぜんぶの数 + りょうがえ の横並び行 ── */
     .zone-row {
-      width: min(920px, 100%);
+      width: 100%;
       display: flex;
       gap: 0;
       align-items: stretch;
+      flex: 1 1 50%;
+      min-height: 0;
+      overflow: hidden;
     }
     .zone-row > .zone-objects {
       flex: 1 1 auto;
       min-width: 0;
-      width: auto;           /* .zone の width: min(...) を上書き */
+      min-height: 0;
+      width: auto;
+      display: flex;
+      flex-direction: column;
     }
     /* りょうがえスライダー（幅アニメーション用ラッパー） */
     .exchange-slider {
@@ -392,6 +431,104 @@
       border: 3px solid;
     }
 
+    /* ── 両替アニメーション ── */
+    @keyframes tile-await-pulse {
+      0%   { transform: scale(1);    box-shadow: 0 0 0 0    rgba(245,158,11,0); }
+      45%  { transform: scale(1.22); box-shadow: 0 0 0 10px rgba(245,158,11,0.6); }
+      100% { transform: scale(1);    box-shadow: 0 0 0 0    rgba(245,158,11,0); }
+    }
+    .tile-await-exchange {
+      animation: tile-await-pulse 0.65s ease-in-out 2;
+      position: relative; z-index: 1;
+    }
+    .tile-hl-partial {
+      outline: 3px solid #fbbf24;
+      outline-offset: 2px;
+      filter: drop-shadow(0 0 5px rgba(251,191,36,0.7));
+    }
+    .pool-hl-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 8px;
+      border: 3px solid #fbbf24;
+      border-radius: 14px;
+      background: rgba(251,191,36,0.08);
+    }
+    @keyframes rem-pulse {
+      0%,100% { border-color: #fbbf24; box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+      50%     { border-color: #fff;    box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+    }
+    .pool-hl-remainder {
+      animation: rem-pulse 1.1s ease-in-out infinite;
+    }
+    @keyframes cell-rem-pulse {
+      0%,100% { outline: 3px solid #fbbf24; outline-offset: 2px; }
+      50%     { outline: 3px solid #fff;    outline-offset: 2px; }
+    }
+    .hissan-rem-hl {
+      animation: cell-rem-pulse 1.1s ease-in-out infinite;
+      border-radius: 6px;
+    }
+    .tile-hl-remainder {
+      animation: cell-rem-pulse 1.1s ease-in-out infinite;
+      border-radius: 6px;
+    }
+    @keyframes drop-hl-pulse {
+      0%,100% { outline: 3px solid #f97316; outline-offset: 2px; }
+      50%     { outline: 3px solid #fff;    outline-offset: 2px; }
+    }
+    .hissan-drop-hl, .tile-hl-drop {
+      animation: drop-hl-pulse 1.1s ease-in-out infinite;
+      border-radius: 6px;
+    }
+    @keyframes exch-hl-pulse {
+      0%,100% { outline: 3px solid #0ea5e9; outline-offset: 2px; }
+      50%     { outline: 3px solid #fff;    outline-offset: 2px; }
+    }
+    .hissan-exch-hl, .tile-hl-exch, .group-hl-exch {
+      animation: exch-hl-pulse 1.1s ease-in-out infinite;
+      border-radius: 14px;
+    }
+    .hissan-drop-hl, .tile-hl-drop { border-radius: 6px; }
+    .hissan-exch-hl                { border-radius: 6px; }
+    .hl-mul  { background: rgba(124,58,237,0.22) !important; border-radius: 6px; }
+    .hl-prod { background: rgba(234,88,12,0.22)  !important; border-radius: 6px; }
+    @keyframes drop-digit-pulse {
+      0%,100% { outline: 3px solid #fbbf24; outline-offset: 2px; }
+      50%     { outline: 3px solid #fff;    outline-offset: 2px; }
+    }
+    .hissan-drop-digit {
+      animation: drop-digit-pulse 1.1s ease-in-out infinite;
+      border-radius: 6px;
+    }
+    @keyframes drop-arrow-anim {
+      0%,100% { opacity: 1; }
+      50%     { opacity: 0.1; }
+    }
+    .drop-arrow-overlay {
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+      overflow: visible;
+      animation: drop-arrow-anim 1.1s ease-in-out infinite;
+      margin-top: 3px;
+    }
+    @keyframes exchange-group-pop {
+      0%   { transform: scale(0.55); opacity: 0; }
+      65%  { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+    .exchange-group-new {
+      animation: exchange-group-pop 0.45s cubic-bezier(.17,.67,.46,1.2);
+    }
+
     /* ── ゴースト ── */
     .ghost {
       position: fixed;
@@ -402,62 +539,132 @@
       transition: none;
     }
 
+    /* ── ページ幅ラッパー ── */
+    #pageWrap {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding: 14px 12px;
+      overflow: hidden;
+    }
+
     /* ── 筆算モード レイアウト ── */
     .app-layout {
-      width: min(920px, 100%);
+      width: 100%;
+      flex: 1 1 0;
+      min-height: 0;
+      min-width: 0;
       display: flex;
       gap: 16px;
-      align-items: flex-start;
+      align-items: stretch;
+      overflow: hidden;
     }
     .left-pane {
       flex: 1 1 100%;
       display: flex;
       flex-direction: column;
-      gap: 14px;
       transition: flex-basis .35s ease;
       min-width: 0;
+      overflow: hidden;
+      min-height: 0;
+    }
+    #leftPaneContent {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1 1 0;
+      min-height: 0;
     }
     .app-layout.hissan-active .left-pane {
-      flex: 0 0 320px;
+      flex: 1 1 58%;
+      overflow: hidden;
     }
     .right-pane {
       flex: 0 0 0px;
       overflow: hidden;
       opacity: 0;
       transition: flex-basis .35s ease, opacity .3s ease;
+      min-width: 0;
+      min-height: 0;
     }
     .app-layout.hissan-active .right-pane {
-      flex: 1 1 auto;
-      overflow: visible;
+      flex: 1 1 34%;
+      overflow: hidden;
       opacity: 1;
       min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     /* 筆算ボタン */
-    .hissan-btn {
-      padding: 9px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      border: 2px solid #d1d5db;
-      border-radius: 50px;
-      background: #fff;
-      color: #555;
-      cursor: pointer;
-      transition: transform .05s;
+    /* 左ペイン非表示状態 */
+    .app-layout.left-pane-off .left-pane {
+      flex: 0 0 0 !important;
+      overflow: hidden;
+      opacity: 0;
+      min-width: 0;
     }
-    .hissan-btn.on {
-      background: #0ea5e9;
-      color: #fff;
-      border-color: #0ea5e9;
+    .app-layout.left-pane-off.hissan-active .right-pane {
+      flex: 1 1 auto;
+      max-width: none;
     }
-    .hissan-btn:active { transform: translateY(1px); }
+
+    /* ── ステップインジケーター ── */
+    .step-indicator {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      flex: 0 0 130px;
+      padding: 16px 0 0;
+      align-self: stretch;
+    }
+    .app-layout.hissan-active .step-indicator { display: flex; }
+    .step-item {
+      flex: 1 1 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      border-radius: 14px;
+      font-size: 26px;
+      font-weight: 900;
+      color: #cbd5e1;
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      text-align: center;
+      transition: color .2s, background .2s, border-color .2s;
+      letter-spacing: .05em;
+    }
+    .step-item.active { background:#ffe4e6; border-color:#fca5a5; color:#991b1b; }
 
     /* ── 筆算ゾーン ── */
     .zone-hissan {
       background: #f0f9ff;
       border: 3px solid #7dd3fc;
       width: 100%;
-      min-width: 260px;
+      min-width: 0;
+      overflow: hidden;
+      flex: 1 1 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    #hissanDisplay {
+      flex: 1 1 0;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 8px 12px;
+    }
+    #hissanBracketDisplay {
+      display: inline-block;
+      transform-origin: top left;
     }
     .zone-hissan .zone-title { color: #0284c7; }
 
@@ -500,6 +707,7 @@
 </head>
 <body>
 
+<div id="pageWrap">
 <header class="controls">
   <div class="inputs-row">
     <div class="input-chip chip-total">
@@ -519,8 +727,9 @@
     </div>
   </div>
   <div class="controls-actions">
-    <button id="kuriBtn" class="kurai-btn">位の見方</button>
-    <button id="hissanBtn" class="hissan-btn">筆算</button>
+    <button id="maruBtn"  class="mode-btn on">まる</button>
+    <button id="kuraiBtn" class="mode-btn">くらい</button>
+    <button id="hissanBtn" class="mode-btn">ひっさん</button>
     <button id="resetBtn" class="reset-btn">リセット</button>
     <button id="checkBtn" class="check-btn" disabled>式を確認</button>
   </div>
@@ -530,40 +739,48 @@
 
 <div class="app-layout" id="appLayout">
   <div class="left-pane">
-    <div class="zone-row">
-      <section class="zone zone-objects">
-        <div class="zone-title">ぜんぶの数</div>
-        <div id="objectsArea" class="objects-area">
-          <span class="placeholder">「ぜんぶの数」を入力すると●があらわれます</span>
-        </div>
-      </section>
-
-      <div class="exchange-slider" id="exchangeZone">
-        <section class="zone zone-exchange">
-          <div class="zone-title">🔄 りょうがえ</div>
-          <div id="exchangeArea" class="exchange-area">
-            <span class="exchange-hint">10 や 100 をここにドロップ</span>
+    <div id="leftPaneContent">
+      <div class="zone-row">
+        <section class="zone zone-objects">
+          <div class="zone-title">ぜんぶの数</div>
+          <div id="objectsArea" class="objects-area">
+            <span class="placeholder">「ぜんぶの数」を入力すると●があらわれます</span>
           </div>
         </section>
-      </div>
-    </div>
 
-    <section class="zone zone-people">
-      <div class="zone-title">わける</div>
-      <div id="peopleZone" class="people-zone">
-        <span class="placeholder">「人数」または「１人分の数」を入力すると人があらわれます</span>
+        <div class="exchange-slider" id="exchangeZone">
+          <section class="zone zone-exchange">
+            <div class="zone-title">🔄 りょうがえ</div>
+            <div id="exchangeArea" class="exchange-area">
+              <span class="exchange-hint">10 や 100 をここにドロップ</span>
+            </div>
+          </section>
+        </div>
       </div>
-    </section>
+
+      <section class="zone zone-people">
+        <div class="zone-title">わける</div>
+        <div id="peopleZone" class="people-zone">
+          <span class="placeholder">「人数」または「１人分の数」を入力すると人があらわれます</span>
+        </div>
+      </section>
+    </div>
   </div>
 
   <div class="right-pane" id="rightPane">
     <section class="zone zone-hissan">
       <div class="zone-title">筆算</div>
       <div id="hissanDisplay">
-        <div id="hissanInputsBar"></div>
         <div id="hissanBracketDisplay"></div>
       </div>
     </section>
+  </div>
+
+  <div class="step-indicator" id="stepIndicator">
+    <div class="step-item" data-step="tateru">たてる</div>
+    <div class="step-item" data-step="kakeru">かける</div>
+    <div class="step-item" data-step="hiku">ひく</div>
+    <div class="step-item" data-step="orosu">おろす</div>
   </div>
 </div>
 
@@ -576,14 +793,17 @@
     people:       null,
     perPerson:    null,
     extraPeople:  1,
-    kuriMode:     false,
-    hissanMode:    false,
-    hissanStepIdx: -1,
-    hissanFrames:  [],
+    leftMode:     'maru',   // 'maru' | 'kurai' | 'none'
+    kuriMode:     false,    // derived: leftMode === 'kurai'
+    hissanMode:   false,
+    hissanStepIdx:      -1,
+    hissanFrames:       [],
+    hissanDistributed:  new Set(),
     items:        [],
     nextId:       0,
     nextGroupId:  0,
     groups:       new Map(),  // groupId → { color, capacity, itemValue }
+    hissanPostHL: null,
     personIcons:  [],
   };
 
@@ -603,14 +823,22 @@
   const remainderValue   = document.getElementById('remainderValue');
   const checkBtn         = document.getElementById('checkBtn');
   const resetBtn         = document.getElementById('resetBtn');
-  const kuriBtn          = document.getElementById('kuriBtn');
+  const maruBtn          = document.getElementById('maruBtn');
+  const kuraiBtn         = document.getElementById('kuraiBtn');
   const hissanBtn        = document.getElementById('hissanBtn');
   const appLayout        = document.getElementById('appLayout');
+  const leftPaneEl       = appLayout.querySelector('.left-pane');
   const feedbackEl       = document.getElementById('feedback');
   const objectsArea      = document.getElementById('objectsArea');
   const exchangeZone     = document.getElementById('exchangeZone');
   const exchangeArea     = document.getElementById('exchangeArea');
   const peopleZone       = document.getElementById('peopleZone');
+  var pendingExchangeTimer = null;
+  var pendingDistribTimers = [];
+  var pendingPostHLTimer   = null;
+  var isDistributing       = false; // 配布アニメーション中は people zone の zoom 再計算を抑制
+  var autoPlayTimer        = null;
+  var AUTO_PLAY_INTERVAL   = 3000; // ms per step
 
   function getInt(el) {
     const v = parseInt(el.value, 10);
@@ -664,7 +892,13 @@
     const cls = item.value === 100 ? 'hundred'
               : item.value === 10  ? 'ten'
               : ('one' + (state.kuriMode ? ' kurai' : ''));
-    el.className  = 'dot ' + cls;
+    var dropHL = (state.hissanPostHL && state.hissanPostHL.phase === 'drop'
+                  && item.groupId === undefined && item.value === state.hissanPostHL.lowerDenom) ? ' tile-hl-drop' : '';
+    el.className  = 'dot ' + cls
+      + (item.awaitingExchange ? ' tile-await-exchange' : '')
+      + (item.hlRemainder      ? ' tile-hl-remainder'   : '')
+      + (item.hlPartial        ? ' tile-hl-partial'     : '')
+      + dropHL;
     el.dataset.id = item.id;
     el.textContent = item.value === 100 ? '100'
                    : item.value === 10  ? '10'
@@ -688,40 +922,52 @@
       return;
     }
 
-    // グループなしのアイテムをそのまま描画
-    pool.filter(i => i.groupId === undefined).forEach(item => objectsArea.appendChild(makeDotEl(item)));
+    // hlPartial タイルだけ wrapper で囲む（hlRemainder はタイル単位で CSS クラスを付ける）
+    const hasHl  = pool.some(i => i.hlPartial);
+    const hlWrap = hasHl ? document.createElement('div') : null;
+    if (hlWrap) hlWrap.className = 'pool-hl-wrapper';
 
-    // グループ化されたアイテムを色枠で囲んで描画（空白スロット付き）
-    const poolGroups = new Map();
-    pool.filter(i => i.groupId !== undefined).forEach(item => {
-      if (!poolGroups.has(item.groupId)) poolGroups.set(item.groupId, []);
-      poolGroups.get(item.groupId).push(item);
-    });
+    // state.items の順序通りにインターリーブして描画（グループは最初のメンバーの位置に出現）
+    const renderedGroups = new Set();
+    pool.forEach(item => {
+      if (item.groupId !== undefined) {
+        if (renderedGroups.has(item.groupId)) return;
+        renderedGroups.add(item.groupId);
 
-    state.groups.forEach((meta, groupId) => {
-      // プールにいなくなったグループ（全員トレイへ）は非表示
-      if (!poolGroups.has(groupId)) return;
+        const meta      = state.groups.get(item.groupId);
+        if (!meta) return;
+        const poolItems = pool.filter(i => i.groupId === item.groupId);
+        const wrapper   = document.createElement('div');
+        var groupExchHL = (state.hissanPostHL && state.hissanPostHL.phase === 'exch'
+                           && meta.itemValue === state.hissanPostHL.lowerDenom) ? ' group-hl-exch' : '';
+        wrapper.className = 'exchange-group'
+          + (state.animateNewGroups ? ' exchange-group-new' : '')
+          + groupExchHL;
+        wrapper.style.borderColor = meta.color;
+        wrapper.style.background  = meta.color + '18';
+        wrapper.style.display = 'grid';
+        wrapper.style.gridTemplateColumns = 'repeat(5, auto)';
 
-      const poolItems = poolGroups.get(groupId);
-      const wrapper   = document.createElement('div');
-      wrapper.className = 'exchange-group';
-      wrapper.style.borderColor = meta.color;
-      wrapper.style.background  = meta.color + '18';
+        poolItems.forEach(pi => wrapper.appendChild(makeDotEl(pi)));
 
-      // 実アイテム
-      poolItems.forEach(item => wrapper.appendChild(makeDotEl(item)));
+        const emptyCls  = meta.itemValue === 10 ? 'ten' : meta.itemValue === 100 ? 'hundred' : 'one kurai';
+        const emptyCount = meta.capacity - poolItems.length;
+        for (let k = 0; k < emptyCount; k++) {
+          const empty = document.createElement('div');
+          empty.className = `dot dot-empty ${emptyCls}`;
+          wrapper.appendChild(empty);
+        }
 
-      // 空白スロット（プールから出たぶん）
-      const emptyCls = meta.itemValue === 10 ? 'ten' : meta.itemValue === 100 ? 'hundred' : 'one kurai';
-      const emptyCount = meta.capacity - poolItems.length;
-      for (let k = 0; k < emptyCount; k++) {
-        const empty = document.createElement('div');
-        empty.className = `dot dot-empty ${emptyCls}`;
-        wrapper.appendChild(empty);
+        const dest = (hasHl && poolItems.some(i => i.hlPartial)) ? hlWrap : objectsArea;
+        dest.appendChild(wrapper);
+      } else {
+        const dest = (hasHl && item.hlPartial) ? hlWrap : objectsArea;
+        dest.appendChild(makeDotEl(item));
       }
-
-      objectsArea.appendChild(wrapper);
     });
+
+    if (hlWrap) objectsArea.appendChild(hlWrap);
+    scaleObjectsToFit();
   }
 
   function renderPeople() {
@@ -770,9 +1016,12 @@
       name.textContent = `${i + 1}人め`;
 
       const tray = document.createElement('div');
-      tray.className = 'person-tray ' + TRAY_COLORS[i % TRAY_COLORS.length];
+      const trayItems = state.items.filter(it => it.location === i);
+      const tileCount = trayItems.length;
+      const sizeClass = tileCount >= 14 ? ' tray-xxs' : tileCount >= 9 ? ' tray-xs' : tileCount >= 5 ? ' tray-sm' : '';
+      tray.className = 'person-tray ' + TRAY_COLORS[i % TRAY_COLORS.length] + sizeClass;
       tray.dataset.tray = i;
-      state.items.filter(it => it.location === i).forEach(it => tray.appendChild(makeDotEl(it)));
+      trayItems.forEach(it => tray.appendChild(makeDotEl(it)));
 
       const sum = traySum(i);
       const countLbl = document.createElement('div');
@@ -782,6 +1031,8 @@
       slot.append(icon, name, tray, countLbl);
       peopleZone.appendChild(slot);
     }
+    // アニメーション中以外は毎回 zoom を再計算（tightenZoom で縮小されたままになるのを防ぐ）
+    if (!isDistributing) scalePeopleToFit();
   }
 
   /* ── ドラッグ & ドロップ ── */
@@ -844,6 +1095,7 @@
       el.addEventListener('pointerup',    onEnd);
       el.addEventListener('pointercancel', onEnd);
     });
+    scalePeopleToFit();
   }
 
   /* ── 入力イベント ── */
@@ -851,7 +1103,7 @@
     state.total     = getInt(totalInput);
     state.people    = getInt(peopleInput);
     state.perPerson = getInt(perInput);
-    state.hissanStepIdx = -1; state.hissanFrames = [];
+    state.hissanStepIdx = -1; state.hissanFrames = []; state.hissanDistributed.clear();
     buildItems();
     checkBtn.disabled = !deriveMode();
     hideFeedback();
@@ -866,29 +1118,108 @@
     const src = state.items.find(i => i.id === item.id);
     if (!src || src.value <= 1) return;
 
+    const idx        = state.items.indexOf(src);
     const newValue   = src.value / 10;
     const groupColor = src.value === 100 ? '#7c3aed' : '#f59e0b';
     const groupId    = state.nextGroupId++;
 
     state.groups.set(groupId, { color: groupColor, capacity: 10, itemValue: newValue });
-    state.items = state.items.filter(i => i.id !== src.id);
+    const newTiles = [];
     for (let j = 0; j < 10; j++) {
-      state.items.push({ id: state.nextId++, value: newValue, location: 'pool', groupId, groupColor });
+      newTiles.push({ id: state.nextId++, value: newValue, location: 'pool', groupId, groupColor });
+    }
+    // 元のタイルの位置に差し込む（並び順を維持）
+    state.items.splice(idx, 1, ...newTiles);
+  }
+
+  /* ── モード制御 ── */
+  var _leftPaneTransEndHandler = null;
+  function applyModeState() {
+    var leftVisible = state.leftMode !== 'none';
+    var wasOff = appLayout.classList.contains('left-pane-off');
+    state.kuriMode  = (state.leftMode === 'kurai');
+
+    appLayout.classList.toggle('hissan-active',  state.hissanMode);
+    appLayout.classList.toggle('left-pane-off',  !leftVisible);
+    document.getElementById('pageWrap').classList.toggle('hissan-active', state.hissanMode);
+    exchangeZone.classList.toggle('visible', state.kuriMode || state.hissanMode);
+
+    maruBtn.classList.toggle('on',   state.leftMode === 'maru');
+    kuraiBtn.classList.toggle('on',  state.leftMode === 'kurai');
+    hissanBtn.classList.toggle('on', state.hissanMode);
+
+    // 左ペイン非表示→表示の遷移後に zoom を再計算（transition 中に測定すると小さくなる）
+    if (_leftPaneTransEndHandler) {
+      leftPaneEl.removeEventListener('transitionend', _leftPaneTransEndHandler);
+      _leftPaneTransEndHandler = null;
+    }
+    if (wasOff && leftVisible) {
+      _leftPaneTransEndHandler = function(e) {
+        if (e.propertyName !== 'flex-basis') return;
+        leftPaneEl.removeEventListener('transitionend', _leftPaneTransEndHandler);
+        _leftPaneTransEndHandler = null;
+        scaleObjectsToFit();
+        scalePeopleToFit();
+      };
+      leftPaneEl.addEventListener('transitionend', _leftPaneTransEndHandler);
     }
   }
 
-  /* ── 筆算モード ── */
-  hissanBtn.addEventListener('click', () => {
-    state.hissanMode = !state.hissanMode;
-    hissanBtn.classList.toggle('on', state.hissanMode);
-    appLayout.classList.toggle('hissan-active', state.hissanMode);
-    if (state.hissanMode && !state.kuriMode) {
-      state.kuriMode = true;
-      kuriBtn.classList.add('on');
-      exchangeZone.classList.add('visible');
-      buildItems();
+  maruBtn.addEventListener('click', () => {
+    if (state.leftMode === 'maru') {
+      if (state.hissanMode) state.leftMode = 'none';
+    } else {
+      var prevMode = state.leftMode;
+      state.leftMode  = 'maru';
+      state.kuriMode  = false; // buildItems() の前に同期
+      if (prevMode === 'kurai') buildItems();
     }
     hideFeedback();
+    applyModeState();
+    renderAll();
+  });
+
+  kuraiBtn.addEventListener('click', () => {
+    if (state.leftMode === 'kurai') {
+      if (state.hissanMode) state.leftMode = 'none';
+    } else {
+      state.leftMode = 'kurai';
+      state.kuriMode = true; // buildItems() の前に同期
+      // hissan 進行中はフレーム状態を復元（全タイルを pool に戻さない）
+      if (state.hissanMode && state.hissanStepIdx >= 0
+          && state.hissanFrames && state.hissanFrames.length > 0) {
+        var _div = state.total, _dvs = hissanDivisorFromState();
+        if (_div && _dvs) {
+          var _ds    = computeDivisionSteps(_div, _dvs);
+          var _frame = state.hissanFrames[state.hissanStepIdx];
+          syncLeftPaneToFrame(_frame, _ds, _dvs);
+          applyHlRemainder(_frame, _ds);
+          applyHlPartial(_frame, _ds);
+        } else {
+          buildItems();
+        }
+      } else {
+        buildItems();
+      }
+    }
+    hideFeedback();
+    applyModeState();
+    renderAll();
+  });
+
+  hissanBtn.addEventListener('click', () => {
+    if (state.hissanMode) {
+      if (state.leftMode !== 'none') { stopAutoPlay(); state.hissanMode = false; }
+    } else {
+      state.hissanMode = true;
+      if (state.leftMode === 'maru') {
+        state.leftMode = 'kurai';
+        state.kuriMode = true; // buildItems() の前に同期
+        buildItems();
+      }
+    }
+    hideFeedback();
+    applyModeState();
     renderAll();
   });
 
@@ -908,14 +1239,156 @@
 
   function renderHissan() {
     if (!state.hissanMode) return;
-    var ib = document.getElementById('hissanInputsBar');
-    if (!ib) return;
-    ib.innerHTML = buildHissanInputsBarHTML(state.total, hissanDivisorFromState(), hissanDivisorLabel());
-    var divIn    = ib.querySelector('#hissanDividendInput');
-    var divsrIn  = ib.querySelector('#hissanDivisorInput');
-    if (divIn)   divIn.addEventListener('input',   onHissanDividendInput);
-    if (divsrIn) divsrIn.addEventListener('input', onHissanDivisorInput);
     renderHissanBracket();
+  }
+
+  function updateStepIndicator(stepType) {
+    document.querySelectorAll('.step-item').forEach(function(el) {
+      el.classList.toggle('active', el.dataset.step === stepType);
+    });
+  }
+
+  function scaleHissanToFit() {
+    var hissanDisplay = document.getElementById('hissanDisplay');
+    var bd = document.getElementById('hissanBracketDisplay');
+    if (!hissanDisplay || !bd) return;
+    bd.style.zoom = '1';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        var availW = hissanDisplay.clientWidth - 24;
+        var availH = hissanDisplay.clientHeight - 24;
+        var natW   = bd.offsetWidth;
+        var natH   = bd.offsetHeight;
+        if (availW > 0 && availH > 0 && natW > 0 && natH > 0) {
+          var sW = natW > availW ? availW / natW : 1;
+          var sH = natH > availH ? availH / natH : 1;
+          var s  = Math.min(sW, sH);
+          bd.style.zoom = s < 1 ? String(Math.max(0.3, s)) : '';
+        } else {
+          bd.style.zoom = '';
+        }
+      });
+    });
+  }
+
+  function scaleLeftPaneToFit() {
+    scaleObjectsToFit();
+    scalePeopleToFit();
+  }
+
+  function scaleZoneContent(el) {
+    if (!el) return;
+    el.style.zoom = '1';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        var availW = el.clientWidth;
+        var availH = el.clientHeight;
+        if (availW <= 0 || availH <= 0) { el.style.zoom = ''; return; }
+        var natW = el.scrollWidth;
+        var natH = el.scrollHeight;
+        if (natW <= availW && natH <= availH) { el.style.zoom = ''; return; }
+
+        // パス1: 線形式（保守的・オーバーフロー回避保証）— 96% マージンでクロップ防止
+        var sLo = Math.max(0.25, Math.min(
+          natW > availW ? (availW * 0.96) / natW : 1,
+          natH > availH ? (availH * 0.96) / natH : 1
+        ));
+
+        // 面積比の sqrt 式（多数の小要素で flex-wrap が詰まる場合により最適）— 92% マージン
+        var sSqrt = Math.min(1, Math.sqrt((availW * availH * 0.92) / (natW * natH)));
+        sSqrt = Math.max(0.25, sSqrt);
+
+        if (sSqrt <= sLo * 1.05) {
+          el.style.zoom = String(sLo);
+        } else {
+          el.style.zoom = String(sSqrt);
+        }
+
+        // パス3以降: 縦余白を使って段階的に拡大（最大 2 ラウンド）
+        // flex-wrap コンテナは拡大しても横方向へ折り返しで吸収できるため、
+        // 縦余白だけを基準に試算し、オーバーフロー検証で安全性を担保する。
+        function upscaleRound(fallbackZoom, round) {
+          requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+              var cur = parseFloat(el.style.zoom) || 1;
+              var h   = el.scrollHeight, w = el.scrollWidth;
+
+              // 直前パスがオーバーフロー（97% 超で判定） → fallback に戻して終了
+              if (h > availH * 0.97 || w > availW * 0.97) {
+                el.style.zoom = String(fallbackZoom);
+                return;
+              }
+
+              // 縦余白 < 15% ならこのラウンドは不要
+              if (h >= availH * 0.85 || h <= 0) return;
+
+              // 目標を 95% に抑えてクロップ防止マージンを確保
+              var ratio     = (availH * 0.95) / h;
+              // 積極的な推定: sqrt(ratio) — flex-wrap 折り返しでの行数増加を想定
+              var tryZoom   = Math.min(1, cur * Math.sqrt(ratio));
+              // 保守的な推定: 4乗根 — tryZoom がオーバーフローしたときの fallback
+              var safeZoom  = Math.min(1, cur * Math.pow(ratio, 0.25));
+
+              if (tryZoom <= cur * 1.02) return; // 改善量が 2% 未満なら打ち切り
+
+              el.style.zoom = String(tryZoom);
+
+              // 検証: tryZoom がオーバーフローなら safeZoom を試す（97% で判定してマージン確保）
+              requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                  if (el.scrollHeight > availH * 0.97 || el.scrollWidth > availW * 0.97) {
+                    // tryZoom はオーバーフロー
+                    if (safeZoom > cur * 1.02) {
+                      el.style.zoom = String(safeZoom);
+                      // safeZoom の検証（97% 超過なら cur に戻す）
+                      requestAnimationFrame(function() {
+                        requestAnimationFrame(function() {
+                          if (el.scrollHeight > availH * 0.97 || el.scrollWidth > availW * 0.97) {
+                            el.style.zoom = String(cur);
+                          }
+                          // safeZoom で収まった場合は次ラウンドへ進まない（保守的に止める）
+                        });
+                      });
+                    } else {
+                      el.style.zoom = String(cur);
+                    }
+                  } else if (round < 2) {
+                    // tryZoom が収まった → 次ラウンドでさらに余白を詰める
+                    upscaleRound(cur, round + 1);
+                  }
+                });
+              });
+            });
+          });
+        }
+        upscaleRound(sLo, 1);
+      });
+    });
+  }
+
+  // アニメーション中に要素が追加されたとき用：縮小のみ行う軽量版
+  function tightenZoom(el) {
+    if (!el) return;
+    requestAnimationFrame(function() {
+      var h = el.scrollHeight, w = el.scrollWidth;
+      var aH = el.clientHeight, aW = el.clientWidth;
+      if (h > aH || w > aW) {
+        var cur = parseFloat(el.style.zoom) || 1;
+        var s = Math.max(0.25, Math.min(
+          w > aW ? aW / w * cur : cur,
+          h > aH ? aH / h * cur : cur
+        ));
+        if (s < cur) el.style.zoom = String(s);
+      }
+    });
+  }
+
+  function scaleObjectsToFit() {
+    scaleZoneContent(document.getElementById('objectsArea'));
+  }
+
+  function scalePeopleToFit() {
+    scaleZoneContent(document.getElementById('peopleZone'));
   }
 
   function renderHissanBracket() {
@@ -923,12 +1396,13 @@
     if (!bd) return;
     var dividend = state.total;
     var divisor  = hissanDivisorFromState();
-    var nd = dividend ? String(dividend).length : 2;
-    if (!dividend || !divisor) { bd.innerHTML = buildHissanShell(divisor, nd); return; }
     if (state.hissanStepIdx < 0) {
-      var q = Math.floor(dividend / divisor);
-      var r = dividend % divisor;
-      bd.innerHTML = buildHissanFull(dividend, divisor, q, r) + buildStepCtrl(true, -1, 0);
+      bd.innerHTML = buildHissanEditable(dividend, divisor) + buildStepCtrl(true, -1, 0);
+      var divIn   = bd.querySelector('#hissanDividendInput');
+      var divsrIn = bd.querySelector('#hissanDivisorInput');
+      if (divIn)   divIn.addEventListener('input', onHissanDividendInput);
+      if (divsrIn) divsrIn.addEventListener('input', onHissanDivisorInput);
+      updateStepIndicator('');
     } else {
       if (!state.hissanFrames.length)
         state.hissanFrames = computeHissanFrames(dividend, divisor);
@@ -936,24 +1410,57 @@
       bd.innerHTML = buildMsgBubble(frame)
         + buildHissanStepped(frame, dividend, divisor)
         + buildStepCtrl(true, state.hissanStepIdx, state.hissanFrames.length);
+      updateStepIndicator(frame.stepType || '');
     }
-    var nb = bd.querySelector('#hissanNextBtn');
-    var bb = bd.querySelector('#hissanStepResetBtn');
-    var sb = bd.querySelector('#hissanStartBtn');
-    if (nb) nb.addEventListener('click', onHissanNext);
-    if (bb) bb.addEventListener('click', onHissanBack);
-    if (sb) sb.addEventListener('click', onHissanStart);
+    var nb  = bd.querySelector('#hissanNextBtn');
+    var pb  = bd.querySelector('#hissanPrevBtn');
+    var rb  = bd.querySelector('#hissanStepResetBtn');
+    var sb  = bd.querySelector('#hissanStartBtn');
+    var ab  = bd.querySelector('#hissanAutoBtn');
+    var spd = bd.querySelector('#speedSlider');
+    if (nb)  nb.addEventListener('click', onHissanNext);
+    if (pb)  pb.addEventListener('click', onHissanPrev);
+    if (rb)  rb.addEventListener('click', function() { stopAutoPlay(); onHissanReset(); });
+    if (sb)  sb.addEventListener('click', onHissanStart);
+    if (ab)  ab.addEventListener('click', toggleAutoPlay);
+    if (spd) spd.addEventListener('input', function() {
+      AUTO_PLAY_INTERVAL = (6 - parseFloat(this.value)) * 1000;
+    });
+    scaleHissanToFit();
   }
 
   function onHissanNext() {
     if (state.hissanStepIdx < state.hissanFrames.length - 1) {
+      if (!autoPlayTimer) stopAutoPlay(); // 手動操作で自動再生停止
       state.hissanStepIdx++;
       renderHissanBracket();
       syncLeftPane();
     }
   }
-  function onHissanBack() {
-    state.hissanStepIdx = -1; state.hissanFrames = [];
+  function onHissanPrev() {
+    if (state.hissanStepIdx > 0) {
+      stopAutoPlay();
+      state.hissanStepIdx--;
+      var dividend = state.total, divisor = hissanDivisorFromState();
+      if (!dividend || !divisor) { renderHissanBracket(); return; }
+      var ds    = computeDivisionSteps(dividend, divisor);
+      var frame = state.hissanFrames[state.hissanStepIdx];
+      // hissanDistributed をこのフレームの lShow に合わせて再構築
+      state.hissanDistributed.clear();
+      ds.steps.forEach(function(step, i) {
+        if (frame.lShow[i]) state.hissanDistributed.add(i);
+      });
+      renderHissanBracket();
+      syncLeftPaneToFrame(frame, ds, divisor);
+      applyHlRemainder(frame, ds);
+      applyHlPartial(frame, ds);
+      renderObjects();
+      renderPeople();
+    }
+  }
+  function onHissanReset() {
+    stopAutoPlay();
+    state.hissanStepIdx = -1; state.hissanFrames = []; state.hissanDistributed.clear();
     renderHissanBracket();
     buildItems(); renderObjects(); renderPeople();
   }
@@ -962,9 +1469,54 @@
     if (!dividend || !divisor) return;
     state.hissanFrames  = computeHissanFrames(dividend, divisor);
     state.hissanStepIdx = 0;
-    buildItems(); // 手順開始時にリセット
+    buildItems();
     renderHissanBracket();
     syncLeftPane();
+  }
+
+  function stopAutoPlay() {
+    if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
+    var btn = document.getElementById('hissanAutoBtn');
+    if (btn) { btn.textContent = '▶'; btn.title = '自動再生'; }
+  }
+
+  function scheduleAutoStep() {
+    autoPlayTimer = setTimeout(doAutoStep, AUTO_PLAY_INTERVAL);
+  }
+
+  function doAutoStep() {
+    autoPlayTimer = null;
+    if (!state.hissanMode) { stopAutoPlay(); return; }
+    if (!state.hissanFrames.length) {
+      // まだ開始していない → 開始
+      onHissanStart();
+    } else if (state.hissanStepIdx >= state.hissanFrames.length - 1) {
+      // 最後 → 先頭に戻ってループ
+      state.hissanStepIdx = 0;
+      state.hissanDistributed.clear();
+      var _div = state.total, _dvs = hissanDivisorFromState();
+      var _ds  = computeDivisionSteps(_div, _dvs);
+      var _f   = state.hissanFrames[0];
+      renderHissanBracket();
+      syncLeftPaneToFrame(_f, _ds, _dvs);
+      renderObjects();
+      renderPeople();
+    } else {
+      onHissanNext();
+    }
+    var btn = document.getElementById('hissanAutoBtn');
+    if (btn) { btn.textContent = '⏸'; btn.title = '停止'; }
+    scheduleAutoStep();
+  }
+
+  function toggleAutoPlay() {
+    if (autoPlayTimer) {
+      stopAutoPlay();
+    } else {
+      var btn = document.getElementById('hissanAutoBtn');
+      if (btn) { btn.textContent = '⏸'; btn.title = '停止'; }
+      doAutoStep();
+    }
   }
 
   function computeHissanFrames(dividend, divisor) {
@@ -972,13 +1524,13 @@
     var digits = ds.digits, n = ds.n, steps = ds.steps, ns = steps.length;
 
     function empty() {
-      return { msg:'', msgType:'normal', bdStep:-1,
+      return { msg:'', msgType:'normal', stepType:'', bdStep:-1, preExch:0, hlRem:-1, hlQ:-1, hlMulStep:-1, dropArrow:-1, dropArrowStep:-1, hlPartialStep:-1,
         qShow: new Array(n).fill(false), hlDiv: [],
         pShow: new Array(ns).fill(false), lShow: new Array(ns).fill(false),
         rShow: new Array(ns).fill(false), ptShow: new Array(ns).fill(false) };
     }
     function clone(f) {
-      return { msg:f.msg, msgType:f.msgType, bdStep:f.bdStep,
+      return { msg:f.msg, msgType:f.msgType, stepType:f.stepType, bdStep:f.bdStep, preExch:f.preExch, hlRem:-1, hlQ:-1, hlMulStep:-1, dropArrow:-1, dropArrowStep:-1, hlPartialStep:-1,
         qShow:f.qShow.slice(), hlDiv:f.hlDiv.slice(),
         pShow:f.pShow.slice(), lShow:f.lShow.slice(),
         rShow:f.rShow.slice(), ptShow:f.ptShow.slice() };
@@ -993,48 +1545,55 @@
       if (i === 0) {
         if (step.col > 0) {
           for (var dc = 0; dc < step.col; dc++) {
-            var fa = clone(cur); fa.hlDiv = [dc];
+            var fa = clone(cur); fa.hlDiv = [dc]; fa.preExch = dc; fa.stepType = 'tateru';
             fa.msg = digits[dc] + ' は ' + divisor + ' よりちいさいね。つぎの位もいっしょに見よう。';
             fa.msgType = 'question'; frames.push(fa); cur = clone(fa);
           }
           var hlR = []; for (var c = 0; c <= step.col; c++) hlR.push(c);
-          var fb = clone(cur); fb.hlDiv = hlR;
-          fb.msg = String(step.partial) + ' は ' + divisor + ' でわれるかな？';
+          var fb = clone(cur); fb.hlDiv = hlR; fb.preExch = step.col; fb.stepType = 'tateru';
+          fb.msg = String(step.partial) + ' ÷ ' + divisor + '　われるかな？';
           fb.msgType = 'question'; frames.push(fb); cur = clone(fb);
         } else {
-          var fc = clone(cur); fc.hlDiv = [0];
-          fc.msg = digits[0] + ' は ' + divisor + ' でわれるかな？';
+          var fc = clone(cur); fc.hlDiv = [0]; fc.stepType = 'tateru';
+          fc.msg = digits[0] + ' ÷ ' + divisor + '　われるかな？';
           fc.msgType = 'question'; frames.push(fc); cur = clone(fc);
         }
       } else {
-        var fd = clone(cur); fd.ptShow[i] = true; fd.bdStep = i - 1;
-        fd.msg = '「' + digits[step.col] + '」をおろそう。'; fd.msgType = 'normal';
+        var fd = clone(cur); fd.ptShow[i] = true; fd.bdStep = i - 1; fd.hlPartialStep = i; fd.stepType = 'tateru';
+        fd.msg = String(step.partial) + ' ÷ ' + divisor + ' をしよう！'; fd.msgType = 'question';
         frames.push(fd); cur = clone(fd);
-        var fe = clone(cur);
-        fe.msg = String(step.partial) + ' は ' + divisor + ' でわれるかな？';
-        fe.msgType = 'question'; frames.push(fe); cur = clone(fe);
       }
 
-      var fq = clone(cur); fq.qShow[step.col] = true; fq.hlDiv = [];
-      fq.msg = String(step.partial) + ' ÷ ' + divisor + ' = ' + step.q + '　→　「' + step.q + '」を上に書こう！';
+      var fq = clone(cur); fq.qShow[step.col] = true; fq.hlDiv = []; fq.hlQ = step.col; fq.stepType = 'tateru'; fq.bdStep = -1;
+      var qHL = '<span style="color:#16a34a;background:rgba(22,163,74,0.18);padding:1px 5px;border-radius:5px;font-size:1.05em;">' + step.q + '</span>';
+      fq.msg = String(step.partial) + ' ÷ ' + divisor + ' = ' + qHL
+        + (step.remainder > 0 ? ' あまり ' + step.remainder : '')
+        + '　→　「' + qHL + '」を上に書こう！';
       fq.msgType = 'correct'; frames.push(fq); cur = clone(fq);
 
-      var fp = clone(cur); fp.pShow[i] = true;
-      fp.msg = step.q + ' × ' + divisor + ' = ' + step.product + '　→　下に書こう。';
+      var fp = clone(cur); fp.pShow[i] = true; fp.hlMulStep = i; fp.stepType = 'kakeru';
+      var mS = function(t) { return '<span style="color:#1f2933;background:rgba(124,58,237,0.18);padding:1px 5px;border-radius:5px;">' + t + '</span>'; };
+      var pS = function(t) { return '<span style="color:#1f2933;background:rgba(234,88,12,0.18);padding:1px 5px;border-radius:5px;">' + t + '</span>'; };
+      fp.msg = mS(step.q + ' × ' + divisor) + ' = ' + pS(step.product) + '　→　下に書こう。';
       fp.msgType = 'normal'; frames.push(fp); cur = clone(fp);
 
-      var fl = clone(cur); fl.lShow[i] = true;
       var isLast = (i === steps.length - 1);
       if (isLast) {
-        fl.rShow[i] = true;
+        var fl = clone(cur); fl.lShow[i] = true; fl.rShow[i] = true; fl.stepType = 'hiku';
         fl.msg = step.partial + ' − ' + step.product + ' = ' + step.remainder
           + (step.remainder > 0 ? '　あまり ' + step.remainder + '！' : '　ぴったり！');
         fl.msgType = 'correct';
+        frames.push(fl); cur = clone(fl);
       } else {
-        fl.msg = step.partial + ' − ' + step.product + ' = ' + step.remainder + '。つぎの位をおろそう。';
-        fl.msgType = 'normal';
+        var fl1 = clone(cur); fl1.lShow[i] = true; fl1.rShow[i] = true; fl1.hlRem = i; fl1.stepType = 'hiku';
+        fl1.msg = step.partial + ' − ' + step.product + ' = ' + step.remainder;
+        fl1.msgType = 'correct';
+        frames.push(fl1); cur = clone(fl1);
+        var fl2 = clone(cur); fl2.dropArrow = steps[i + 1].col; fl2.dropArrowStep = i;
+        fl2.ptShow[i + 1] = true; fl2.stepType = 'orosu';
+        fl2.msg = 'つぎの位をおろそう。'; fl2.msgType = 'normal';
+        frames.push(fl2); cur = clone(fl2);
       }
-      frames.push(fl); cur = clone(fl);
     });
 
     var qq = Math.floor(dividend / divisor), rr = dividend % divisor;
@@ -1047,22 +1606,35 @@
   function buildHissanStepped(frame, dividend, divisor) {
     var ds = computeDivisionSteps(dividend, divisor);
     var digits = ds.digits, n = ds.n, steps = ds.steps;
-    var C = 36, BL = 10, LEAD = C + BL;
+    var C = 68, BL = 28, LEAD = C + BL;
+    var divisorFontSize = String(divisor).length >= 3 ? 28 : String(divisor).length >= 2 ? 34 : 44;
     var hlSet = {}; frame.hlDiv.forEach(function(c) { hlSet[c] = true; });
 
-    function cell(ch, color, size, hl, vis) {
-      size = size || 22;
-      var bg = hl ? 'rgba(251,191,36,0.55)' : 'transparent';
-      var v  = vis === false ? 'hidden' : 'visible';
-      return '<div style="width:' + C + 'px;text-align:center;font-size:' + size + 'px;'
-        + 'font-weight:800;color:' + color + ';visibility:' + v + ';background:' + bg + ';border-radius:6px;transition:background .2s;">'
+    var PLACE_NAMES = ['一', '十', '百', '千', '万'];
+    function colBorder(col) {
+      return col < n - 1 ? 'border-right:1px dashed rgba(148,163,184,0.4);' : '';
+    }
+    function cell(ch, color, size, hl, vis, pulse, extraClass, col) {
+      size = size || 40;
+      var bg  = hl ? 'rgba(251,191,36,0.55)' : 'transparent';
+      var v   = vis === false ? 'hidden' : 'visible';
+      var clsArr = [];
+      if (pulse)      clsArr.push('hissan-rem-hl');
+      if (extraClass) clsArr.push(extraClass);
+      var cls = clsArr.length ? ' class="' + clsArr.join(' ') + '"' : '';
+      return '<div' + cls + ' style="width:' + C + 'px;text-align:center;font-size:' + size + 'px;'
+        + 'font-weight:800;color:' + color + ';visibility:' + v + ';background:' + bg + ';border-radius:6px;transition:background .2s;' + colBorder(col !== undefined ? col : n) + '">'
         + (ch !== null ? ch : '0') + '</div>';
     }
-    function placeRow(num, rightCol, color, vis) {
+    function placeRow(num, rightCol, color, vis, hlRow, extraCellClass) {
       var s = String(num), lc = Math.max(0, rightCol - s.length + 1);
       var cells = new Array(n).fill(null);
       s.split('').forEach(function(ch, i) { if (lc + i < n) cells[lc + i] = ch; });
-      return cells.map(function(ch) { return cell(ch, color, 22, false, vis && ch !== null); }).join('');
+      return cells.map(function(ch, col) {
+        var isHl = !!hlRow && ch !== null;
+        var ec   = (extraCellClass && ch !== null) ? extraCellClass : '';
+        return cell(ch, color, 40, isHl, vis && ch !== null, isHl, ec, col);
+      }).join('');
     }
     function hline(vis) {
       return '<div style="border-top:2.5px solid #94a3b8;width:' + (n * C) + 'px;margin:2px 0;visibility:' + (vis ? 'visible' : 'hidden') + ';"></div>';
@@ -1070,11 +1642,30 @@
 
     var qArr = new Array(n).fill(null);
     steps.forEach(function(s) { qArr[s.col] = s.q; });
+    var labelRowHTML = new Array(n).fill(null).map(function(_, col) {
+      var lbl = PLACE_NAMES[n - 1 - col] || '';
+      return '<div style="width:' + C + 'px;text-align:center;font-size:15px;font-weight:700;color:#94a3b8;' + colBorder(col) + '">' + lbl + '</div>';
+    }).join('');
+    var mulStep = frame.hlMulStep >= 0 ? steps[frame.hlMulStep] : null;
     var qRowHTML = qArr.map(function(q, col) {
-      return cell(q !== null ? String(q) : '0', '#16a34a', 22, false, q !== null && frame.qShow[col]);
+      var isHlQ   = frame.hlQ === col && q !== null && frame.qShow[col];
+      var isMulQ  = mulStep && col === mulStep.col && q !== null && frame.qShow[col];
+      var extraCls = isMulQ ? 'hl-mul' : '';
+      return cell(q !== null ? String(q) : '0', '#16a34a', 40, isHlQ, q !== null && frame.qShow[col], false, extraCls, col);
     }).join('');
     var divRowHTML = digits.map(function(d, col) {
-      return cell(String(d), '#ef4444', 24, !!hlSet[col], true);
+      var isDrop = (frame.dropArrow >= 0 && col === frame.dropArrow);
+      if (isDrop) {
+        var arrowOverlay =
+          '<div class="drop-arrow-overlay">'
+          + '<div style="width:3px;height:' + (45 + frame.dropArrowStep * 113) + 'px;background:#f97316;"></div>'
+          + '<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid #f97316;"></div>'
+          + '</div>';
+        return '<div class="hissan-drop-digit" style="position:relative;width:' + C + 'px;text-align:center;'
+          + 'font-size:44px;font-weight:800;color:#ef4444;background:rgba(251,191,36,0.45);'
+          + 'border-radius:6px;overflow:visible;' + colBorder(col) + '">' + String(d) + arrowOverlay + '</div>';
+      }
+      return cell(String(d), '#ef4444', 44, !!hlSet[col], true, false, '', col);
     }).join('');
 
     var stHTML = '';
@@ -1086,25 +1677,43 @@
         var pcells = new Array(n).fill(null);
         pStr.split('').forEach(function(ch, k) { pcells[prevCol + k] = ch; });
         var isBd = frame.bdStep === i - 1;
+        // fl2（つぎの位をおろそう）: dropArrow 列がこのステップの落とし先
+        var isDropFrame = frame.dropArrow >= 0 && frame.bdStep < 0 && frame.dropArrow === step.col;
+        // fd（XX÷divisor をしよう）: 全体を黄色ハイライト
+        var isPartialHL = frame.hlPartialStep === i;
         stHTML += '<div style="display:flex;">'
           + pcells.map(function(ch, col) {
-              var isNew = isBd && col === step.col;
-              return cell(ch, isNew ? '#f97316' : '#1f2933', 22, isNew, frame.ptShow[i] && ch !== null);
+              var isNew     = isBd && col === step.col;
+              var isDropNew = isDropFrame && col === step.col;
+              var hlBg      = (isNew || isPartialHL) && ch !== null;
+              var textColor = (isNew || isDropNew) ? '#f97316' : '#1f2933';
+              return cell(ch, textColor, 40, hlBg, frame.ptShow[i] && ch !== null, false, '', col);
             }).join('') + '</div>';
       }
-      stHTML += '<div style="display:flex;">' + placeRow(step.product, step.col, '#1f2933', frame.pShow[i]) + '</div>';
+      var prodHlCls = (frame.hlMulStep === i) ? 'hl-prod' : '';
+      stHTML += '<div style="display:flex;">' + placeRow(step.product, step.col, '#1f2933', frame.pShow[i], false, prodHlCls) + '</div>';
       stHTML += hline(frame.lShow[i]);
-      if (i === steps.length - 1) {
-        var rc = step.remainder > 0 ? '#f97316' : '#94a3b8';
-        stHTML += '<div style="display:flex;">' + placeRow(step.remainder, step.col, rc, frame.rShow[i]) + '</div>';
+      if (frame.rShow[i]) {
+        // ptShow[i+1] が true のとき、部分行が余り＋下ろし数字を一緒に表示するため余り行は非表示
+        var nextPtShow = (i + 1 < steps.length) && frame.ptShow[i + 1];
+        if (!nextPtShow) {
+          var rc      = step.remainder > 0 ? '#f97316' : '#94a3b8';
+          var hlRem   = (frame.hlRem === i);
+          var exchCls = (state.hissanPostHL && state.hissanPostHL.phase === 'exch'
+                         && state.hissanPostHL.bdIdx === i) ? 'hissan-exch-hl' : '';
+          stHTML += '<div style="display:flex;">' + placeRow(step.remainder, step.col, rc, true, hlRem, exchCls) + '</div>';
+        }
       }
     });
 
     return '<div style="padding:16px 20px;display:inline-flex;flex-direction:column;font-family:monospace;">'
+      + '<div style="display:flex;margin-left:' + LEAD + 'px;">' + labelRowHTML + '</div>'
       + '<div style="display:flex;margin-left:' + LEAD + 'px;">' + qRowHTML + '</div>'
-      + '<div style="display:flex;align-items:stretch;">'
-      + '<div style="width:' + C + 'px;font-size:24px;font-weight:800;color:#1f2933;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;">' + divisor + '</div>'
-      + '<div style="border-left:4px solid #1f2933;border-top:4px solid #1f2933;padding:4px 4px 0 6px;display:flex;">' + divRowHTML + '</div>'
+      + '<div style="display:flex;align-items:stretch;overflow:visible;">'
+      + '<div style="width:' + C + 'px;font-size:' + divisorFontSize + 'px;font-weight:800;color:#1f2933;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;' + (mulStep ? 'background:rgba(124,58,237,0.22);border-radius:6px;' : '') + '">' + divisor + '</div>'
+      + '<div style="border-top:4px solid #1f2933;padding:4px 4px 0 ' + BL + 'px;display:flex;overflow:visible;position:relative;">'
+      + '<svg style="position:absolute;left:0;top:0;width:' + BL + 'px;height:100%;" viewBox="0 0 20 100" preserveAspectRatio="none"><path d="M 0,0 C 20,0 20,100 0,100" stroke="#1f2933" stroke-width="4" fill="none" vector-effect="non-scaling-stroke"/></svg>'
+      + divRowHTML + '</div>'
       + '</div>'
       + '<div style="margin-left:' + LEAD + 'px;display:flex;flex-direction:column;">' + stHTML + '</div>'
       + '</div>';
@@ -1114,28 +1723,41 @@
     var col = { question:{bg:'#fef9c3',bd:'#fde047'}, correct:{bg:'#dcfce7',bd:'#86efac'},
                 complete:{bg:'#dbeafe',bd:'#93c5fd'}, normal:{bg:'#f1f5f9',bd:'#e2e8f0'} };
     var c = col[frame.msgType] || col.normal;
-    return '<div style="margin:0 0 10px;padding:10px 14px;background:' + c.bg + ';border:2px solid ' + c.bd
-      + ';border-radius:12px;font-size:15px;font-weight:700;color:#1f2933;line-height:1.5;">'
+    return '<div style="margin:0 0 10px;padding:12px 16px;background:' + c.bg + ';border:2px solid ' + c.bd
+      + ';border-radius:12px;font-size:clamp(15px,2.2vw,26px);font-weight:700;color:#1f2933;line-height:1.4;word-break:break-word;">'
       + frame.msg + '</div>';
   }
 
   function buildStepCtrl(canStart, stepIdx, total) {
     if (!canStart) return '';
-    var pb = 'padding:8px 18px;font-size:14px;font-weight:800;border:none;border-radius:10px;cursor:pointer;';
-    var sb = 'padding:8px 14px;font-size:13px;font-weight:700;border:2px solid #d1d5db;border-radius:10px;background:#fff;color:#555;cursor:pointer;';
+    var pb  = 'padding:8px 20px;font-size:18px;font-weight:900;border:none;border-radius:10px;cursor:pointer;line-height:1;';
+    var sb  = 'padding:8px 12px;font-size:16px;font-weight:700;border:2px solid #d1d5db;border-radius:10px;background:#fff;color:#888;cursor:pointer;line-height:1;';
+    var isPlaying  = !!autoPlayTimer;
+    var autoIcon   = isPlaying ? '⏸' : '▶';
+    var autoTitle  = isPlaying ? '停止' : '自動再生';
+    var sliderVal  = 6 - AUTO_PLAY_INTERVAL / 1000; // 左=遅(1)、右=速(5)
+    var speedBar   = '<span style="font-size:11px;color:#94a3b8;">遅</span>'
+      + '<input id="speedSlider" type="range" min="1" max="5" step="0.5" value="' + sliderVal + '"'
+      + ' style="width:60px;accent-color:#0ea5e9;cursor:pointer;vertical-align:middle;">'
+      + '<span style="font-size:11px;color:#94a3b8;">速</span>';
+    var autoBtn   = '<button id="hissanAutoBtn" title="' + autoTitle + '" style="' + sb + 'font-size:18px;">' + autoIcon + '</button>';
     if (stepIdx < 0)
-      return '<div style="margin-top:12px;display:flex;gap:8px;align-items:center;">'
-        + '<button id="hissanStartBtn" style="' + pb + 'background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#fff;">手順を見る ▶</button></div>';
-    var isLast = stepIdx >= total - 1;
+      return '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+        + '<button id="hissanStartBtn" style="' + pb + 'background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#fff;">→</button>'
+        + autoBtn + speedBar + '</div>';
+    var isFirst = stepIdx <= 0;
+    var isLast  = stepIdx >= total - 1;
     return '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
-      + (isLast ? '' : '<button id="hissanNextBtn" style="' + pb + 'background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#fff;">→ 次へ</button>')
-      + '<button id="hissanStepResetBtn" style="' + sb + '">' + (isLast ? '↩ 最初から' : '↩ 筆算に戻る') + '</button>'
+      + '<button id="hissanPrevBtn" style="' + pb + 'background:' + (isFirst ? '#e5e7eb' : 'linear-gradient(135deg,#38bdf8,#0ea5e9)') + ';color:' + (isFirst ? '#aaa' : '#fff') + ';" ' + (isFirst ? 'disabled' : '') + '>←</button>'
+      + (isLast ? '' : '<button id="hissanNextBtn" style="' + pb + 'background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#fff;">→</button>')
+      + autoBtn + speedBar
+      + '<button id="hissanStepResetBtn" style="' + sb + '">↩</button>'
       + '<span style="font-size:12px;color:#94a3b8;">' + (stepIdx + 1) + ' / ' + total + '</span>'
       + '</div>';
   }
 
   function onHissanDividendInput() {
-    state.hissanStepIdx = -1; state.hissanFrames = [];
+    state.hissanStepIdx = -1; state.hissanFrames = []; state.hissanDistributed.clear();
     var v = parseInt(this.value, 10);
     state.total = (Number.isFinite(v) && v > 0) ? v : null;
     totalInput.value = state.total != null ? state.total : '';
@@ -1148,7 +1770,7 @@
   }
 
   function onHissanDivisorInput() {
-    state.hissanStepIdx = -1; state.hissanFrames = [];
+    state.hissanStepIdx = -1; state.hissanFrames = []; state.hissanDistributed.clear();
     var v = parseInt(this.value, 10);
     var val = (Number.isFinite(v) && v > 0) ? v : null;
     var mode = deriveMode();
@@ -1165,6 +1787,25 @@
     renderObjects();
     renderPeople();
     renderHissanBracket();
+  }
+
+  function buildHissanEditable(dividend, divisor) {
+    var C   = 68, BL = 28;
+    var dvd = dividend != null ? String(dividend) : '';
+    var dvs = divisor  != null ? String(divisor)  : '';
+    var base = 'border:none;background:transparent;outline:none;font-family:monospace;font-weight:800;text-align:center;';
+    return '<div style="padding:16px 20px;display:inline-flex;flex-direction:column;font-family:monospace;">'
+      + '<div style="display:flex;align-items:stretch;">'
+      + '<input id="hissanDivisorInput" type="number" min="1" max="99" value="' + dvs + '" placeholder="？" '
+      + 'style="' + base + 'width:' + C + 'px;font-size:44px;color:#1f2933;'
+      + 'padding-bottom:4px;align-self:flex-end;">'
+      + '<div style="border-top:4px solid #1f2933;padding:4px 4px 0 ' + BL + 'px;position:relative;">'
+      + '<svg style="position:absolute;left:0;top:0;width:' + BL + 'px;height:100%;" viewBox="0 0 20 100" preserveAspectRatio="none"><path d="M 0,0 C 20,0 20,100 0,100" stroke="#1f2933" stroke-width="4" fill="none" vector-effect="non-scaling-stroke"/></svg>'
+      + '<input id="hissanDividendInput" type="number" min="1" max="9999" value="' + dvd + '" placeholder="？？？" '
+      + 'style="' + base + 'width:' + (C * 3) + 'px;font-size:44px;color:#ef4444;">'
+      + '</div>'
+      + '</div>'
+      + '</div>';
   }
 
   function buildHissanInputsBarHTML(dividend, divisor, divisorLabel) {
@@ -1200,31 +1841,37 @@
   }
 
   function buildHissanShell(divisor, numDigits) {
-    var C  = 36;
+    var C  = 48;
     var nd = numDigits || 2;
     var dv = divisor != null ? divisor : '?';
     var cells = '';
     for (var i = 0; i < nd; i++)
-      cells += '<div style="width:' + C + 'px;text-align:center;font-size:22px;color:#cbd5e1;">―</div>';
+      cells += '<div style="width:' + C + 'px;text-align:center;font-size:28px;color:#cbd5e1;">―</div>';
     return '<div style="padding:16px 20px;display:inline-flex;flex-direction:column;font-family:monospace;">'
       + '<div style="display:flex;align-items:stretch;">'
-      + '<div style="width:' + C + 'px;font-size:24px;font-weight:800;color:#94a3b8;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;">' + dv + '</div>'
-      + '<div style="border-left:4px solid #94a3b8;border-top:4px solid #94a3b8;padding:4px 12px 4px 6px;display:flex;">'
+      + '<div style="width:' + C + 'px;font-size:32px;font-weight:800;color:#94a3b8;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;">' + dv + '</div>'
+      + '<div style="border-top:4px solid #94a3b8;padding:4px 12px 4px 20px;display:flex;position:relative;">'
+      + '<svg style="position:absolute;left:0;top:0;width:20px;height:100%;" viewBox="0 0 20 100" preserveAspectRatio="none"><path d="M 0,0 C 20,0 20,100 0,100" stroke="#94a3b8" stroke-width="4" fill="none" vector-effect="non-scaling-stroke"/></svg>'
       + cells
       + '</div></div></div>';
   }
 
   function buildHissanFull(dividend, divisor, quotient, remainder) {
     const { digits, n, steps } = computeDivisionSteps(dividend, divisor);
-    const C = 36, BL = 10, LEAD = C + BL;
+    const C = 68, BL = 28, LEAD = C + BL;
+    const divisorFontSize = String(divisor).length >= 3 ? 28 : String(divisor).length >= 2 ? 34 : 44;
 
     const qArr = new Array(n).fill(null);
     steps.forEach(function(s) { qArr[s.col] = s.q; });
 
-    function cell(ch, color, size) {
-      var sz = size || 22;
+    function colBorderFull(col) {
+      return col < n - 1 ? 'border-right:1px dashed rgba(148,163,184,0.4);' : '';
+    }
+
+    function cell(ch, color, size, col) {
+      var sz = size || 40;
       var vis = ch !== null ? 'visible' : 'hidden';
-      return '<div style="width:' + C + 'px;text-align:center;font-size:' + sz + 'px;font-weight:800;color:' + color + ';visibility:' + vis + ';">' + (ch !== null ? ch : '0') + '</div>';
+      return '<div style="width:' + C + 'px;text-align:center;font-size:' + sz + 'px;font-weight:800;color:' + color + ';visibility:' + vis + ';' + colBorderFull(col !== undefined ? col : n) + '">' + (ch !== null ? ch : '0') + '</div>';
     }
 
     function placeRow(num, rightCol, color, size) {
@@ -1232,15 +1879,21 @@
       var lc = Math.max(0, rightCol - s.length + 1);
       var cells = new Array(n).fill(null);
       s.split('').forEach(function(ch, i) { if (lc + i < n) cells[lc + i] = ch; });
-      return cells.map(function(ch) { return cell(ch, color, size); }).join('');
+      return cells.map(function(ch, col) { return cell(ch, color, size, col); }).join('');
     }
 
     function hline() {
       return '<div style="border-top:2.5px solid #94a3b8;width:' + (n * C) + 'px;margin:2px 0;"></div>';
     }
 
-    var qRow   = qArr.map(function(q) { return cell(q !== null ? String(q) : null, '#16a34a'); }).join('');
-    var divRow = digits.map(function(d) { return cell(String(d), '#ef4444', 24); }).join('');
+    var PLACE_NAMES_FULL = ['一', '十', '百', '千', '万'];
+    var labelRow = new Array(n).fill(null).map(function(_, col) {
+      var lbl = PLACE_NAMES_FULL[n - 1 - col] || '';
+      return '<div style="width:' + C + 'px;text-align:center;font-size:15px;font-weight:700;color:#94a3b8;' + colBorderFull(col) + '">' + lbl + '</div>';
+    }).join('');
+
+    var qRow   = qArr.map(function(q, col) { return cell(q !== null ? String(q) : null, '#16a34a', 40, col); }).join('');
+    var divRow = digits.map(function(d, col) { return cell(String(d), '#ef4444', 44, col); }).join('');
 
     var stHTML = '';
     steps.forEach(function(step, i) {
@@ -1250,9 +1903,9 @@
         var pStr = String(step.partial).padStart(len, '0');
         var cells = new Array(n).fill(null);
         pStr.split('').forEach(function(ch, k) { cells[prevCol + k] = ch; });
-        stHTML += '<div style="display:flex;">' + cells.map(function(ch) { return cell(ch, '#1f2933'); }).join('') + '</div>';
+        stHTML += '<div style="display:flex;">' + cells.map(function(ch, col) { return cell(ch, '#1f2937', 40, col); }).join('') + '</div>';
       }
-      stHTML += '<div style="display:flex;">' + placeRow(step.product, step.col, '#1f2933') + '</div>';
+      stHTML += '<div style="display:flex;">' + placeRow(step.product, step.col, '#1f2937') + '</div>';
       stHTML += hline();
       if (i === steps.length - 1) {
         var rc = step.remainder > 0 ? '#f97316' : '#94a3b8';
@@ -1261,14 +1914,17 @@
     });
 
     var remNote = remainder > 0
-      ? '<div style="margin-top:6px;font-size:13px;font-weight:800;color:#f97316;padding-left:' + LEAD + 'px;">あまり ' + remainder + '</div>'
+      ? '<div style="margin-top:6px;font-size:18px;font-weight:800;color:#f97316;padding-left:' + LEAD + 'px;">あまり ' + remainder + '</div>'
       : '';
 
     return '<div style="padding:16px 20px;display:inline-flex;flex-direction:column;font-family:monospace;">'
+      + '<div style="display:flex;margin-left:' + LEAD + 'px;">' + labelRow + '</div>'
       + '<div style="display:flex;margin-left:' + LEAD + 'px;">' + qRow + '</div>'
       + '<div style="display:flex;align-items:stretch;">'
-      + '<div style="width:' + C + 'px;font-size:24px;font-weight:800;color:#1f2933;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;">' + divisor + '</div>'
-      + '<div style="border-left:4px solid #1f2933;border-top:4px solid #1f2933;padding:4px 4px 0 6px;display:flex;">' + divRow + '</div>'
+      + '<div style="width:' + C + 'px;font-size:' + divisorFontSize + 'px;font-weight:800;color:#1f2933;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;">' + divisor + '</div>'
+      + '<div style="border-top:4px solid #1f2933;padding:4px 4px 0 ' + BL + 'px;display:flex;position:relative;">'
+      + '<svg style="position:absolute;left:0;top:0;width:' + BL + 'px;height:100%;" viewBox="0 0 20 100" preserveAspectRatio="none"><path d="M 0,0 C 20,0 20,100 0,100" stroke="#1f2933" stroke-width="4" fill="none" vector-effect="non-scaling-stroke"/></svg>'
+      + divRow + '</div>'
       + '</div>'
       + '<div style="margin-left:' + LEAD + 'px;display:flex;flex-direction:column;">' + stHTML + '</div>'
       + remNote
@@ -1276,6 +1932,34 @@
   }
 
   /* ── 左ペイン連動 ── */
+  function applyHlPartial(frame, ds) {
+    if (frame.hlDiv.length > 1 && ds.steps.length > 0) {
+      var stepDenom = Math.pow(10, ds.n - 1 - ds.steps[0].col);
+      state.items.forEach(function(it) {
+        if (it.value === stepDenom && it.location === 'pool') it.hlPartial = true;
+      });
+    }
+    if (frame.hlPartialStep >= 0 && frame.hlPartialStep < ds.steps.length) {
+      var hlDenom = Math.pow(10, ds.n - 1 - ds.steps[frame.hlPartialStep].col);
+      state.items.forEach(function(it) {
+        if (it.value === hlDenom && it.location === 'pool') it.hlPartial = true;
+      });
+    }
+  }
+
+  function applyHlRemainder(frame, ds) {
+    if (frame.hlRem < 0) return;
+    var step = ds.steps[frame.hlRem];
+    if (!step || step.remainder <= 0) return;
+    var denom = Math.pow(10, ds.n - 1 - step.col);
+    var marked = 0;
+    state.items.forEach(function(it) {
+      if (it.value === denom && it.location === 'pool' && marked < step.remainder) {
+        it.hlRemainder = true; marked++;
+      }
+    });
+  }
+
   function syncLeftPane() {
     if (!state.hissanMode || state.hissanStepIdx < 0) return;
     if (deriveMode() !== 'equal-share') return;
@@ -1284,9 +1968,274 @@
     if (!dividend || !divisor) return;
     var frame = state.hissanFrames[state.hissanStepIdx];
     if (!frame) return;
-    syncLeftPaneToFrame(frame, computeDivisionSteps(dividend, divisor), divisor);
+    var ds = computeDivisionSteps(dividend, divisor);
+
+    // 進行中のアニメーションをキャンセル
+    if (pendingExchangeTimer) { clearTimeout(pendingExchangeTimer); pendingExchangeTimer = null; }
+    if (pendingPostHLTimer)   { clearTimeout(pendingPostHLTimer);   pendingPostHLTimer   = null; }
+    state.hissanPostHL = null;
+
+    var prevFrame = state.hissanStepIdx > 0 ? state.hissanFrames[state.hissanStepIdx - 1] : null;
+    var prevPreExch = prevFrame ? prevFrame.preExch : 0;
+
+    // 配布アニメーションが必要なステップを検出（qShow が新たに true になった）
+    var newQShowStep = -1;
+    ds.steps.forEach(function(step, i) {
+      if (frame.qShow[step.col] && !frame.lShow[i] && !state.hissanDistributed.has(i)) {
+        if (!prevFrame || !prevFrame.qShow[step.col]) newQShowStep = i;
+      }
+    });
+
+    // 進行中の配布アニメーションをキャンセル
+    pendingDistribTimers.forEach(clearTimeout);
+    pendingDistribTimers = [];
+    isDistributing = false;
+    document.querySelectorAll('.distrib-ghost, .drop-ex-ghost').forEach(function(el) { el.remove(); });
+
+    if (frame.preExch > 0 && frame.preExch > prevPreExch) {
+      // Phase 1: 元のタイルを表示 → 対象タイルがパルス点滅（0.65s × 2 = 1.3s）
+      buildItems();
+      var topDenom = Math.pow(10, ds.n - 1);
+      state.items.forEach(function(it) {
+        if (it.value === topDenom && it.location === 'pool') it.awaitingExchange = true;
+      });
+      renderObjects();
+      renderPeople();
+
+      pendingExchangeTimer = setTimeout(function() {
+        var cls = topDenom === 100 ? 'hundred' : 'ten';
+        var lbl = String(topDenom);
+
+        // ソースタイルの画面上の位置を取得
+        var srcEl   = objectsArea.querySelector('.tile-await-exchange');
+        var srcRect = srcEl ? srcEl.getBoundingClientRect() : null;
+
+        // Phase 2: 両替ゾーンを開き、ゴーストタイルをスライド
+        exchangeZone.classList.add('visible');
+
+        if (srcRect) {
+          if (srcEl) srcEl.style.opacity = '0'; // 元タイルを隠す
+
+          // ゴースト要素を body に追加（ソース位置に配置）
+          var ghost = document.createElement('div');
+          ghost.className = 'dot ' + cls;
+          ghost.textContent = lbl;
+          ghost.style.cssText =
+            'position:fixed;margin:0;pointer-events:none;z-index:9999;' +
+            'left:' + srcRect.left + 'px;top:' + srcRect.top + 'px;' +
+            'width:' + srcRect.width + 'px;height:' + srcRect.height + 'px;' +
+            'transition:left 0.75s cubic-bezier(.4,0,.2,1),top 0.75s cubic-bezier(.4,0,.2,1);';
+          document.body.appendChild(ghost);
+
+          // 2フレーム後に目的地へ移動開始（paint確定後に位置変更）
+          requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+              var dstRect = exchangeArea.getBoundingClientRect();
+              ghost.style.left = (dstRect.left + (dstRect.width  - srcRect.width)  / 2) + 'px';
+              ghost.style.top  = (dstRect.top  + (dstRect.height - srcRect.height) / 2) + 'px';
+            });
+          });
+
+          // Phase 3: ゴースト除去 → ゾーン内にタイル静止
+          pendingExchangeTimer = setTimeout(function() {
+            document.body.removeChild(ghost);
+            exchangeArea.innerHTML =
+              '<div class="dot ' + cls + '" style="pointer-events:none;">' + lbl + '</div>';
+
+            // Phase 4: ゾーンを閉じて両替実行 → グループがポップイン
+            pendingExchangeTimer = setTimeout(function() {
+              pendingExchangeTimer = null;
+              exchangeZone.classList.remove('visible');
+              exchangeArea.innerHTML = '<span class="exchange-hint">10 や 100 をここにドロップ</span>';
+              state.animateNewGroups = true;
+              syncLeftPaneToFrame(frame, ds, divisor);
+              applyHlPartial(frame, ds);
+              renderObjects();
+              state.animateNewGroups = false;
+              renderPeople();
+            }, 900);
+          }, 850);
+        } else {
+          // 位置取得失敗時のフォールバック（即座に両替）
+          exchangeArea.innerHTML =
+            '<div class="dot ' + cls + '" style="pointer-events:none;">' + lbl + '</div>';
+          pendingExchangeTimer = setTimeout(function() {
+            pendingExchangeTimer = null;
+            exchangeZone.classList.remove('visible');
+            exchangeArea.innerHTML = '<span class="exchange-hint">10 や 100 をここにドロップ</span>';
+            state.animateNewGroups = true;
+            syncLeftPaneToFrame(frame, ds, divisor);
+            applyHlPartial(frame, ds);
+            renderObjects();
+            state.animateNewGroups = false;
+            renderPeople();
+          }, 900);
+        }
+      }, 1350);
+    } else if (frame.bdStep >= 0 && frame.bdStep + 1 < ds.steps.length
+               && (!prevFrame || prevFrame.bdStep !== frame.bdStep)) {
+      playDropExchangeAnimation(frame, ds, divisor);
+    } else if (newQShowStep >= 0) {
+      playDistributeAnimation(newQShowStep, frame, ds, divisor);
+    } else {
+      syncLeftPaneToFrame(frame, ds, divisor);
+      applyHlRemainder(frame, ds);
+      applyHlPartial(frame, ds);
+      renderObjects();
+      renderPeople();
+    }
+  }
+
+  function playDistributeAnimation(stepIdx, frame, ds, divisor) {
+    // 具体物ペインが非表示のときはアニメーションをスキップして即確定
+    if (state.leftMode === 'none') {
+      state.hissanDistributed.add(stepIdx);
+      syncLeftPaneToFrame(frame, ds, divisor);
+      renderObjects();
+      renderPeople();
+      return;
+    }
+
+    var step     = ds.steps[stepIdx];
+    var denom    = Math.pow(10, ds.n - 1 - step.col);
+    var denomCls = denom === 100 ? 'hundred' : denom === 10 ? 'ten' : 'one';
+    var cls      = denomCls + (denom === 1 && state.kuriMode ? ' kurai' : '');
+    var lbl      = denom >= 10 ? String(denom) : (state.kuriMode ? '1' : '●');
+    var tileHalf = denom === 100 ? 38 : denom === 10 ? 30 : 23;
+    var STAGGER  = 160;
+    var TRAVEL   = 480;
+    var total    = step.q * divisor;
+    // 配布完了時の枚数に基づいてサイズクラスを事前決定
+    var expectedCount = step.q;
+    var previewSizeClass = expectedCount >= 14 ? 'tray-xxs' : expectedCount >= 9 ? 'tray-xs' : expectedCount >= 5 ? 'tray-sm' : '';
+
+    // 分配アニメーション中は renderPeople() 内の scalePeopleToFit() を抑制
+    // （tightenZoom で zoom が変化しても tFinal 後に再計算される）
+    isDistributing = true;
+
+    // 分配前の pool 状態を構築
+    // syncLeftPaneToFrame は前ステップの分配済み tiles のみ処理する。
+    // 前ステップの余り (例: 残った 100-tile) はまだ高額面のまま残っているので、
+    // 今回配る denomination へ cascade 両替してから描画する。
+    syncLeftPaneToFrame(frame, ds, divisor);
+    [100, 10].forEach(function(d) { if (d > denom) exchangePoolByDenom(d); });
     renderObjects();
     renderPeople();
+
+    // アニメーション中にタイルが増えても収まるよう、サイズクラスを先行適用
+    if (previewSizeClass) {
+      peopleZone.querySelectorAll('.person-tray').forEach(function(el) {
+        el.classList.add(previewSizeClass);
+      });
+    }
+
+    // 配るタイルの DOM 要素を収集（空スロット除く）
+    var poolTileEls = Array.from(
+      objectsArea.querySelectorAll('.dot.' + denomCls + ':not(.dot-empty)')
+    ).slice(0, total);
+
+    // zoom が確定してから座標を読み取り、発射する（2パス zoom = 4 rAF 待機）
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() {
+        // 全タイルと全トレイの位置をアニメーション開始前に確定
+        var srcPositions = poolTileEls.map(function(el) {
+          var r = el.getBoundingClientRect();
+          return { x: r.left, y: r.top };
+        });
+        var dstPositions = [];
+        for (var pp = 0; pp < divisor; pp++) {
+          var tEl = peopleZone.querySelector('[data-tray="' + pp + '"]');
+          if (tEl) {
+            var r = tEl.getBoundingClientRect();
+            dstPositions.push({ x: r.left + r.width / 2 - tileHalf, y: r.top + r.height / 2 - tileHalf });
+          } else {
+            dstPositions.push({ x: 0, y: 0 });
+          }
+        }
+
+        // 各トレイへの到着数カウンタ（タイル到着のたびにラベルを更新する用）
+        var arrivedCounts = new Array(divisor).fill(0);
+
+        // 1枚ずつ round-robin で発射
+        for (var t = 0; t < total; t++) {
+          (function(tileIdx) {
+            var person = tileIdx % divisor;
+            var t1 = setTimeout(function() {
+              // ① 元タイルを即座に非表示
+              var srcEl = poolTileEls[tileIdx];
+              if (srcEl) srcEl.style.visibility = 'hidden';
+
+              // 発射直前に再取得（ページスクロール等のズレを防ぐ）
+              var src = (function() {
+                if (srcEl) { var rr = srcEl.getBoundingClientRect(); return { x: rr.left, y: rr.top }; }
+                return srcPositions[tileIdx] || { x: 0, y: 0 };
+              })();
+              // 到着先は zoom 確定後の位置を再取得
+              var dst = (function() {
+                var tEl2 = peopleZone.querySelector('[data-tray="' + person + '"]');
+                if (tEl2) {
+                  var rr = tEl2.getBoundingClientRect();
+                  return { x: rr.left + rr.width / 2 - tileHalf, y: rr.top + rr.height / 2 - tileHalf };
+                }
+                return dstPositions[person] || { x: 0, y: 0 };
+              })();
+
+              var ghost = document.createElement('div');
+              ghost.className = 'dot ' + cls + ' distrib-ghost';
+              ghost.textContent = lbl;
+              ghost.style.cssText =
+                'position:fixed;margin:0;z-index:9999;pointer-events:none;' +
+                'left:' + src.x + 'px;top:' + src.y + 'px;' +
+                'transition:left ' + TRAVEL + 'ms cubic-bezier(.4,0,.2,1),' +
+                         'top '  + TRAVEL + 'ms cubic-bezier(.4,0,.2,1);';
+              document.body.appendChild(ghost);
+
+              requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                  ghost.style.left = dst.x + 'px';
+                  ghost.style.top  = dst.y + 'px';
+                });
+              });
+
+              // ② ghost 到着 → tray にタイルを追加してカウント更新
+              var t2 = setTimeout(function() {
+                if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+
+                var trayEl2 = peopleZone.querySelector('[data-tray="' + person + '"]');
+                if (trayEl2) {
+                  var animTile = document.createElement('div');
+                  animTile.className = 'dot ' + cls;
+                  animTile.textContent = lbl;
+                  animTile.style.pointerEvents = 'none';
+                  trayEl2.appendChild(animTile);
+
+                  arrivedCounts[person]++;
+                  var countEl = trayEl2.nextElementSibling; // .tray-count
+                  if (countEl) countEl.textContent = (arrivedCounts[person] * denom) + 'こ';
+                  tightenZoom(peopleZone);
+                }
+              }, TRAVEL + 60);
+              pendingDistribTimers.push(t2);
+            }, tileIdx * STAGGER);
+            pendingDistribTimers.push(t1);
+          })(t);
+        }
+
+        // 全タイル完了後に配分確定して再描画・zoom 再計算
+        var tFinal = setTimeout(function() {
+          isDistributing = false;
+          state.hissanDistributed.add(stepIdx);
+          syncLeftPaneToFrame(frame, ds, divisor);
+          renderObjects();
+          renderPeople(); // isDistributing=false → scalePeopleToFit() が走る
+        }, total * STAGGER + TRAVEL + 120);
+        pendingDistribTimers.push(tFinal);
+          });
+        });
+      });
+    });
   }
 
   function exchangePoolByDenom(d) {
@@ -1299,13 +2248,190 @@
       });
   }
 
+  function playPostDropHL(frame, ds, divisor) {
+    if (pendingPostHLTimer) { clearTimeout(pendingPostHLTimer); pendingPostHLTimer = null; }
+    var bdIdx      = frame.bdStep;
+    var lowerDenom = Math.pow(10, ds.n - 1 - ds.steps[bdIdx + 1].col);
+    var PHASE_MS   = 2200;
+
+    // Phase A: 下ろした数字（bracket の partial 行）+ 対応する pool タイルをオレンジで点滅
+    state.hissanPostHL = { phase: 'drop', bdIdx: bdIdx, lowerDenom: lowerDenom };
+    renderHissanBracket();
+    renderObjects();
+
+    pendingPostHLTimer = setTimeout(function() {
+      // Phase B: 引き算の結果（bracket の余り行）+ 両替グループをブルーで点滅
+      state.hissanPostHL = { phase: 'exch', bdIdx: bdIdx, lowerDenom: lowerDenom };
+      renderHissanBracket();
+      renderObjects();
+
+      pendingPostHLTimer = setTimeout(function() {
+        pendingPostHLTimer = null;
+        state.hissanPostHL = null;
+        renderHissanBracket();
+        renderObjects();
+      }, PHASE_MS);
+    }, PHASE_MS);
+  }
+
+  function playDropExchangeAnimation(frame, ds, divisor) {
+    // 具体物ペインが非表示のときはアニメーションをスキップして即確定
+    if (state.leftMode === 'none') {
+      syncLeftPaneToFrame(frame, ds, divisor);
+      renderObjects();
+      renderPeople();
+      return;
+    }
+
+    var n = ds.n, steps = ds.steps;
+
+    // プレ両替状態を構築（bdStep の両替は適用しない）
+    buildItems();
+    if (frame.preExch > 0) {
+      for (var ex = 0; ex < frame.preExch; ex++) exchangePoolByDenom(Math.pow(10, n - 1 - ex));
+    }
+    steps.forEach(function(step, i) {
+      if (!frame.lShow[i] && !state.hissanDistributed.has(i)) return;
+      var denom = Math.pow(10, n - 1 - step.col);
+      [100, 10].forEach(function(d) { if (d > denom) exchangePoolByDenom(d); });
+      for (var p = 0; p < divisor; p++) {
+        var given = 0;
+        for (var j = 0; j < state.items.length && given < step.q; j++) {
+          var it = state.items[j];
+          if (it.value === denom && it.location === 'pool') { it.location = p; given++; }
+        }
+      }
+    });
+
+    var bdIdx       = frame.bdStep;
+    var higherDenom = Math.pow(10, n - 1 - steps[bdIdx].col);
+    var lowerDenom  = Math.pow(10, n - 1 - steps[bdIdx + 1].col);
+    var exchangeRate = higherDenom / lowerDenom;
+    var higherCls   = higherDenom === 100 ? 'hundred' : 'ten';
+    var lowerCls    = lowerDenom  === 100 ? 'hundred' : lowerDenom === 10 ? 'ten' : 'one kurai';
+    var lowerLbl    = lowerDenom  >= 10 ? String(lowerDenom) : (state.kuriMode ? '1' : '●');
+
+    // 両替対象タイルを収集
+    var toExchange = state.items.filter(function(it) {
+      return it.value === higherDenom && it.location === 'pool';
+    });
+
+    if (toExchange.length === 0) {
+      syncLeftPaneToFrame(frame, ds, divisor);
+      renderObjects(); renderPeople(); return;
+    }
+
+    // Phase 1: 対象タイルをパルス点滅（待機アニメーション）
+    toExchange.forEach(function(it) { it.awaitingExchange = true; });
+    renderObjects(); renderPeople();
+
+    var PAUSE_MS      = 1300;  // 点滅完了まで待機（0.65s × 2）
+    var TRANSITION_MS = 320;   // exchange-slider の CSS transition（0.3s）+ 余裕
+    var TRAVEL_MS     = 800;
+    var SHOW_MS       = 900;
+    var BETWEEN_MS    = 250;
+
+    var tileQueue = toExchange.slice();
+
+    pendingExchangeTimer = setTimeout(function() {
+      // 点滅完了 → ゾーンを開いてトランジションを待つ
+      toExchange.forEach(function(it) { delete it.awaitingExchange; });
+      exchangeZone.classList.add('visible');
+
+      pendingExchangeTimer = setTimeout(function() {
+        // ゾーンが完全に開ききった（dstRect 確定）
+
+        function runNextTile() {
+          if (tileQueue.length === 0) {
+            exchangeZone.classList.remove('visible');
+            exchangeArea.innerHTML = '<span class="exchange-hint">10 や 100 をここにドロップ</span>';
+            syncLeftPaneToFrame(frame, ds, divisor);
+            applyHlPartial(frame, ds);
+            renderObjects(); renderPeople();
+            return;
+          }
+          var tile = tileQueue.shift();
+
+          var srcEl   = objectsArea.querySelector('.dot.' + higherCls);
+          var srcRect = srcEl ? srcEl.getBoundingClientRect() : null;
+          var dstRect = exchangeArea.getBoundingClientRect();
+
+          if (srcRect) {
+            // タイルを pool から除外し、除いた状態で再描画（並び順を維持）
+            tile.location = '__done__';
+            var ghost = document.createElement('div');
+            ghost.className = 'dot ' + higherCls + ' drop-ex-ghost';
+            ghost.textContent = String(higherDenom);
+            ghost.style.cssText = 'position:fixed;margin:0;pointer-events:none;z-index:9999;'
+              + 'left:' + srcRect.left + 'px;top:' + srcRect.top + 'px;'
+              + 'width:' + srcRect.width + 'px;height:' + srcRect.height + 'px;'
+              + 'transition:left 0.75s cubic-bezier(.4,0,.2,1),top 0.75s cubic-bezier(.4,0,.2,1);';
+            document.body.appendChild(ghost);
+            renderObjects(); // __done__ タイルを除いた pool を再描画
+
+            requestAnimationFrame(function() {
+              requestAnimationFrame(function() {
+                ghost.style.left = (dstRect.left + (dstRect.width  - srcRect.width)  / 2) + 'px';
+                ghost.style.top  = (dstRect.top  + (dstRect.height - srcRect.height) / 2) + 'px';
+              });
+            });
+
+            pendingExchangeTimer = setTimeout(function() {
+              if (ghost.parentNode) document.body.removeChild(ghost);
+
+              // 両替結果を表示（ゾーンは開いたまま innerHTML だけ更新）
+              var exHtml = '';
+              for (var k = 0; k < exchangeRate; k++) {
+                exHtml += '<div class="dot ' + lowerCls + '" style="pointer-events:none;">' + lowerLbl + '</div>';
+              }
+              exchangeArea.innerHTML = exHtml;
+
+              pendingExchangeTimer = setTimeout(function() {
+                exchangeArea.innerHTML = '<span class="exchange-hint">10 や 100 をここにドロップ</span>';
+                // tile の位置にグループを splice で差し込む（囲い付き・並び順維持）
+                var tileIdx  = state.items.indexOf(tile);
+                var groupId  = state.nextGroupId++;
+                var groupColor = higherDenom === 100 ? '#7c3aed' : '#f59e0b';
+                state.groups.set(groupId, { color: groupColor, capacity: exchangeRate, itemValue: lowerDenom });
+                var newGroupTiles = [];
+                for (var k = 0; k < exchangeRate; k++) {
+                  newGroupTiles.push({ id: state.nextId++, value: lowerDenom, location: 'pool',
+                                       groupId: groupId, groupColor: groupColor });
+                }
+                state.items.splice(tileIdx, 1, ...newGroupTiles);
+                state.animateNewGroups = true;
+                renderObjects();
+                state.animateNewGroups = false;
+                pendingExchangeTimer = setTimeout(runNextTile, BETWEEN_MS);
+              }, SHOW_MS);
+            }, TRAVEL_MS);
+          } else {
+            // フォールバック（位置取得失敗）
+            tile.location = '__done__';
+            renderObjects();
+            pendingExchangeTimer = setTimeout(runNextTile, BETWEEN_MS);
+          }
+        }
+
+        runNextTile();
+      }, TRANSITION_MS);
+    }, PAUSE_MS);
+  }
+
   function syncLeftPaneToFrame(frame, ds, divisor) {
     var n = ds.n, steps = ds.steps;
     buildItems();
 
+    // 予備フレーム（最上位が割れない）：上の位から順に両替して位を合わせる
+    if (frame.preExch > 0) {
+      for (var ex = 0; ex < frame.preExch; ex++) {
+        exchangePoolByDenom(Math.pow(10, n - 1 - ex));
+      }
+    }
+
     // コミット済みステップ：必要なら上位タイルを両替してから配る
     steps.forEach(function(step, i) {
-      if (!frame.lShow[i]) return;
+      if (!frame.lShow[i] && !state.hissanDistributed.has(i)) return;
       var denom = Math.pow(10, n - 1 - step.col);
       // この位より大きいタイルをすべて両替（カスケード）
       [100, 10].forEach(function(d) { if (d > denom) exchangePoolByDenom(d); });
@@ -1326,15 +2452,6 @@
     }
   }
 
-  /* ── 位の見方 ── */
-  kuriBtn.addEventListener('click', () => {
-    state.kuriMode = !state.kuriMode;
-    kuriBtn.classList.toggle('on', state.kuriMode);
-    exchangeZone.classList.toggle('visible', state.kuriMode);
-    buildItems();
-    hideFeedback();
-    renderAll();
-  });
 
   /* ── 答えを確認 ── */
   checkBtn.addEventListener('click', () => {
@@ -1390,23 +2507,52 @@
     perInput.value    = '';
     state.total = state.people = state.perPerson = null;
     state.extraPeople = 1;
-    state.kuriMode     = false;
-    state.hissanMode   = false;
+    state.leftMode      = 'maru';
+    state.kuriMode      = false;
+    state.hissanMode    = false;
     state.hissanStepIdx = -1;
     state.hissanFrames  = [];
     state.nextGroupId = 0;
     state.groups.clear();
     state.personIcons = [];
-    kuriBtn.classList.remove('on');
-    hissanBtn.classList.remove('on');
-    appLayout.classList.remove('hissan-active');
-    exchangeZone.classList.remove('visible');
+    applyModeState();
     buildItems();
     remainderDisplay.style.display = 'none';
     checkBtn.disabled = true;
     hideFeedback();
     renderAll();
   });
+  // キーボード ← → で筆算ステップを操作
+  document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT') return; // 入力欄フォーカス中は無効
+    if (!state.hissanMode) return;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      stopAutoPlay();
+      var btn = document.getElementById('hissanNextBtn') || document.getElementById('hissanStartBtn');
+      if (btn && !btn.disabled) btn.click();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      stopAutoPlay();
+      var btn = document.getElementById('hissanPrevBtn');
+      if (btn && !btn.disabled) btn.click();
+    }
+  });
+
+  // ウィンドウリサイズ時にスケールを再計算
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(function() {
+      scaleHissanToFit();
+      scaleLeftPaneToFit();
+    });
+    ro.observe(document.querySelector('.app-layout') || document.body);
+  } else {
+    window.addEventListener('resize', function() {
+      scaleHissanToFit();
+      scaleLeftPaneToFit();
+    });
+  }
 </script>
+</div><!-- #pageWrap -->
 </body>
 </html>
