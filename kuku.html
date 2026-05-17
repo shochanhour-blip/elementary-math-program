@@ -10,22 +10,35 @@
     body {
       font-family: 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif;
       background: linear-gradient(160deg, #fdf4ff 0%, #f0f9ff 55%, #fefce8 100%);
-      min-height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px 16px 52px;
+      padding: 14px 16px 0;
+      gap: 10px;
     }
 
     /* ── Top card ────────────────────────────────────── */
     .top-card {
+      flex-shrink: 0;
       width: 100%;
       max-width: 780px;
       background: white;
-      border-radius: 24px;
-      padding: 20px 20px 14px;
+      border-radius: 20px;
+      padding: 14px 18px 12px;
       box-shadow: 0 4px 28px rgba(139,92,246,0.10), 0 1px 6px rgba(0,0,0,0.04);
-      margin-bottom: 18px;
+    }
+
+    /* 数直線＋テンキーを包む伸縮コンテナ */
+    .main-area {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      max-width: 780px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     .stage-label {
@@ -101,50 +114,61 @@
       color: #ea580c;
     }
 
-    /* ── Viz area ────────────────────────────────────── */
+    /* ── 数直線エリア：余った高さをすべて使う ─────── */
     #viz-container {
+      flex: 1;
+      min-height: 0;
       width: 100%;
-      max-width: 780px;
     }
     #viz-svg { width: 100%; display: block; overflow: visible; }
 
-    /* ── Numpad panel（画面下部に固定） ─────────────── */
-    .numpad-panel {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: white;
-      border-radius: 24px 24px 0 0;
-      border-top: 2px solid #e9d5ff;
-      box-shadow: 0 -6px 32px rgba(139,92,246,0.14);
-      padding: 16px 20px calc(20px + env(safe-area-inset-bottom));
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      z-index: 500;
-      transform: translateY(110%);
-      transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+    /* ── インライン数式／ヒント ──────────────────── */
+    .formula-area {
+      flex-shrink: 0;
+      text-align: center;
+      padding: 4px 0;
     }
-    .numpad-panel.visible { transform: translateY(0); }
-
-    .panel-formula {
-      font-size: 30px;
+    .formula-text {
+      font-size: 40px;
       font-weight: 900;
       color: #f97316;
       letter-spacing: 0.06em;
-      min-height: 38px;
+    }
+    .quiz-hint {
+      font-size: 14px;
+      font-weight: 600;
+      color: #a78bfa;
+    }
+
+    /* ── テンキーセクション（インフロー） ────────── */
+    .numpad-section {
+      flex-shrink: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+      border-top: 2px solid #f0e6ff;
+    }
+    .numpad-section.visible { display: flex; }
+
+    .panel-formula {
+      font-size: 26px;
+      font-weight: 900;
+      color: #f97316;
+      letter-spacing: 0.06em;
+      line-height: 1;
     }
 
     .numpad-display {
-      font-size: 38px;
+      font-size: 34px;
       font-weight: 900;
       color: #1e293b;
-      min-width: 140px;
-      min-height: 50px;
+      min-width: 120px;
       text-align: center;
       letter-spacing: 0.12em;
       border-bottom: 3px solid #e2e8f0;
-      padding-bottom: 4px;
+      padding-bottom: 3px;
       transition: color 0.15s;
     }
     .numpad-display.wrong   { color: #ef4444; }
@@ -152,68 +176,45 @@
 
     .numpad-grid {
       display: grid;
-      grid-template-columns: repeat(3, 64px);
-      gap: 8px;
+      grid-template-columns: repeat(3, var(--np-col, 62px));
+      gap: 7px;
     }
 
     .np-btn {
-      height: 58px;
-      border-radius: 16px;
+      height: var(--np-btn-h, 52px);
+      border-radius: 14px;
       border: none;
       background: #f8fafc;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 800;
       color: #334155;
       cursor: pointer;
-      transition: transform 0.08s, box-shadow 0.08s, background 0.08s;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: transform 0.08s, background 0.08s;
+      box-shadow: 0 2px 7px rgba(0,0,0,0.08);
       user-select: none;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    .np-btn:hover  { background: #f1f5f9; box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
-    .np-btn:active { transform: scale(0.91); box-shadow: none; }
+    .np-btn:hover  { background: #f1f5f9; }
+    .np-btn:active { transform: scale(0.91); }
 
     .np-btn.enter-btn {
       background: linear-gradient(135deg, #4ade80, #16a34a);
       color: white;
-      font-size: 22px;
-      box-shadow: 0 3px 12px rgba(22,163,74,0.35);
+      font-size: 20px;
+      box-shadow: 0 3px 10px rgba(22,163,74,0.35);
     }
-    .np-btn.enter-btn:hover { box-shadow: 0 5px 18px rgba(22,163,74,0.45); }
-    .np-btn.del-btn { color: #f87171; }
+    .np-btn.del-btn { color: #f87171; font-size: 20px; }
 
     .quiz-feedback {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 800;
-      min-height: 32px;
+      min-height: 26px;
       letter-spacing: 0.04em;
     }
     .quiz-feedback.correct { color: #22c55e; }
     .quiz-feedback.wrong   { color: #ef4444; }
-
-    /* ── In-flow formula (こたえを見るモード) ─────── */
-    .formula-area {
-      margin-top: 26px;
-      min-height: 58px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .formula-text {
-      font-size: 46px;
-      font-weight: 900;
-      color: #f97316;
-      letter-spacing: 0.06em;
-    }
-    .quiz-hint {
-      font-size: 15px;
-      font-weight: 600;
-      color: #a78bfa;
-      text-align: center;
-      margin-top: 6px;
-    }
   </style>
 </head>
 <body>
@@ -237,36 +238,39 @@
     </div>
   </div>
 
-  <div id="viz-container">
-    <svg id="viz-svg"></svg>
-  </div>
-
-  <!-- 固定下部パネル：クイズモード入力時のみスライドイン -->
-  <div class="numpad-panel" id="numpad-panel">
-    <div class="panel-formula" id="panel-formula"></div>
-    <div class="numpad-display" id="numpad-display">　</div>
-    <div class="numpad-grid">
-      <button class="np-btn" data-digit="7">7</button>
-      <button class="np-btn" data-digit="8">8</button>
-      <button class="np-btn" data-digit="9">9</button>
-      <button class="np-btn" data-digit="4">4</button>
-      <button class="np-btn" data-digit="5">5</button>
-      <button class="np-btn" data-digit="6">6</button>
-      <button class="np-btn" data-digit="1">1</button>
-      <button class="np-btn" data-digit="2">2</button>
-      <button class="np-btn" data-digit="3">3</button>
-      <button class="np-btn del-btn" id="np-del">⌫</button>
-      <button class="np-btn" data-digit="0">0</button>
-      <button class="np-btn enter-btn" id="np-enter">↵</button>
+  <!-- 数直線＋テンキーを同じ flex コンテナで高さを分け合う -->
+  <div class="main-area">
+    <div id="viz-container">
+      <svg id="viz-svg"></svg>
     </div>
-    <div class="quiz-feedback" id="quiz-feedback"></div>
-  </div>
 
-  <!-- こたえを見るモード用インライン数式 -->
-  <div class="formula-area">
-    <div class="formula-text" id="formula"></div>
+    <!-- こたえを見るモード用インライン数式 / クイズのヒント -->
+    <div class="formula-area">
+      <div class="formula-text" id="formula"></div>
+      <div class="quiz-hint" id="quiz-hint"></div>
+    </div>
+
+    <!-- テンキーセクション（表示時に数直線が縮んで両者が画面内に収まる） -->
+    <div class="numpad-section" id="numpad-section">
+      <div class="panel-formula" id="panel-formula"></div>
+      <div class="numpad-display" id="numpad-display">　</div>
+      <div class="numpad-grid">
+        <button class="np-btn" data-digit="7">7</button>
+        <button class="np-btn" data-digit="8">8</button>
+        <button class="np-btn" data-digit="9">9</button>
+        <button class="np-btn" data-digit="4">4</button>
+        <button class="np-btn" data-digit="5">5</button>
+        <button class="np-btn" data-digit="6">6</button>
+        <button class="np-btn" data-digit="1">1</button>
+        <button class="np-btn" data-digit="2">2</button>
+        <button class="np-btn" data-digit="3">3</button>
+        <button class="np-btn del-btn" id="np-del">⌫</button>
+        <button class="np-btn" data-digit="0">0</button>
+        <button class="np-btn enter-btn" id="np-enter">↵</button>
+      </div>
+      <div class="quiz-feedback" id="quiz-feedback"></div>
+    </div>
   </div>
-  <div class="quiz-hint" id="quiz-hint"></div>
 
   <script>
     // ── Stage accent colors (index = stage number) ──────────────────
@@ -285,9 +289,8 @@
       results:     {},
     };
 
-    // ── Layout constants ────────────────────────────────────────────
+    // ── Layout constants（高さは render() 内で動的計算） ────────────
     var LM = 52, RM = 12, N = 9;
-    var UPPER_Y = 95, LOWER_Y = 210, VH = 290;
     var TICK_H = 14, STUB_H = 6;
 
     // ── SVG helpers ─────────────────────────────────────────────────
@@ -314,10 +317,18 @@
     // ── Render ──────────────────────────────────────────────────────
     function render() {
       var container = document.getElementById('viz-container');
-      var W       = container.clientWidth || 760;
+      var W = container.clientWidth  || 760;
+      var H = container.clientHeight || 290;
       var spacing = (W - LM - RM) / N;
-      var fontSize = Math.min(20, Math.max(12, Math.round(spacing * 0.28)));
-      var clickR   = Math.min(32, Math.floor(spacing * 0.46));
+      // UPPER_Y / LOWER_Y をコンテナ高さから比例計算
+      var UPPER_Y = Math.round(H * 0.33);
+      var LOWER_Y = Math.round(H * 0.73);
+      var VH = H;
+      var fontSize = Math.min(20, Math.max(10, Math.min(
+        Math.round(spacing * 0.28),
+        Math.round(H * 0.085)
+      )));
+      var clickR = Math.min(32, Math.floor(spacing * 0.46));
       var accentColor = state.stage ? STAGE_COLORS[state.stage] : '#8b5cf6';
 
       function xOf(i) { return LM + i * spacing; }
@@ -487,24 +498,23 @@
     }
 
     function updateNumpad() {
-      var panel = document.getElementById('numpad-panel');
-      var disp  = document.getElementById('numpad-display');
-      var pf    = document.getElementById('panel-formula');
-      var show  = state.quizMode && state.activeIdx !== null && state.stage !== null;
-      panel.classList.toggle('visible', show);
+      var section = document.getElementById('numpad-section');
+      var disp    = document.getElementById('numpad-display');
+      var pf      = document.getElementById('panel-formula');
+      var show    = state.quizMode && state.activeIdx !== null && state.stage !== null;
+      section.classList.toggle('visible', show);
       if (show) {
         disp.textContent = state.inputValue || '　';
-        disp.className = 'numpad-display';
-        pf.textContent = state.stage + ' × ' + state.activeIdx + ' =';
+        disp.className   = 'numpad-display';
+        pf.textContent   = state.stage + ' × ' + state.activeIdx + ' =';
+        // ボタン高さを画面高さに応じて調整
+        var btnH = window.innerHeight >= 700 ? 52 : window.innerHeight >= 580 ? 44 : 38;
+        document.documentElement.style.setProperty('--np-btn-h', btnH + 'px');
       } else {
         pf.textContent = '';
       }
-      // パネルが出た分だけ body の余白を確保（パネル高さを rAF で測定）
-      requestAnimationFrame(function() {
-        document.body.style.paddingBottom = show
-          ? (panel.offsetHeight + 24) + 'px'
-          : '52px';
-      });
+      // テンキーの表示/非表示で viz-container 高さが変わるので再描画
+      requestAnimationFrame(render);
     }
 
     function handleDigit(d) {
