@@ -14,15 +14,28 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 28px 16px 40px;
+      padding: 20px 16px 40px;
     }
 
-    h1 {
-      font-size: 22px;
-      font-weight: 800;
-      color: #1e293b;
-      margin-bottom: 24px;
-      letter-spacing: 0.06em;
+    /* 右上ボタン群 */
+    .top-right {
+      position: fixed;
+      top: 14px;
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      align-items: flex-end;
+      z-index: 100;
+    }
+
+    .stage-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      text-align: center;
     }
 
     .stage-buttons {
@@ -73,25 +86,18 @@
       overflow: visible;
     }
 
-    .controls {
-      margin-top: 20px;
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
     .toggle-btn {
-      padding: 9px 22px;
-      border-radius: 24px;
+      padding: 6px 14px;
+      border-radius: 20px;
       border: 2px solid #cbd5e1;
       background: white;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
       color: #64748b;
       cursor: pointer;
       transition: border-color 0.15s, background 0.15s, color 0.15s;
       letter-spacing: 0.03em;
+      white-space: nowrap;
     }
 
     .toggle-btn:hover { border-color: #94a3b8; }
@@ -202,7 +208,13 @@
 </head>
 <body>
 
-  <h1>九九の学習</h1>
+  <!-- 右上のボタン群 -->
+  <div class="top-right">
+    <button class="toggle-btn" id="subtick-toggle">ほじょめもり</button>
+    <button class="toggle-btn quiz-btn" id="quiz-toggle">こたえを見る</button>
+  </div>
+
+  <p class="stage-label">九九のだん</p>
 
   <div class="stage-buttons" id="stage-btns">
     <button class="stage-btn" data-stage="1">1</button>
@@ -218,11 +230,6 @@
 
   <div id="viz-container">
     <svg id="viz-svg"></svg>
-  </div>
-
-  <div class="controls">
-    <button class="toggle-btn" id="subtick-toggle">補助目盛り：オフ</button>
-    <button class="toggle-btn quiz-btn" id="quiz-toggle">こたえを入力する</button>
   </div>
 
   <!-- Numpad (visible only in quiz mode when a box is active) -->
@@ -253,11 +260,11 @@
   <script>
     var state = {
       stage: null,
-      selected:    null,   // 通常モード選択
+      selected:    null,   // こたえを見るモードで選択中
       showSubTicks: false,
-      quizMode:    false,
-      activeIdx:   null,   // クイズモードで入力中の mark（1〜9）
-      inputValue:  '',     // 入力中の文字列
+      quizMode:    true,   // デフォルトは入力モード（□表示）
+      activeIdx:   null,   // 入力中の mark（1〜9）
+      inputValue:  '',
       results:     {},     // { idx: 'correct' | 'wrong' | null }
     };
 
@@ -448,7 +455,7 @@
       if (state.quizMode) {
         if (state.stage === null) {
           fEl.textContent = '';
-          hEl.textContent = 'まず段をえらんでね';
+          hEl.textContent = 'まずだんをえらんでね';
         } else if (state.activeIdx !== null) {
           fEl.textContent = state.stage + ' × ' + state.activeIdx + ' =';
           hEl.textContent = '';
@@ -597,15 +604,14 @@
     document.getElementById('subtick-toggle').addEventListener('click', function() {
       state.showSubTicks = !state.showSubTicks;
       this.classList.toggle('active');
-      this.textContent = '補助目盛り：' + (state.showSubTicks ? 'オン' : 'オフ');
       render();
     });
 
-    // ── Quiz mode toggle ────────────────────────────────────────────
+    // ── こたえを見る トグル（active = 答え表示モード = quizMode false）──
     document.getElementById('quiz-toggle').addEventListener('click', function() {
       state.quizMode = !state.quizMode;
-      this.classList.toggle('active');
-      // モード切替時にリセット
+      // quizMode=false（答え表示）のとき active
+      this.classList.toggle('active', !state.quizMode);
       state.selected   = null;
       state.activeIdx  = null;
       state.inputValue = '';
