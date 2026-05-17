@@ -76,7 +76,9 @@
     .controls {
       margin-top: 20px;
       display: flex;
+      gap: 10px;
       justify-content: center;
+      flex-wrap: wrap;
     }
 
     .toggle-btn {
@@ -100,8 +102,82 @@
       color: #059669;
     }
 
+    .toggle-btn.quiz-btn.active {
+      border-color: #8b5cf6;
+      background: #f5f3ff;
+      color: #7c3aed;
+    }
+
+    /* ── Numpad ─────────────────────────────────── */
+    .numpad-wrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+      gap: 14px;
+    }
+    .numpad-wrap.visible { display: flex; }
+
+    .numpad-display {
+      font-size: 38px;
+      font-weight: 900;
+      color: #1e293b;
+      min-width: 140px;
+      min-height: 52px;
+      text-align: center;
+      letter-spacing: 0.1em;
+      border-bottom: 3px solid #cbd5e1;
+      padding-bottom: 6px;
+      transition: color 0.15s;
+    }
+    .numpad-display.wrong { color: #ef4444; }
+    .numpad-display.correct { color: #16a34a; }
+
+    .numpad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 68px);
+      gap: 8px;
+    }
+
+    .np-btn {
+      height: 64px;
+      border-radius: 14px;
+      border: 2px solid #e2e8f0;
+      background: white;
+      font-size: 26px;
+      font-weight: 700;
+      color: #1e293b;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s, transform 0.08s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+    .np-btn:hover  { background: #f1f5f9; border-color: #94a3b8; }
+    .np-btn:active { transform: scale(0.93); background: #e2e8f0; }
+
+    .np-btn.enter-btn {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+      font-size: 22px;
+    }
+    .np-btn.enter-btn:hover  { background: #2563eb; border-color: #2563eb; }
+    .np-btn.del-btn   { color: #ef4444; font-size: 22px; }
+
+    .quiz-feedback {
+      font-size: 28px;
+      font-weight: 800;
+      min-height: 40px;
+      letter-spacing: 0.04em;
+    }
+    .quiz-feedback.correct { color: #16a34a; }
+    .quiz-feedback.wrong   { color: #ef4444; }
+
+    /* ── Formula / hint ─────────────────────────── */
     .formula-area {
-      margin-top: 32px;
+      margin-top: 28px;
       min-height: 60px;
       display: flex;
       align-items: center;
@@ -113,6 +189,14 @@
       font-weight: 900;
       color: #f97316;
       letter-spacing: 0.06em;
+    }
+
+    .quiz-hint {
+      font-size: 16px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 4px;
     }
   </style>
 </head>
@@ -138,14 +222,44 @@
 
   <div class="controls">
     <button class="toggle-btn" id="subtick-toggle">補助目盛り：オフ</button>
+    <button class="toggle-btn quiz-btn" id="quiz-toggle">こたえを入力する</button>
+  </div>
+
+  <!-- Numpad (visible only in quiz mode when a box is active) -->
+  <div class="numpad-wrap" id="numpad-wrap">
+    <div class="numpad-display" id="numpad-display">　</div>
+    <div class="numpad-grid">
+      <button class="np-btn" data-digit="7">7</button>
+      <button class="np-btn" data-digit="8">8</button>
+      <button class="np-btn" data-digit="9">9</button>
+      <button class="np-btn" data-digit="4">4</button>
+      <button class="np-btn" data-digit="5">5</button>
+      <button class="np-btn" data-digit="6">6</button>
+      <button class="np-btn" data-digit="1">1</button>
+      <button class="np-btn" data-digit="2">2</button>
+      <button class="np-btn" data-digit="3">3</button>
+      <button class="np-btn del-btn" id="np-del">⌫</button>
+      <button class="np-btn" data-digit="0">0</button>
+      <button class="np-btn enter-btn" id="np-enter">↵</button>
+    </div>
+    <div class="quiz-feedback" id="quiz-feedback"></div>
   </div>
 
   <div class="formula-area">
     <div class="formula-text" id="formula"></div>
   </div>
+  <div class="quiz-hint" id="quiz-hint"></div>
 
   <script>
-    var state = { stage: null, selected: null, showSubTicks: false };
+    var state = {
+      stage: null,
+      selected:    null,   // 通常モード選択
+      showSubTicks: false,
+      quizMode:    false,
+      activeIdx:   null,   // クイズモードで入力中の mark（1〜9）
+      inputValue:  '',     // 入力中の文字列
+      results:     {},     // { idx: 'correct' | 'wrong' | null }
+    };
 
     // ── Fixed layout constants ──────────────────────────────────────
     var LM = 52;   // left margin (axis labels)
@@ -244,11 +358,39 @@
         for (var i = 1; i <= N; i++) {
           var x     = xOf(i);
           var isSel = (state.selected === i);
-          var mc    = isSel ? '#f97316' : '#475569';
-          var tc    = isSel ? '#f97316' : '#1e293b';
-          p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, mc, isSel ? 3 : 2));
-          p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, tc));
-          if (isSel) p.push(mkCircle(x, UPPER_Y, 7, '#f97316'));
+
+          if (state.quizMode) {
+            var res      = state.results[i];
+            var isActive = (state.activeIdx === i);
+            var mc = res === 'correct' ? '#16a34a' : isActive ? '#f97316' : '#475569';
+            p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, mc, isActive ? 3 : 2));
+
+            if (res === 'correct') {
+              // 正解済み：緑でラベル表示
+              p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, '#16a34a'));
+            } else {
+              // 未回答 or 不正解：□ ボックス
+              var bW = Math.max(32, fontSize * 2.0);
+              var bH = Math.max(26, fontSize * 1.5);
+              var bX = x - bW / 2;
+              var bY = UPPER_Y - TICK_H - bH - 6;
+              var strokeC = isActive ? '#f97316' : (res === 'wrong' ? '#ef4444' : '#94a3b8');
+              var fillC   = isActive ? 'rgba(251,191,36,0.12)' : (res === 'wrong' ? 'rgba(239,68,68,0.08)' : 'white');
+              p.push('<rect x="' + bX + '" y="' + bY + '" width="' + bW + '" height="' + bH + '"'
+                   + ' rx="5" fill="' + fillC + '" stroke="' + strokeC + '" stroke-width="2"'
+                   + ' style="cursor:pointer;" data-quiz-idx="' + i + '"/>');
+              var dispVal = (isActive && state.inputValue) ? state.inputValue : '';
+              p.push(mkText(x, bY + bH / 2, dispVal, fontSize * 0.95,
+                            isActive ? '#f97316' : '#94a3b8'));
+            }
+          } else {
+            // 通常モード
+            var mc = isSel ? '#f97316' : '#475569';
+            var tc = isSel ? '#f97316' : '#1e293b';
+            p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, mc, isSel ? 3 : 2));
+            p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, tc));
+            if (isSel) p.push(mkCircle(x, UPPER_Y, 7, '#f97316'));
+          }
         }
 
         // Lower marks (かける数)
@@ -272,12 +414,23 @@
 
       svg.innerHTML = p.join('\n');
 
+      // 通常モード：かける数 / 積 タップ
       svg.querySelectorAll('[data-idx]').forEach(function(el) {
         el.addEventListener('click', function() {
+          if (state.quizMode) return;
           var idx = parseInt(this.getAttribute('data-idx'));
           state.selected = (state.selected === idx) ? null : idx;
           updateFormula();
           render();
+        });
+      });
+
+      // クイズモード：□ ボックスをタップしてアクティブにする
+      svg.querySelectorAll('[data-quiz-idx]').forEach(function(el) {
+        el.addEventListener('click', function() {
+          var idx = parseInt(this.getAttribute('data-quiz-idx'));
+          if (state.results[idx] === 'correct') return;
+          setActiveIdx(idx);
         });
       });
     }
@@ -290,12 +443,131 @@
     });
 
     function updateFormula() {
-      var el = document.getElementById('formula');
-      if (state.stage === null || state.selected === null) {
-        el.textContent = '';
+      var fEl = document.getElementById('formula');
+      var hEl = document.getElementById('quiz-hint');
+      if (state.quizMode) {
+        if (state.stage === null) {
+          fEl.textContent = '';
+          hEl.textContent = 'まず段をえらんでね';
+        } else if (state.activeIdx !== null) {
+          fEl.textContent = state.stage + ' × ' + state.activeIdx + ' =';
+          hEl.textContent = '';
+        } else {
+          fEl.textContent = '';
+          hEl.textContent = '□ をタップしてこたえを入力しよう';
+        }
       } else {
-        el.textContent = state.stage + ' × ' + state.selected + ' =';
+        hEl.textContent = '';
+        if (state.stage === null || state.selected === null) {
+          fEl.textContent = '';
+        } else {
+          fEl.textContent = state.stage + ' × ' + state.selected + ' =';
+        }
       }
+    }
+
+    // ── クイズ関数 ──────────────────────────────────────────────────
+    function setActiveIdx(idx) {
+      state.activeIdx  = idx;
+      state.inputValue = '';
+      clearFeedback();
+      updateNumpad();
+      updateFormula();
+      render();
+    }
+
+    function updateNumpad() {
+      var wrap = document.getElementById('numpad-wrap');
+      var disp = document.getElementById('numpad-display');
+      if (state.quizMode && state.activeIdx !== null && state.stage !== null) {
+        wrap.classList.add('visible');
+        disp.textContent = state.inputValue || '　';
+        disp.className = 'numpad-display';
+      } else {
+        wrap.classList.remove('visible');
+      }
+    }
+
+    function handleDigit(d) {
+      if (state.activeIdx === null || !state.quizMode) return;
+      if (state.inputValue.length >= 3) return; // max 3 digits (81 max)
+      state.inputValue += d;
+      updateNumpad();
+      updateFormula();
+    }
+
+    function handleDelete() {
+      if (state.activeIdx === null || !state.quizMode) return;
+      state.inputValue = state.inputValue.slice(0, -1);
+      updateNumpad();
+    }
+
+    function submitAnswer() {
+      if (!state.quizMode || state.activeIdx === null || state.inputValue === '') return;
+      var answer  = parseInt(state.inputValue, 10);
+      var correct = answer === state.stage * state.activeIdx;
+
+      if (correct) {
+        state.results[state.activeIdx] = 'correct';
+        showFeedback(true);
+        render();
+        // 次の未回答へ自動移動
+        var next = nextUnanswered(state.activeIdx);
+        if (next !== null) {
+          setTimeout(function() { setActiveIdx(next); }, 500);
+        } else {
+          // 全問正解
+          state.activeIdx  = null;
+          state.inputValue = '';
+          updateNumpad();
+          updateFormula();
+          showFeedback('all');
+        }
+      } else {
+        state.results[state.activeIdx] = 'wrong';
+        showFeedback(false);
+        render();
+        setTimeout(function() {
+          state.results[state.activeIdx] = null;
+          state.inputValue = '';
+          updateNumpad();
+          clearFeedback();
+          render();
+        }, 700);
+      }
+    }
+
+    function nextUnanswered(fromIdx) {
+      for (var i = fromIdx + 1; i <= N; i++) {
+        if (state.results[i] !== 'correct') return i;
+      }
+      for (var i = 1; i < fromIdx; i++) {
+        if (state.results[i] !== 'correct') return i;
+      }
+      return null;
+    }
+
+    function showFeedback(type) {
+      var el = document.getElementById('quiz-feedback');
+      var disp = document.getElementById('numpad-display');
+      if (type === true) {
+        el.textContent = '⭕　せいかい！';
+        el.className = 'quiz-feedback correct';
+        if (disp) { disp.textContent = String(state.stage * state.activeIdx); disp.className = 'numpad-display correct'; }
+      } else if (type === false) {
+        el.textContent = '✕　もういちど！';
+        el.className = 'quiz-feedback wrong';
+        if (disp) { disp.textContent = state.inputValue; disp.className = 'numpad-display wrong'; }
+      } else if (type === 'all') {
+        el.textContent = '🎉　ぜんぶせいかい！';
+        el.className = 'quiz-feedback correct';
+      }
+    }
+
+    function clearFeedback() {
+      var el = document.getElementById('quiz-feedback');
+      el.textContent = '';
+      el.className = 'quiz-feedback';
     }
 
     // ── Stage buttons ───────────────────────────────────────────────
@@ -305,12 +577,17 @@
         document.querySelectorAll('.stage-btn').forEach(function(b) { b.classList.remove('active'); });
         if (state.stage === stage) {
           state.stage = null;
-          state.selected = null;
         } else {
           state.stage = stage;
-          state.selected = null;
           this.classList.add('active');
         }
+        // 段が変わったらリセット
+        state.selected   = null;
+        state.activeIdx  = null;
+        state.inputValue = '';
+        state.results    = {};
+        clearFeedback();
+        updateNumpad();
         updateFormula();
         render();
       });
@@ -324,8 +601,52 @@
       render();
     });
 
+    // ── Quiz mode toggle ────────────────────────────────────────────
+    document.getElementById('quiz-toggle').addEventListener('click', function() {
+      state.quizMode = !state.quizMode;
+      this.classList.toggle('active');
+      // モード切替時にリセット
+      state.selected   = null;
+      state.activeIdx  = null;
+      state.inputValue = '';
+      state.results    = {};
+      clearFeedback();
+      updateNumpad();
+      updateFormula();
+      render();
+    });
+
+    // ── Numpad buttons ──────────────────────────────────────────────
+    document.querySelectorAll('.np-btn[data-digit]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        handleDigit(this.getAttribute('data-digit'));
+        render(); // □内の入力値を更新
+      });
+    });
+    document.getElementById('np-del').addEventListener('click', function() {
+      handleDelete();
+      render();
+    });
+    document.getElementById('np-enter').addEventListener('click', submitAnswer);
+
+    // ── Keyboard ────────────────────────────────────────────────────
+    document.addEventListener('keydown', function(e) {
+      if (!state.quizMode || state.activeIdx === null) return;
+      if (e.key >= '0' && e.key <= '9') {
+        handleDigit(e.key);
+        render();
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleDelete();
+        render();
+      } else if (e.key === 'Enter') {
+        submitAnswer();
+      }
+    });
+
     // Initial render
     render();
+    updateFormula();
   </script>
 </body>
 </html>
