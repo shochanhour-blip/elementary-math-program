@@ -108,26 +108,43 @@
     }
     #viz-svg { width: 100%; display: block; overflow: visible; }
 
-    /* ── Numpad ──────────────────────────────────────── */
-    .numpad-wrap {
-      display: none;
+    /* ── Numpad panel（画面下部に固定） ─────────────── */
+    .numpad-panel {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: white;
+      border-radius: 24px 24px 0 0;
+      border-top: 2px solid #e9d5ff;
+      box-shadow: 0 -6px 32px rgba(139,92,246,0.14);
+      padding: 16px 20px calc(20px + env(safe-area-inset-bottom));
+      display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 22px;
-      gap: 14px;
+      gap: 10px;
+      z-index: 500;
+      transform: translateY(110%);
+      transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
     }
-    .numpad-wrap.visible { display: flex; }
+    .numpad-panel.visible { transform: translateY(0); }
+
+    .panel-formula {
+      font-size: 30px;
+      font-weight: 900;
+      color: #f97316;
+      letter-spacing: 0.06em;
+      min-height: 38px;
+    }
 
     .numpad-display {
-      font-size: 44px;
+      font-size: 38px;
       font-weight: 900;
       color: #1e293b;
-      min-width: 150px;
-      min-height: 58px;
+      min-width: 140px;
+      min-height: 50px;
       text-align: center;
       letter-spacing: 0.12em;
       border-bottom: 3px solid #e2e8f0;
-      padding-bottom: 6px;
+      padding-bottom: 4px;
       transition: color 0.15s;
     }
     .numpad-display.wrong   { color: #ef4444; }
@@ -135,48 +152,48 @@
 
     .numpad-grid {
       display: grid;
-      grid-template-columns: repeat(3, 70px);
-      gap: 10px;
+      grid-template-columns: repeat(3, 64px);
+      gap: 8px;
     }
 
     .np-btn {
-      height: 66px;
-      border-radius: 18px;
+      height: 58px;
+      border-radius: 16px;
       border: none;
-      background: white;
-      font-size: 28px;
+      background: #f8fafc;
+      font-size: 26px;
       font-weight: 800;
       color: #334155;
       cursor: pointer;
-      transition: transform 0.08s, box-shadow 0.08s;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.09), 0 1px 3px rgba(0,0,0,0.05);
+      transition: transform 0.08s, box-shadow 0.08s, background 0.08s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       user-select: none;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    .np-btn:hover  { box-shadow: 0 6px 18px rgba(0,0,0,0.13); transform: translateY(-1px); }
-    .np-btn:active { transform: scale(0.91); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .np-btn:hover  { background: #f1f5f9; box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+    .np-btn:active { transform: scale(0.91); box-shadow: none; }
 
     .np-btn.enter-btn {
       background: linear-gradient(135deg, #4ade80, #16a34a);
       color: white;
-      font-size: 24px;
-      box-shadow: 0 4px 14px rgba(22,163,74,0.35);
+      font-size: 22px;
+      box-shadow: 0 3px 12px rgba(22,163,74,0.35);
     }
-    .np-btn.enter-btn:hover { box-shadow: 0 6px 20px rgba(22,163,74,0.45); }
-    .np-btn.del-btn { color: #f87171; font-size: 22px; }
+    .np-btn.enter-btn:hover { box-shadow: 0 5px 18px rgba(22,163,74,0.45); }
+    .np-btn.del-btn { color: #f87171; }
 
     .quiz-feedback {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 800;
-      min-height: 38px;
+      min-height: 32px;
       letter-spacing: 0.04em;
     }
     .quiz-feedback.correct { color: #22c55e; }
     .quiz-feedback.wrong   { color: #ef4444; }
 
-    /* ── Formula ─────────────────────────────────────── */
+    /* ── In-flow formula (こたえを見るモード) ─────── */
     .formula-area {
       margin-top: 26px;
       min-height: 58px;
@@ -224,7 +241,9 @@
     <svg id="viz-svg"></svg>
   </div>
 
-  <div class="numpad-wrap" id="numpad-wrap">
+  <!-- 固定下部パネル：クイズモード入力時のみスライドイン -->
+  <div class="numpad-panel" id="numpad-panel">
+    <div class="panel-formula" id="panel-formula"></div>
     <div class="numpad-display" id="numpad-display">　</div>
     <div class="numpad-grid">
       <button class="np-btn" data-digit="7">7</button>
@@ -243,6 +262,7 @@
     <div class="quiz-feedback" id="quiz-feedback"></div>
   </div>
 
+  <!-- こたえを見るモード用インライン数式 -->
   <div class="formula-area">
     <div class="formula-text" id="formula"></div>
   </div>
@@ -443,14 +463,13 @@
       var fEl = document.getElementById('formula');
       var hEl = document.getElementById('quiz-hint');
       if (state.quizMode) {
+        // クイズモードの数式はパネル内に表示するのでインライン側はヒントのみ
+        fEl.textContent = '';
         if (state.stage === null) {
-          fEl.textContent = '';
           hEl.textContent = 'まずだんをえらんでね';
         } else if (state.activeIdx !== null) {
-          fEl.textContent = state.stage + ' × ' + state.activeIdx + ' =';
           hEl.textContent = '';
         } else {
-          fEl.textContent = '';
           hEl.textContent = '□ をタップしてこたえを入力しよう';
         }
       } else {
@@ -468,15 +487,24 @@
     }
 
     function updateNumpad() {
-      var wrap = document.getElementById('numpad-wrap');
-      var disp = document.getElementById('numpad-display');
-      if (state.quizMode && state.activeIdx !== null && state.stage !== null) {
-        wrap.classList.add('visible');
+      var panel = document.getElementById('numpad-panel');
+      var disp  = document.getElementById('numpad-display');
+      var pf    = document.getElementById('panel-formula');
+      var show  = state.quizMode && state.activeIdx !== null && state.stage !== null;
+      panel.classList.toggle('visible', show);
+      if (show) {
         disp.textContent = state.inputValue || '　';
         disp.className = 'numpad-display';
+        pf.textContent = state.stage + ' × ' + state.activeIdx + ' =';
       } else {
-        wrap.classList.remove('visible');
+        pf.textContent = '';
       }
+      // パネルが出た分だけ body の余白を確保（パネル高さを rAF で測定）
+      requestAnimationFrame(function() {
+        document.body.style.paddingBottom = show
+          ? (panel.offsetHeight + 24) + 'px'
+          : '52px';
+      });
     }
 
     function handleDigit(d) {
