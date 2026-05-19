@@ -39,6 +39,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      padding-top: 12px; /* top-card と ⭕️/❌️ の間に余白を確保 */
     }
 
     .stage-label {
@@ -330,8 +331,9 @@
         Math.round(H * 0.085)
       )));
       // ラベル・絵文字が SVG 上端に収まる最小 Y を確保（クロップ防止）
+      // dominant-baseline="central" なので絵文字はy座標を中心に ±emojiSz/2 広がる
       var emojiSz = Math.min(18, Math.max(13, fontSize + 2));
-      var minTopPad = TICK_H + fontSize + emojiSz + 8;
+      var minTopPad = Math.ceil(TICK_H + fontSize + emojiSz * 1.5 + 8);
       var minBotPad = TICK_H + fontSize + 8;
       var UPPER_Y = Math.max(minTopPad, Math.round(H * 0.5 - lineGap * 0.5));
       var LOWER_Y = Math.min(H - minBotPad, Math.round(H * 0.5 + lineGap * 0.5));
@@ -357,10 +359,9 @@
 
       // Axis labels — centered in the space before the first tick
       var labelX = LM + spacing * 0.25;
-      var lblSz  = Math.min(13, Math.max(10, Math.round(fontSize * 0.7)));
-      p.push(mkText(labelX, UPPER_Y, '積', lblSz, '#a78bfa', 'middle', '800'));
-      p.push(mkText(labelX, LOWER_Y - lblSz, 'かける', lblSz, '#94a3b8', 'middle', '700'));
-      p.push(mkText(labelX, LOWER_Y + lblSz, '数',     lblSz, '#94a3b8', 'middle', '700'));
+      var lblSz  = Math.min(15, Math.max(12, Math.round(fontSize * 0.9)));
+      p.push(mkText(labelX, UPPER_Y,  'こたえ',   lblSz, '#a78bfa', 'middle', '800'));
+      p.push(mkText(labelX, LOWER_Y, 'かける数', lblSz, '#94a3b8', 'middle', '700'));
 
       if (state.stage !== null) {
 
@@ -395,12 +396,15 @@
             p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, tickC, isActive ? 3 : 2));
 
             if (res === 'correct') {
+              // ⭕️ は数字ラベルの上に適切な間隔をあけて配置
+              var numY  = UPPER_Y - TICK_H - fontSize;
+              var emojiY = numY - fontSize * 0.5 - emojiSz * 0.5 - 4;
               p.push(mkCircle(x, UPPER_Y, 5, accentColor + '22', accentColor, 1.5));
-              p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, '#22c55e'));
-              p.push(mkText(x, UPPER_Y - TICK_H - fontSize - emojiSz - 2, '⭕', emojiSz, 'inherit'));
+              p.push(mkText(x, numY, String(state.stage * i), fontSize, '#22c55e'));
+              p.push(mkText(x, emojiY, '⭕', emojiSz, '#22c55e'));
             } else {
-              var bW = Math.max(32, fontSize * 2.1);
-              var bH = Math.max(24, fontSize * 1.45);
+              var bW = Math.max(38, fontSize * 2.4);
+              var bH = bW; // 正方形
               var bX = x - bW / 2, bY = UPPER_Y - TICK_H - bH - 6;
               var strokeC = isActive ? accentColor : (res === 'wrong' ? '#ef4444' : '#cbd5e1');
               var fillC   = isActive ? (accentColor + '18') : (res === 'wrong' ? '#fef2f2' : 'white');
@@ -410,7 +414,9 @@
               var dispVal = (isActive && state.inputValue) ? state.inputValue : '';
               p.push(mkText(x, bY + bH / 2, dispVal, fontSize, isActive ? accentColor : '#cbd5e1'));
               if (res === 'wrong') {
-                p.push(mkText(x, bY - emojiSz * 0.4, '❌', emojiSz, 'inherit'));
+                // ❌️ は□の上に間隔をあけて配置
+                var emojiY2 = bY - emojiSz * 0.5 - 4;
+                p.push(mkText(x, emojiY2, '❌', emojiSz, '#ef4444'));
               }
             }
           } else {
@@ -450,6 +456,8 @@
           var x = xOf(i);
           p.push(mkClickRect(x, UPPER_Y, 'data-idx="' + i + '"', clickR));
           p.push(mkClickRect(x, LOWER_Y, 'data-idx="' + i + '"', clickR));
+          // かける数テキスト上のクリック判定
+          p.push(mkClickRect(x, LOWER_Y + TICK_H + fontSize, 'data-idx="' + i + '"', clickR));
         }
       }
 
@@ -526,12 +534,6 @@
         state.results[answeredIdx] = 'correct';
       } else {
         state.results[answeredIdx] = 'wrong';
-        setTimeout(function() {
-          if (state.results[answeredIdx] === 'wrong') {
-            state.results[answeredIdx] = null;
-            render();
-          }
-        }, 700);
       }
       setActiveIdx(nextIdx);
     }
@@ -586,7 +588,6 @@
         state.results[state.activeIdx] = 'wrong';
         showFeedback(false); render();
         setTimeout(function() {
-          state.results[state.activeIdx] = null;
           state.inputValue = '';
           updateNumpad(); clearFeedback(); render();
         }, 700);
