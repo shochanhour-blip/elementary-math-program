@@ -52,18 +52,20 @@
 
     .stage-buttons {
       display: flex;
-      gap: 7px;
+      gap: 6px;
       justify-content: center;
-      flex-wrap: wrap;
+      flex-wrap: nowrap; /* 常に1行 — 折り返し禁止 */
     }
 
     .stage-btn {
-      width: 50px;
-      height: 50px;
+      flex: 1 0 0;       /* 均等に伸縮 */
+      min-width: 0;
+      max-width: 50px;
+      height: 44px;
       border-radius: 50%;
       border: 2.5px solid #e2e8f0;
       background: #f8fafc;
-      font-size: 21px;
+      font-size: clamp(14px, 4vw, 21px);
       font-weight: 800;
       color: #64748b;
       cursor: pointer;
@@ -119,6 +121,7 @@
       flex: 1;
       min-height: 0;
       width: 100%;
+      overflow: hidden; /* SVG が上方向にはみ出して top-card と重ならないよう clip */
     }
     #viz-svg { width: 100%; display: block; overflow: visible; }
 
@@ -322,13 +325,17 @@
       var spacing = (W - LM - RM) / N;
       // 2本の数直線の間隔を固定(70〜100px)にして、コンテナ高さによらず一定に見せる
       var lineGap = Math.max(70, Math.min(100, H * 0.4));
-      var UPPER_Y = Math.round(H * 0.5 - lineGap * 0.5);
-      var LOWER_Y = Math.round(H * 0.5 + lineGap * 0.5);
-      var VH = H;
       var fontSize = Math.min(20, Math.max(10, Math.min(
         Math.round(spacing * 0.28),
         Math.round(H * 0.085)
       )));
+      // ラベル・絵文字が SVG 上端に収まる最小 Y を確保（クロップ防止）
+      var emojiSz = Math.min(18, Math.max(13, fontSize + 2));
+      var minTopPad = TICK_H + fontSize + emojiSz + 8;
+      var minBotPad = TICK_H + fontSize + 8;
+      var UPPER_Y = Math.max(minTopPad, Math.round(H * 0.5 - lineGap * 0.5));
+      var LOWER_Y = Math.min(H - minBotPad, Math.round(H * 0.5 + lineGap * 0.5));
+      var VH = H;
       var clickR = Math.min(32, Math.floor(spacing * 0.46));
       var accentColor = state.stage ? STAGE_COLORS[state.stage] : '#8b5cf6';
 
@@ -387,7 +394,6 @@
             var tickC    = res === 'correct' ? '#22c55e' : isActive ? accentColor : '#94a3b8';
             p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, tickC, isActive ? 3 : 2));
 
-            var emojiSz = Math.min(18, Math.max(13, fontSize + 2));
             if (res === 'correct') {
               p.push(mkCircle(x, UPPER_Y, 5, accentColor + '22', accentColor, 1.5));
               p.push(mkText(x, UPPER_Y - TICK_H - fontSize, String(state.stage * i), fontSize, '#22c55e'));
