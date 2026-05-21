@@ -626,7 +626,6 @@
         state.results[state.activeIdx] = 'wrong';
         showFeedback(false); render();
         setTimeout(function() {
-          state.inputValue = '';
           updateNumpad(); clearFeedback(); render();
         }, 700);
       }
