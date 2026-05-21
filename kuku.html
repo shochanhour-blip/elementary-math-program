@@ -124,7 +124,7 @@
       width: 100%;
       overflow: hidden; /* SVG が上方向にはみ出して top-card と重ならないよう clip */
     }
-    #viz-svg { width: 100%; display: block; overflow: visible; }
+    #viz-svg { width: 100%; display: block; overflow: hidden; }
 
     /* ── インライン数式／ヒント ──────────────────── */
     .formula-area {
@@ -330,11 +330,12 @@
         Math.round(spacing * 0.28),
         Math.round(H * 0.085)
       )));
-      // ラベル・絵文字が SVG 上端に収まる最小 Y を確保（クロップ防止）
-      // dominant-baseline="central" なので絵文字はy座標を中心に ±emojiSz/2 広がる
-      var emojiSz = Math.min(18, Math.max(13, fontSize + 2));
-      var minTopPad = Math.ceil(TICK_H + fontSize + emojiSz * 1.5 + 8);
-      var minBotPad = TICK_H + fontSize + 8;
+      // ラベル・絵文字が SVG 上端に収まる最小 Y を確保
+      // 最も高い要素は「❌️（wrong時）」: UPPER_Y の上に tick + □(bH) + gap + emoji が積まれる
+      var emojiSz  = Math.min(18, Math.max(13, fontSize + 2));
+      var bH_est   = Math.max(38, fontSize * 2.4);  // □の高さ（renderと同じ計算）
+      var minTopPad = Math.ceil(TICK_H + bH_est + 6 + emojiSz + 12);
+      var minBotPad = Math.ceil(TICK_H + fontSize * 1.5 + 8);
       var UPPER_Y = Math.max(minTopPad, Math.round(H * 0.5 - lineGap * 0.5));
       var LOWER_Y = Math.min(H - minBotPad, Math.round(H * 0.5 + lineGap * 0.5));
       var VH = H;
