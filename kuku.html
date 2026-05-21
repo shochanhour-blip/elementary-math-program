@@ -437,11 +437,14 @@
             p.push(mkLine(x, UPPER_Y - TICK_H, x, UPPER_Y + TICK_H, tickC, isActive ? 3 : 2));
 
             if (res === 'correct') {
-              // ⭕️ は数字ラベルの上に適切な間隔をあけて配置
-              var numY  = UPPER_Y - TICK_H - fontSize;
-              var emojiY = numY - fontSize * 0.5 - emojiSz * 0.5 - 10;
+              var bW = Math.max(38, fontSize * 2.4);
+              var bH = bW;
+              var bX = x - bW / 2, bY = UPPER_Y - TICK_H - bH - 6;
+              var emojiY = bY - emojiSz * 0.5 - 10;
               p.push(mkCircle(x, UPPER_Y, 5, accentColor + '22', accentColor, 1.5));
-              p.push(mkText(x, numY, String(state.stage * i), fontSize, '#22c55e'));
+              p.push('<rect x="' + bX + '" y="' + bY + '" width="' + bW + '" height="' + bH + '"'
+                   + ' rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"/>');
+              p.push(mkText(x, bY + bH / 2, String(state.stage * i), fontSize, '#22c55e'));
               p.push(mkText(x, emojiY, '⭕', emojiSz, '#22c55e'));
             } else {
               var bW = Math.max(38, fontSize * 2.4);
