@@ -144,7 +144,7 @@
       color: #a78bfa;
     }
 
-    /* ── テンキーセクション（インフロー） ────────── */
+    /* ── テンキーセクション ──────────────────────── */
     .numpad-section {
       flex-shrink: 0;
       display: none;
@@ -155,6 +155,31 @@
       border-top: 2px solid #f0e6ff;
     }
     .numpad-section.visible { display: flex; }
+
+    /* テンキー表示時：main-area を横並びにして数直線の縦幅を確保 */
+    .main-area.numpad-open {
+      flex-direction: row;
+      align-items: stretch;
+      gap: 0;
+    }
+    .main-area.numpad-open #viz-container {
+      flex: 1;
+      min-width: 0;
+    }
+    .main-area.numpad-open .formula-area { display: none; }
+    .main-area.numpad-open .numpad-section {
+      border-top: none;
+      border-left: 2px solid #f0e6ff;
+      padding: 10px 10px 10px 12px;
+      width: 192px;
+      flex-shrink: 0;
+      justify-content: center;
+    }
+    .main-area.numpad-open .numpad-grid {
+      grid-template-columns: repeat(3, 1fr);
+      width: 100%;
+    }
+    .main-area.numpad-open .np-btn { width: 100%; min-width: 0; }
 
     .panel-formula {
       font-size: 26px;
@@ -540,17 +565,19 @@
     }
 
     function updateNumpad() {
-      var section = document.getElementById('numpad-section');
-      var disp    = document.getElementById('numpad-display');
-      var pf      = document.getElementById('panel-formula');
-      var show    = state.quizMode && state.activeIdx !== null && state.stage !== null;
+      var section  = document.getElementById('numpad-section');
+      var mainArea = document.querySelector('.main-area');
+      var disp     = document.getElementById('numpad-display');
+      var pf       = document.getElementById('panel-formula');
+      var show     = state.quizMode && state.activeIdx !== null && state.stage !== null;
       section.classList.toggle('visible', show);
+      mainArea.classList.toggle('numpad-open', show);
       if (show) {
         disp.textContent = state.inputValue || '　';
         disp.className   = 'numpad-display';
         pf.textContent   = state.stage + ' × ' + state.activeIdx + ' =';
         // ボタン高さを画面高さに応じて調整
-        var btnH = window.innerHeight >= 700 ? 52 : window.innerHeight >= 580 ? 44 : 38;
+        var btnH = window.innerHeight >= 700 ? 52 : window.innerHeight >= 580 ? 46 : 40;
         document.documentElement.style.setProperty('--np-btn-h', btnH + 'px');
       } else {
         pf.textContent = '';
