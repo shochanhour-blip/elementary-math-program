@@ -373,7 +373,7 @@
       // 最も高い要素は「❌️（wrong時）」: UPPER_Y の上に tick + □(bH) + gap + emoji が積まれる
       var emojiSz  = Math.min(18, Math.max(13, fontSize + 2));
       var bH_est   = Math.max(38, fontSize * 2.4);  // □の高さ（renderと同じ計算）
-      var minTopPad = Math.ceil(TICK_H + bH_est + 6 + emojiSz + 12);
+      var minTopPad = Math.ceil(TICK_H + bH_est + 6 + emojiSz + 18);
       var minBotPad = Math.ceil(TICK_H + fontSize * 1.5 + 8);
       var UPPER_Y = Math.max(minTopPad, Math.round(H * 0.5 - lineGap * 0.5));
       var LOWER_Y = Math.min(H - minBotPad, Math.round(H * 0.5 + lineGap * 0.5));
@@ -438,7 +438,7 @@
             if (res === 'correct') {
               // ⭕️ は数字ラベルの上に適切な間隔をあけて配置
               var numY  = UPPER_Y - TICK_H - fontSize;
-              var emojiY = numY - fontSize * 0.5 - emojiSz * 0.5 - 4;
+              var emojiY = numY - fontSize * 0.5 - emojiSz * 0.5 - 10;
               p.push(mkCircle(x, UPPER_Y, 5, accentColor + '22', accentColor, 1.5));
               p.push(mkText(x, numY, String(state.stage * i), fontSize, '#22c55e'));
               p.push(mkText(x, emojiY, '⭕', emojiSz, '#22c55e'));
@@ -455,7 +455,7 @@
               p.push(mkText(x, bY + bH / 2, dispVal, fontSize, isActive ? accentColor : '#cbd5e1'));
               if (res === 'wrong') {
                 // ❌️ は□の上に間隔をあけて配置
-                var emojiY2 = bY - emojiSz * 0.5 - 4;
+                var emojiY2 = bY - emojiSz * 0.5 - 10;
                 p.push(mkText(x, emojiY2, '❌', emojiSz, '#ef4444'));
               }
             }
