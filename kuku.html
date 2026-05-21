@@ -30,11 +30,22 @@
       box-shadow: 0 4px 28px rgba(139,92,246,0.10), 0 1px 6px rgba(0,0,0,0.04);
     }
 
-    /* 数直線＋テンキーを包む伸縮コンテナ — 画面幅を最大限使用 */
+    /* content-row: 数直線エリア＋テンキーを横並び管理 */
+    .content-row {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      justify-content: center; /* 中央寄せ：数直線は top-card と揃う */
+    }
+
+    /* 数直線エリア：top-card と同じ幅 */
     .main-area {
       flex: 1;
       min-height: 0;
-      width: 100%;          /* max-width なし：top-card に縛られず全幅を使う */
+      max-width: 780px;     /* top-card と同じ幅 */
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -143,43 +154,44 @@
       color: #a78bfa;
     }
 
-    /* ── テンキーセクション ──────────────────────── */
+    /* ── テンキー：数直線の右外側に配置 ─────────── */
     .numpad-section {
       flex-shrink: 0;
       display: none;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
-      padding: 10px 0 max(10px, env(safe-area-inset-bottom));
-      border-top: 2px solid #f0e6ff;
+      justify-content: center;
+      gap: 8px;
+      width: 220px;
+      padding: 0 16px;
+      border-left: 1px solid #e9d5ff;
+      background: rgba(255,255,255,0.55);
     }
     .numpad-section.visible { display: flex; }
 
-    /* ── 広い画面（≥560px）：テンキーを右サイドバーに ── */
-    .main-area.numpad-open {
-      flex-direction: row;
-      align-items: stretch;
-      gap: 0;
+    /* 狭い画面（<560px）：テンキーを下に移動 */
+    @media (max-width: 559px) {
+      .content-row { flex-direction: column; align-items: center; }
+      .numpad-section {
+        width: 100%;
+        border-left: none;
+        border-top: 2px solid #f0e6ff;
+        padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+        flex-direction: column;
+      }
+      .numpad-section .numpad-grid {
+        grid-template-columns: repeat(3, 62px);
+      }
     }
-    .main-area.numpad-open #viz-container {
-      flex: 1;
-      min-width: 0;
+
+    /* 横モード：テンキーグリッドを幅に合わせる */
+    @media (min-width: 560px) {
+      .numpad-section .numpad-grid {
+        grid-template-columns: repeat(3, 1fr);
+        width: 100%;
+      }
+      .numpad-section .np-btn { width: 100%; min-width: 0; }
     }
-    .main-area.numpad-open .formula-area { display: none; }
-    .main-area.numpad-open .numpad-section {
-      width: 220px;
-      flex-shrink: 0;
-      border-top: none;
-      border-left: 1px solid #e9d5ff;
-      padding: 0 16px;
-      background: rgba(255,255,255,0.55);
-      justify-content: center;
-    }
-    .main-area.numpad-open .numpad-grid {
-      grid-template-columns: repeat(3, 1fr);
-      width: 100%;
-    }
-    .main-area.numpad-open .np-btn { width: 100%; min-width: 0; }
 
     .panel-formula {
       font-size: 26px;
@@ -267,19 +279,20 @@
     </div>
   </div>
 
-  <!-- 数直線＋テンキーを同じ flex コンテナで高さを分け合う -->
-  <div class="main-area">
-    <div id="viz-container">
-      <svg id="viz-svg"></svg>
+  <!-- content-row: 数直線エリア（中央）＋テンキー（右の余白）を横並びで管理 -->
+  <div class="content-row">
+    <!-- 数直線エリア（top-card と同じ幅を維持） -->
+    <div class="main-area">
+      <div id="viz-container">
+        <svg id="viz-svg"></svg>
+      </div>
+      <div class="formula-area">
+        <div class="formula-text" id="formula"></div>
+        <div class="quiz-hint" id="quiz-hint"></div>
+      </div>
     </div>
 
-    <!-- こたえを見るモード用インライン数式 / クイズのヒント -->
-    <div class="formula-area">
-      <div class="formula-text" id="formula"></div>
-      <div class="quiz-hint" id="quiz-hint"></div>
-    </div>
-
-    <!-- テンキーセクション（表示時に数直線が縮んで両者が画面内に収まる） -->
+    <!-- テンキー：数直線の右外側に配置 -->
     <div class="numpad-section" id="numpad-section">
       <div class="panel-formula" id="panel-formula"></div>
       <div class="numpad-display" id="numpad-display">　</div>
@@ -566,19 +579,16 @@
 
     function updateNumpad() {
       var section  = document.getElementById('numpad-section');
-      var mainArea = document.querySelector('.main-area');
-      var disp     = document.getElementById('numpad-display');
+      var disp = document.getElementById('numpad-display');
       var pf       = document.getElementById('panel-formula');
       var show     = state.quizMode && state.activeIdx !== null && state.stage !== null;
-      var useRow = show && window.innerWidth >= 560;
       section.classList.toggle('visible', show);
-      mainArea.classList.toggle('numpad-open', useRow);
       if (show) {
         disp.textContent = state.inputValue || '　';
         disp.className   = 'numpad-display';
         pf.textContent   = state.stage + ' × ' + state.activeIdx + ' =';
-        // 横モード：縦が確保されるので大きめ。縦モード：コンパクトに
-        var btnH = useRow
+        var isRow = window.innerWidth >= 560;
+        var btnH  = isRow
           ? (window.innerHeight >= 700 ? 54 : 48)
           : (window.innerHeight >= 700 ? 44 : window.innerHeight >= 580 ? 38 : 34);
         document.documentElement.style.setProperty('--np-btn-h', btnH + 'px');
