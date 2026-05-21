@@ -330,6 +330,7 @@
       activeIdx:   null,
       inputValue:  '',
       results:     {},
+      wrongValues: {},     // 不正解のとき入力値をボックスごとに保持
     };
 
     // ── Layout constants（高さは render() 内で動的計算） ────────────
@@ -446,13 +447,23 @@
               var bW = Math.max(38, fontSize * 2.4);
               var bH = bW; // 正方形
               var bX = x - bW / 2, bY = UPPER_Y - TICK_H - bH - 6;
-              var strokeC = isActive ? accentColor : (res === 'wrong' ? '#ef4444' : '#cbd5e1');
-              var fillC   = isActive ? (accentColor + '18') : (res === 'wrong' ? '#fef2f2' : 'white');
+              var isWrong = (res === 'wrong');
+              var strokeC = isActive
+                ? (isWrong ? '#ef4444' : accentColor)
+                : (isWrong ? '#ef4444' : '#cbd5e1');
+              var fillC = isActive
+                ? (isWrong ? '#fef2f2' : accentColor + '18')
+                : (isWrong ? '#fef2f2' : 'white');
+              var textC = isActive
+                ? (isWrong ? '#ef4444' : accentColor)
+                : (isWrong ? '#ef4444' : '#cbd5e1');
               p.push('<rect x="' + bX + '" y="' + bY + '" width="' + bW + '" height="' + bH + '"'
                    + ' rx="6" fill="' + fillC + '" stroke="' + strokeC + '" stroke-width="2"'
                    + ' style="cursor:pointer;" data-quiz-idx="' + i + '"/>');
-              var dispVal = (isActive && state.inputValue) ? state.inputValue : '';
-              p.push(mkText(x, bY + bH / 2, dispVal, fontSize, isActive ? accentColor : '#cbd5e1'));
+              var dispVal = isActive
+                ? (state.inputValue || '')
+                : (isWrong ? (state.wrongValues[i] || '') : '');
+              p.push(mkText(x, bY + bH / 2, dispVal, fontSize, textC));
               if (res === 'wrong') {
                 // ❌️ は□の上に間隔をあけて配置
                 var emojiY2 = bY - emojiSz * 0.5 - 10;
@@ -574,6 +585,7 @@
         state.results[answeredIdx] = 'correct';
       } else {
         state.results[answeredIdx] = 'wrong';
+        state.wrongValues[answeredIdx] = state.inputValue;
       }
       setActiveIdx(nextIdx);
     }
@@ -624,6 +636,7 @@
         }
       } else {
         state.results[state.activeIdx] = 'wrong';
+        state.wrongValues[state.activeIdx] = state.inputValue;
         showFeedback(false); render();
         setTimeout(function() {
           updateNumpad(); clearFeedback(); render();
@@ -658,7 +671,7 @@
 
     function resetQuizState() {
       state.selected = null; state.activeIdx = null;
-      state.inputValue = ''; state.results = {};
+      state.inputValue = ''; state.results = {}; state.wrongValues = {};
       clearFeedback(); updateNumpad(); updateFormula();
     }
 
