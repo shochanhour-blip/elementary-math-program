@@ -136,11 +136,11 @@
     }
     #viz-svg { width: 100%; display: block; overflow: hidden; }
 
-    /* ── インライン数式／ヒント ──────────────────── */
+    /* ── 式エリア：ペインと数直線の間 ──────────── */
     .formula-area {
       flex-shrink: 0;
       text-align: center;
-      padding: 4px 0;
+      padding: 2px 0 6px;
     }
     .formula-text {
       font-size: 40px;
@@ -284,19 +284,19 @@
   <div class="content-row">
     <!-- 数直線エリア（top-card と同じ幅を維持） -->
     <div class="main-area">
-      <div id="viz-container">
-        <svg id="viz-svg"></svg>
-      </div>
+      <!-- 式：九九のだんペインと数直線の間 -->
       <div class="formula-area">
         <div class="formula-text" id="formula"></div>
         <div class="quiz-hint" id="quiz-hint"></div>
+      </div>
+      <div id="viz-container">
+        <svg id="viz-svg"></svg>
       </div>
     </div>
 
     <!-- テンキー：数直線の右外側に配置 -->
     <div class="numpad-section" id="numpad-section">
-      <div class="panel-formula" id="panel-formula"></div>
-      <div class="numpad-display" id="numpad-display">　</div>
+      <div class="numpad-display" id="numpad-display">
       <div class="numpad-grid">
         <button class="np-btn" data-digit="7">7</button>
         <button class="np-btn" data-digit="8">8</button>
@@ -543,14 +543,14 @@
       var fEl = document.getElementById('formula');
       var hEl = document.getElementById('quiz-hint');
       if (state.quizMode) {
-        // クイズモードの数式はパネル内に表示するのでインライン側はヒントのみ
-        fEl.textContent = '';
+        // クイズモード：activeIdx があれば式を表示、なければヒント
         if (state.stage === null) {
-          hEl.textContent = 'まずだんをえらんでね';
+          fEl.textContent = ''; hEl.textContent = 'まずだんをえらんでね';
         } else if (state.activeIdx !== null) {
+          fEl.textContent = state.stage + ' × ' + state.activeIdx + ' =';
           hEl.textContent = '';
         } else {
-          hEl.textContent = '□ をタップしてこたえを入力しよう';
+          fEl.textContent = ''; hEl.textContent = '□ をタップしてこたえを入力しよう';
         }
       } else {
         hEl.textContent = '';
@@ -579,22 +579,18 @@
     }
 
     function updateNumpad() {
-      var section  = document.getElementById('numpad-section');
-      var disp = document.getElementById('numpad-display');
-      var pf       = document.getElementById('panel-formula');
-      var show     = state.quizMode && state.activeIdx !== null && state.stage !== null;
+      var section = document.getElementById('numpad-section');
+      var disp    = document.getElementById('numpad-display');
+      var show    = state.quizMode && state.activeIdx !== null && state.stage !== null;
       section.classList.toggle('visible', show);
       if (show) {
         disp.textContent = state.inputValue || '　';
         disp.className   = 'numpad-display';
-        pf.textContent   = state.stage + ' × ' + state.activeIdx + ' =';
-        var isRow = window.innerWidth >= 560;
+        var isRow = window.innerWidth >= 1280;
         var btnH  = isRow
           ? (window.innerHeight >= 700 ? 54 : 48)
           : (window.innerHeight >= 700 ? 44 : window.innerHeight >= 580 ? 38 : 34);
         document.documentElement.style.setProperty('--np-btn-h', btnH + 'px');
-      } else {
-        pf.textContent = '';
       }
       // テンキーの表示/非表示で viz-container 高さが変わるので再描画
       requestAnimationFrame(render);
