@@ -30,22 +30,22 @@
       box-shadow: 0 4px 28px rgba(139,92,246,0.10), 0 1px 6px rgba(0,0,0,0.04);
     }
 
-    /* content-row: 数直線エリア＋テンキーを横並び管理 */
+    /* content-row：数直線を top-card と同じ位置に中央配置、テンキーは外に出す */
     .content-row {
       flex: 1;
       min-height: 0;
       width: 100%;
       display: flex;
-      flex-direction: row;
+      justify-content: center;
       align-items: stretch;
-      justify-content: center; /* 中央寄せ：数直線は top-card と揃う */
+      position: relative; /* テンキーの absolute 基準 */
     }
 
-    /* 数直線エリア：top-card と同じ幅 */
+    /* 数直線エリア：top-card と同幅・同位置 */
     .main-area {
-      flex: 1;
+      flex: none;
+      width: min(780px, 100%);
       min-height: 0;
-      max-width: 780px;     /* top-card と同じ幅 */
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -154,38 +154,39 @@
       color: #a78bfa;
     }
 
-    /* ── テンキー：数直線の右外側に配置 ─────────── */
+    /* ── テンキー（デフォルト：下に配置） ───────── */
     .numpad-section {
-      flex-shrink: 0;
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      width: 220px;
-      padding: 0 16px;
-      border-left: 1px solid #e9d5ff;
-      background: rgba(255,255,255,0.55);
+      padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+      border-top: 2px solid #f0e6ff;
+      width: 100%;
+      max-width: 780px;
     }
     .numpad-section.visible { display: flex; }
 
-    /* 狭い画面（<560px）：テンキーを下に移動 */
-    @media (max-width: 559px) {
-      .content-row { flex-direction: column; align-items: center; }
+    /* ── 広い画面（≥1280px）：top-card の右外の余白に配置 ── */
+    @media (min-width: 1280px) {
       .numpad-section {
-        width: 100%;
-        border-left: none;
-        border-top: 2px solid #f0e6ff;
-        padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-        flex-direction: column;
+        position: absolute;
+        right: 0;              /* content-row の右端に貼り付く */
+        top: 50%;
+        transform: translateY(-50%);
+        width: 210px;
+        max-width: none;
+        border-top: none;
+        border-left: 1px solid #e9d5ff;
+        padding: 0 16px;
+        background: rgba(255,255,255,0.6);
+        backdrop-filter: blur(6px);
+        border-radius: 16px 0 0 16px;
+        box-shadow: -4px 0 20px rgba(139,92,246,0.08);
+        max-height: calc(100% - 24px);
+        overflow-y: auto;
       }
-      .numpad-section .numpad-grid {
-        grid-template-columns: repeat(3, 62px);
-      }
-    }
-
-    /* 横モード：テンキーグリッドを幅に合わせる */
-    @media (min-width: 560px) {
       .numpad-section .numpad-grid {
         grid-template-columns: repeat(3, 1fr);
         width: 100%;
