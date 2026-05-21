@@ -15,8 +15,8 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 14px 16px 0;
-      gap: 10px;
+      padding: 12px 20px 0;
+      gap: 12px;
     }
 
     /* ── Top card ────────────────────────────────────── */
@@ -30,16 +30,15 @@
       box-shadow: 0 4px 28px rgba(139,92,246,0.10), 0 1px 6px rgba(0,0,0,0.04);
     }
 
-    /* 数直線＋テンキーを包む伸縮コンテナ */
+    /* 数直線＋テンキーを包む伸縮コンテナ — 画面幅を最大限使用 */
     .main-area {
       flex: 1;
       min-height: 0;
-      width: 100%;
-      max-width: 780px;
+      width: 100%;          /* max-width なし：top-card に縛られず全幅を使う */
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      padding-top: 12px; /* top-card と ⭕️/❌️ の間に余白を確保 */
+      padding-top: 8px;
     }
 
     .stage-label {
@@ -156,7 +155,7 @@
     }
     .numpad-section.visible { display: flex; }
 
-    /* テンキー表示時：main-area を横並びにして数直線の縦幅を確保 */
+    /* ── 広い画面（≥560px）：テンキーを右サイドバーに ── */
     .main-area.numpad-open {
       flex-direction: row;
       align-items: stretch;
@@ -168,11 +167,12 @@
     }
     .main-area.numpad-open .formula-area { display: none; }
     .main-area.numpad-open .numpad-section {
-      border-top: none;
-      border-left: 2px solid #f0e6ff;
-      padding: 10px 10px 10px 12px;
-      width: 192px;
+      width: 220px;
       flex-shrink: 0;
+      border-top: none;
+      border-left: 1px solid #e9d5ff;
+      padding: 0 16px;
+      background: rgba(255,255,255,0.55);
       justify-content: center;
     }
     .main-area.numpad-open .numpad-grid {
@@ -570,14 +570,17 @@
       var disp     = document.getElementById('numpad-display');
       var pf       = document.getElementById('panel-formula');
       var show     = state.quizMode && state.activeIdx !== null && state.stage !== null;
+      var useRow = show && window.innerWidth >= 560;
       section.classList.toggle('visible', show);
-      mainArea.classList.toggle('numpad-open', show);
+      mainArea.classList.toggle('numpad-open', useRow);
       if (show) {
         disp.textContent = state.inputValue || '　';
         disp.className   = 'numpad-display';
         pf.textContent   = state.stage + ' × ' + state.activeIdx + ' =';
-        // ボタン高さを画面高さに応じて調整
-        var btnH = window.innerHeight >= 700 ? 52 : window.innerHeight >= 580 ? 46 : 40;
+        // 横モード：縦が確保されるので大きめ。縦モード：コンパクトに
+        var btnH = useRow
+          ? (window.innerHeight >= 700 ? 54 : 48)
+          : (window.innerHeight >= 700 ? 44 : window.innerHeight >= 580 ? 38 : 34);
         document.documentElement.style.setProperty('--np-btn-h', btnH + 'px');
       } else {
         pf.textContent = '';
