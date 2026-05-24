@@ -455,23 +455,28 @@
       outline: 3px dashed rgba(0,0,0,0.5);
       outline-offset: 2px;
     }
-    /* くりあがりグループ枠（10個溜まったとき） */
-    /* carry-zone-group と完全同寸にし、border だけ差し替える */
+    /* くりあがりグループ（タイル列を横並びで束ねる） */
     .carry-group, .carry-zone-group {
       display: flex;
-      flex-direction: column;
-      flex-wrap: wrap;
-      align-content: flex-start;
-      justify-content: flex-start;
-      gap: 8px;
-      padding: 5px; /* border 3px 分を差し引いた padding で寸法を揃える */
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 5px;
       border: 3px solid transparent;
       border-radius: 12px;
       flex-shrink: 0;
       background: transparent;
     }
+    /* 各列 div */
+    .carry-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    /* 10個で枠が出現 */
     .carry-group {
-      border-color: #f97316; /* オレンジ：ゾーンの緑と区別 */
+      border-color: #f97316;
       background: rgba(249,115,22,0.08);
       cursor: pointer;
       transition: background .15s;
@@ -1276,20 +1281,28 @@ function renderCarryZone() {
     const pd = PLACE_DEFS.find(d => d.value === parseFloat(pv));
     if (!pd) return;
     const wrap = document.createElement('div');
-    if (tiles.length >= 10) {
-      wrap.className = 'carry-group';
+    const isGroup = tiles.length >= 10;
+    wrap.className = isGroup ? 'carry-group' : 'carry-zone-group';
+    if (isGroup) {
       wrap.addEventListener('click', e => { e.stopPropagation(); showCarryConfirm(parseFloat(pv)); });
-    } else {
-      wrap.className = 'carry-zone-group';
     }
-    tiles.forEach(t => {
-      const el = document.createElement('div');
-      el.className = `tile ${pd.cls} carry-ghost`;
-      el.dataset.carryId = t.id;
-      el.textContent = placeLabelShort(pd.value);
-      attachCarryZoneGhostDrag(el, t);
-      wrap.appendChild(el);
-    });
+
+    // タイルを MAX_PER_COL ごとに列divに分割して配置
+    const MAX_PER_COL = 5;
+    const colCount = Math.ceil(tiles.length / MAX_PER_COL);
+    for (let c = 0; c < colCount; c++) {
+      const col = document.createElement('div');
+      col.className = 'carry-col';
+      tiles.slice(c * MAX_PER_COL, (c + 1) * MAX_PER_COL).forEach(t => {
+        const el = document.createElement('div');
+        el.className = `tile ${pd.cls} carry-ghost`;
+        el.dataset.carryId = t.id;
+        el.textContent = placeLabelShort(pd.value);
+        attachCarryZoneGhostDrag(el, t);
+        col.appendChild(el);
+      });
+      wrap.appendChild(col);
+    }
     carryZoneEl.appendChild(wrap);
   });
 
@@ -1604,7 +1617,6 @@ function autoScaleTileAreas() {
     document.querySelectorAll('.tile-area .tile, .carry-group .tile, .carry-zone-group .tile')
       .forEach(t => { t.style.zoom = ''; });
     document.querySelectorAll('.tile-area').forEach(a => { a.style.height = ''; });
-    document.querySelectorAll('.carry-group, .carry-zone-group').forEach(g => { g.style.height = ''; });
 
     // ② 位の表：tile-areaに高さをセット → 縦が溢れたら右へ折り返す（多列）
     document.querySelectorAll('.place-body').forEach(body => {
@@ -1627,19 +1639,11 @@ function autoScaleTileAreas() {
       });
     });
 
-    // ④ くりあがりゾーン：1列最大5タイルになるよう高さをセット
+    // ④ くりあがりゾーン：横幅に収まらなければタイルを縮小
     const czArea = document.getElementById('carryZone');
     if (czArea) {
       const czW = czArea.clientWidth - 20;
       czArea.querySelectorAll('.carry-group, .carry-zone-group').forEach(g => {
-        const firstTile = g.querySelector('.tile');
-        if (!firstTile) return;
-        const tileH = firstTile.offsetHeight;
-        const MAX_PER_COL = 5;
-        // 5タイル分の高さ + gap(8px)×4 + padding(5px)×2 + border(3px)×2
-        const groupH = MAX_PER_COL * tileH + (MAX_PER_COL - 1) * 8 + 10 + 6;
-        g.style.height = groupH + 'px';
-        // 横方向に溢れる場合はタイルを縮小
         if (g.scrollWidth > czW) {
           const scale = Math.max(0.25, czW / g.scrollWidth);
           g.querySelectorAll('.tile').forEach(t => { t.style.zoom = String(scale); });
