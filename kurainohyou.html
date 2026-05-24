@@ -456,22 +456,27 @@
       outline-offset: 2px;
     }
     /* くりあがりグループ枠（10個溜まったとき） */
-    .carry-group {
+    /* carry-zone-group と完全同寸にし、border だけ差し替える */
+    .carry-group, .carry-zone-group {
       display: flex;
       flex-direction: column;
       flex-wrap: wrap;
       align-content: flex-start;
       justify-content: flex-start;
       gap: 8px;
-      padding: 8px;
-      border: 3px solid #10b981;
+      padding: 5px; /* border 3px 分を差し引いた padding で寸法を揃える */
+      border: 3px solid transparent;
       border-radius: 12px;
-      background: rgba(16,185,129,0.1);
       flex-shrink: 0;
+      background: transparent;
+    }
+    .carry-group {
+      border-color: #f97316; /* オレンジ：ゾーンの緑と区別 */
+      background: rgba(249,115,22,0.08);
       cursor: pointer;
       transition: background .15s;
     }
-    .carry-group:hover { background: rgba(16,185,129,0.2); }
+    .carry-group:hover { background: rgba(249,115,22,0.18); }
 
     /* タイルパレット */
     .tile-palette {
@@ -648,15 +653,7 @@
       text-align: center;
       padding: 12px 0;
     }
-    .carry-zone-group {
-      display: flex;
-      flex-direction: column;
-      flex-wrap: wrap;
-      align-content: flex-start;
-      justify-content: flex-start;
-      gap: 8px;
-      padding: 8px;
-    }
+    /* carry-zone-group のレイアウトは .carry-group との共通ルールで定義済み */
     /* 結果タイル（くりあがり後） */
     .tile.carry-result {
       cursor: grab;
@@ -1639,8 +1636,8 @@ function autoScaleTileAreas() {
         if (!firstTile) return;
         const tileH = firstTile.offsetHeight;
         const MAX_PER_COL = 5;
-        // 5タイル分の高さ + gap(8px)×4 + padding(8px)×2
-        const groupH = MAX_PER_COL * tileH + (MAX_PER_COL - 1) * 8 + 16;
+        // 5タイル分の高さ + gap(8px)×4 + padding(5px)×2 + border(3px)×2
+        const groupH = MAX_PER_COL * tileH + (MAX_PER_COL - 1) * 8 + 10 + 6;
         g.style.height = groupH + 'px';
         // 横方向に溢れる場合はタイルを縮小
         if (g.scrollWidth > czW) {
