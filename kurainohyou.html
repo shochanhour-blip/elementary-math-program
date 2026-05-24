@@ -213,10 +213,11 @@
     .place-table-wrap {
       flex: 1 1 0;
       min-height: 0;
-      overflow: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
     }
 
     /* 分数表記 */
@@ -261,7 +262,7 @@
     .place-table {
       display: flex;
       flex-direction: column;
-      min-width: max-content;
+      width: 100%;
       flex: 1 1 0;
       min-height: 0;
     }
@@ -270,7 +271,7 @@
     .place-header { display: flex; flex-shrink: 0; }
     .place-header-cell {
       flex: 1 1 0;
-      min-width: 60px;
+      min-width: 80px;
       text-align: center;
       padding: 6px 4px;
       font-size: 14px;
@@ -289,10 +290,10 @@
       display: flex; align-items: center; justify-content: center;
     }
 
-    /* 4列以下：固定幅 */
+    /* 4列以下：均等分割（ペイン幅に追従） */
     .place-table.cols-fixed .place-header-cell:not(.decimal-sep):not(.row-label-hdr),
     .place-table.cols-fixed .place-cell:not(.decimal-sep):not(.row-label-cell) {
-      flex: 0 0 140px;
+      flex: 1 1 0;
     }
 
     /* 上下分割（たし算モード）の色分けと点線 */
@@ -315,10 +316,10 @@
     }
 
     /* ボディ */
-    .place-body { display: flex; align-items: stretch; flex: 1 1 0; min-height: 0; }
+    .place-body { display: flex; align-items: stretch; flex: 1 1 0; min-height: 80px; }
     .place-cell {
       flex: 1 1 0;
-      min-width: 60px;
+      min-width: 80px;
       border: 2px solid #e5e7eb;
       border-top: none;
       background: #fafafa;
@@ -346,12 +347,14 @@
 
     /* 点線分割 */
 
-    /* タイルエリア — 縦並び・クリップなし */
+    /* タイルエリア — 横折り返し・クリップなし */
     .tile-area {
       width: 100%;
       display: flex;
-      flex-direction: column;
-      align-items: center;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      justify-content: center;
       gap: 4px;
       padding: 6px 4px;
       min-height: 48px;
@@ -361,7 +364,7 @@
     .num-row { display: flex; flex-shrink: 0; }
     .num-cell {
       flex: 1 1 0;
-      min-width: 60px;
+      min-width: 80px;
       border: 2px solid #e5e7eb;
       border-top: none;
       border-bottom: none;
@@ -376,25 +379,30 @@
       flex: 0 0 28px; min-width: 28px;
       background: transparent; border-color: transparent;
     }
+    .num-cell.over-limit {
+      animation: over-pulse-text .5s ease-in-out infinite alternate;
+      background: #f59e0b !important;
+      color: #fff !important;
+    }
     .num-row:last-child .num-cell { border-bottom: 2px solid #e5e7eb; }
     .num-row:last-child .num-cell:first-child:not(.decimal-sep) { border-radius: 0 0 0 10px; }
     .num-row:last-child .num-cell:last-child:not(.decimal-sep)  { border-radius: 0 0 10px 0; }
-    .place-table.cols-fixed .num-cell:not(.decimal-sep) { flex: 0 0 140px; }
+    .place-table.cols-fixed .num-cell:not(.decimal-sep) { flex: 1 1 0; }
 
     /* 10個以上エラー表示 */
     @keyframes over-pulse {
-      0%,100% { box-shadow: inset 0 0 0 4px #ef4444, 0 0 0 4px #ef4444; }
-      50%      { box-shadow: inset 0 0 0 4px #fca5a5, 0 0 0 8px #fca5a5; }
+      0%,100% { box-shadow: inset 0 0 0 4px #f59e0b, 0 0 0 4px #f59e0b; }
+      50%      { box-shadow: inset 0 0 0 4px #fcd34d, 0 0 0 8px #fcd34d; }
     }
     .place-cell.over-limit {
       animation: over-pulse .7s ease-in-out infinite;
-      background: #fff1f1 !important;
+      background: #fffbeb !important;
     }
     .cell-number.over {
       display: block !important;
-      background: #ef4444;
+      background: #f59e0b;
       color: #fff;
-      border-top: 2px solid #b91c1c;
+      border-top: 2px solid #b45309;
       font-size: 13px;
       font-weight: 900;
       padding: 5px 4px;
@@ -402,8 +410,8 @@
       animation: over-pulse-text .5s ease-in-out infinite alternate;
     }
     @keyframes over-pulse-text {
-      from { background: #ef4444; }
-      to   { background: #dc2626; }
+      from { background: #f59e0b; }
+      to   { background: #d97706; }
     }
 
     /* 合計数表示 */
@@ -422,32 +430,49 @@
       transition: transform .08s, opacity .15s;
     }
     .tile:active { cursor: grabbing; }
-    .tile.t1000 { width:52px;height:52px;font-size:17px;background:#0ea5e9;color:#fff;border-radius:12px;box-shadow:0 3px 0 #0369a1; }
-    .tile.t100  { width:46px;height:46px;font-size:19px;background:#7c3aed;color:#fff;border-radius:11px;box-shadow:0 3px 0 #4c1d95; }
-    .tile.t10   { width:40px;height:40px;font-size:20px;background:#f59e0b;color:#fff;border-radius:10px;box-shadow:0 3px 0 #b45309; }
-    .tile.t1    { width:34px;height:34px;font-size:22px;background:#ef4444;color:#fff;border-radius:50%;box-shadow:0 3px 0 #b91c1c; }
-    .tile.t01   { width:28px;height:28px;font-size:12px;background:#f97316;color:#fff;border-radius:50%;box-shadow:0 2px 0 #c2410c; }
-    .tile.t001  { width:22px;height:22px;font-size:9px; background:#22c55e;color:#fff;border-radius:50%;box-shadow:0 2px 0 #15803d; }
+    .tile.t1000 { width:64px;height:64px;font-size:20px;background:#0ea5e9;color:#fff;border-radius:14px;box-shadow:0 3px 0 #0369a1; }
+    .tile.t100  { width:56px;height:56px;font-size:22px;background:#7c3aed;color:#fff;border-radius:13px;box-shadow:0 3px 0 #4c1d95; }
+    .tile.t10   { width:50px;height:50px;font-size:24px;background:#f59e0b;color:#fff;border-radius:12px;box-shadow:0 3px 0 #b45309; }
+    .tile.t1    { width:44px;height:44px;font-size:26px;background:#ef4444;color:#fff;border-radius:50%;box-shadow:0 3px 0 #b91c1c; }
+    .tile.t01   { width:36px;height:36px;font-size:15px;background:#f97316;color:#fff;border-radius:50%;box-shadow:0 2px 0 #c2410c; }
+    .tile.t001  { width:28px;height:28px;font-size:11px;background:#22c55e;color:#fff;border-radius:50%;box-shadow:0 2px 0 #15803d; }
     .tile.dragging { opacity: .15; }
 
     /* remove モード */
     .remove-mode .tile-area .tile { cursor: pointer; }
     .remove-mode .tile-area .tile:hover { filter: brightness(1.4); transform: scale(1.1); }
 
-    /* 10個まとまり */
-    .bundle {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 3px;
-      padding: 5px;
-      border: 3px solid #fbbf24;
-      border-radius: 10px;
-      background: rgba(251,191,36,0.12);
-      cursor: grab;
-      flex-shrink: 0;
-      transition: transform .08s;
+    /* 予約済みタイル（くりあがり元） */
+    .tile.reserved {
+      opacity: 0.35;
+      cursor: not-allowed !important;
+      filter: grayscale(0.6);
     }
-    .bundle:active { cursor: grabbing; }
+    /* くりあがりゴーストタイル（くりあがり先） */
+    .tile.carry-ghost {
+      opacity: 0.5;
+      box-shadow: none !important;
+      cursor: grab;
+      outline: 3px dashed rgba(0,0,0,0.5);
+      outline-offset: 2px;
+    }
+    /* くりあがりグループ枠（10個溜まったとき） */
+    .carry-group {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      justify-content: center;
+      gap: 4px;
+      padding: 6px;
+      border: 3px solid #10b981;
+      border-radius: 12px;
+      background: rgba(16,185,129,0.1);
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .carry-group:hover { background: rgba(16,185,129,0.2); }
 
     /* タイルパレット */
     .tile-palette {
@@ -581,11 +606,67 @@
       padding: 14px 16px;
       display: flex;
       flex-direction: column;
-      flex: 1 1 0;
-      min-height: 0;
+      flex: 0 0 auto;
       overflow: hidden;
     }
     .zone-palette .zone-title { color: var(--c-place); }
+
+    /* くりあがりゾーン */
+    .zone-carry {
+      background: var(--panel);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 0;
+      min-height: 80px;
+      overflow: hidden;
+    }
+    .zone-carry .zone-title { color: #10b981; }
+    .carry-zone-area {
+      flex: 1 1 0;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 6px 4px;
+      border: 2px dashed #a7f3d0;
+      border-radius: 12px;
+      background: #f0fdf4;
+      transition: background .15s, border-color .15s;
+    }
+    .carry-zone-area.drag-over {
+      background: #d1fae5;
+      border-color: #10b981;
+      border-style: solid;
+    }
+    .carry-zone-empty {
+      color: #6ee7b7;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      padding: 12px 0;
+    }
+    .carry-zone-group {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      justify-content: center;
+      gap: 4px;
+      padding: 4px;
+    }
+    /* 結果タイル（くりあがり後） */
+    .tile.carry-result {
+      cursor: grab;
+      animation: carry-result-pulse 0.9s ease-in-out infinite alternate;
+    }
+    @keyframes carry-result-pulse {
+      from { box-shadow: 0 0 0 2px #10b981, 0 3px 0 #059669; }
+      to   { box-shadow: 0 0 0 6px rgba(16,185,129,0.5), 0 3px 0 #059669; }
+    }
     .tile-palette {
       display: flex;
       flex-direction: column;
@@ -697,19 +778,6 @@
     }
     .tile-new { animation: tile-pop 0.3s cubic-bezier(.17,.67,.46,1.2); }
 
-    @keyframes bundle-pop {
-      0%   { transform: scale(0.6); opacity: 0; }
-      70%  { transform: scale(1.06); opacity: 1; }
-      100% { transform: scale(1);    opacity: 1; }
-    }
-    .bundle-new { animation: bundle-pop 0.4s cubic-bezier(.17,.67,.46,1.2); }
-
-    /* バンドル形成ヒント（繰り上がり示唆）*/
-    @keyframes bundle-hint-pulse {
-      0%,100% { box-shadow: 0 0 0 0   rgba(251,191,36,0);    border-color: #fbbf24; }
-      50%     { box-shadow: 0 0 0 12px rgba(251,191,36,0.55); border-color: #f59e0b; }
-    }
-    .bundle-hint { animation: bundle-hint-pulse 0.7s ease-in-out 3; }
 
     /* りょうがえゾーン フラッシュ */
     @keyframes exch-flash {
@@ -784,12 +852,18 @@
         <div class="zone-title">タイル</div>
         <div id="tilePalette" class="tile-palette"></div>
       </section>
+      <section class="zone-carry">
+        <div class="zone-title">くりあがりゾーン</div>
+        <div id="carryZone" class="carry-zone-area">
+          <div class="carry-zone-empty">ここにタイルをおくる</div>
+        </div>
+      </section>
     </div>
 
     <!-- りょうがえ確認モーダル -->
     <div id="confirmModal" class="confirm-overlay" style="display:none">
       <div class="confirm-box">
-        <div class="confirm-msg">りょうがえ<br>しますか？</div>
+        <div id="confirmMsg" class="confirm-msg">りょうがえ<br>しますか？</div>
         <div class="confirm-btns">
           <button id="confirmYes" class="confirm-yes">はい</button>
           <button id="confirmNo"  class="confirm-no">いいえ</button>
@@ -831,13 +905,10 @@ const state = {
   topPlace:    10,
   botPlace:    1,
   nextId:      0,
-  nextBundleId: 0,
-  tiles:       [],   // { id, placeValue, bundleId? }
-  bundles:     new Map(), // bundleId → { placeValue }
-  animNewBundles:    new Set(), // アニメーション対象のbundleId
-  animNewTiles:      new Set(), // アニメーション対象のtileId
-  animNewTileOrder:  [],        // pop-in の順序（stagger用）
-  pendingBundleHints: new Set(), // hint pulse を表示するbundleId
+  tiles:       [],      // { id, placeValue, row, reserved? }
+  carryZone:   [],      // { id, placeValue, row?, sourceId?, result? }
+  animNewTiles:     new Set(),
+  animNewTileOrder: [],
 };
 
 // ── DOM ─────────────────────────────────────────────
@@ -855,7 +926,9 @@ const paneDivider   = $('paneDivider');
 const confirmModal  = $('confirmModal');
 const confirmYesBtn = $('confirmYes');
 const confirmNoBtn  = $('confirmNo');
-let pendingExchange = null;
+const confirmMsg    = $('confirmMsg');
+const carryZoneEl   = $('carryZone');
+let pendingAction = null;
 const inputA        = $('inputA');
 const inputB        = $('inputB');
 const opDisplay     = $('opDisplay');
@@ -883,78 +956,31 @@ function realPlaces() {
   return getActivePlaces().filter(p => !p.isDot);
 }
 
-// ── バンドル確認（10個溜まったら自動グループ）────────
-function checkBundles() {
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const pd of realPlaces()) {
-      const pv = pd.value;
-      for (const row of ['a', 'b']) {
-      const loose = state.tiles.filter(t => t.placeValue === pv && t.bundleId === undefined && t.row === row);
-      if (loose.length >= 10) {
-        const bid = state.nextBundleId++;
-        state.bundles.set(bid, { placeValue: pv, row });
-        loose.slice(0, 10).forEach(t => { t.bundleId = bid; });
-        state.animNewBundles.add(bid);
-        state.pendingBundleHints.add(bid);
-        changed = true;
-      }
-      } // end for row
-    }
-  }
-}
-
 // ── タイル追加 ───────────────────────────────────────
 function addTile(placeValue, row = 'a') {
   const id = state.nextId++;
   state.tiles.push({ id, placeValue, row });
   state.animNewTiles.add(id);
   state.animNewTileOrder.push(id);
-  checkBundles();
 }
 
 // ── タイル削除 ───────────────────────────────────────
 function removeTile(tileId) {
   const tile = state.tiles.find(t => t.id === tileId);
   if (!tile) return;
-  if (tile.bundleId !== undefined) {
-    // バンドルから取り出す：バンドル全体の bundleId を外す（バラバラに）
-    const bid = tile.bundleId;
-    state.tiles.filter(t => t.bundleId === bid).forEach(t => { t.bundleId = undefined; });
-    state.bundles.delete(bid);
+  if (tile.reserved) {
+    // 予約済みタイル削除 → 対応carryZoneゴーストも削除
+    state.carryZone = state.carryZone.filter(t => t.sourceId !== tileId);
   }
   state.tiles = state.tiles.filter(t => t.id !== tileId);
 }
 
-// ── 繰り上がり（バンドル → 上位1枚）────────────────
-function promoteBundle(bundleId) {
-  const meta = state.bundles.get(bundleId);
-  if (!meta) return;
-  const upper = getUpperPlace(meta.placeValue);
-  if (upper === null) return;
-  const promoteRow = meta.row || 'a';
-  state.tiles = state.tiles.filter(t => t.bundleId !== bundleId);
-  state.bundles.delete(bundleId);
-  const newId = state.nextId++;
-  state.tiles.push({ id: newId, placeValue: upper, row: promoteRow });
-  state.animNewTiles.add(newId);
-  state.animNewTileOrder.push(newId);
-  checkBundles();
-}
-
-// ── 両替（タイル/バンドル → 下位10枚）──────────────
+// ── 両替（タイル → 下位10枚）────────────────────────
 function exchangeTile(tileId) {
   const tile = state.tiles.find(t => t.id === tileId);
   if (!tile) return;
   const lower = getLowerPlace(tile.placeValue);
   if (lower === null) return;
-  if (tile.bundleId !== undefined) {
-    // バンドルから1枚だけ切り離す（残りはバンドル解除してバラバラに）
-    const bid = tile.bundleId;
-    state.tiles.filter(t => t.bundleId === bid).forEach(t => { t.bundleId = undefined; });
-    state.bundles.delete(bid);
-  }
   const tileRow = tile.row || 'a';
   state.tiles = state.tiles.filter(t => t.id !== tileId);
   const newIds = [];
@@ -964,25 +990,53 @@ function exchangeTile(tileId) {
     newIds.push(nid);
   }
   newIds.forEach(id => { state.animNewTiles.add(id); state.animNewTileOrder.push(id); });
-  checkBundles();
 }
 
-function exchangeBundle(bundleId) {
-  const meta = state.bundles.get(bundleId);
-  if (!meta) return;
-  const lower = getLowerPlace(meta.placeValue);
-  if (lower === null) return;
-  const bundleRow = meta.row || 'a';
-  state.tiles = state.tiles.filter(t => t.bundleId !== bundleId);
-  state.bundles.delete(bundleId);
-  const newIds = [];
-  for (let i = 0; i < 10; i++) {
-    const nid = state.nextId++;
-    state.tiles.push({ id: nid, placeValue: lower, row: bundleRow });
-    newIds.push(nid);
-  }
-  newIds.forEach(id => { state.animNewTiles.add(id); state.animNewTileOrder.push(id); });
-  checkBundles();
+// ── くりあがりゾーンにタイルを送る ──────────────────
+function addToCarryZone(sourceTileId) {
+  const src = state.tiles.find(t => t.id === sourceTileId);
+  if (!src || src.reserved) return;
+  src.reserved = true;
+  state.carryZone.push({
+    id: state.nextId++,
+    placeValue: src.placeValue,
+    row: src.row || 'a',
+    sourceId: sourceTileId,
+  });
+}
+
+// ── くりあがりゾーンからキャンセル ──────────────────
+function removeFromCarryZone(carryId) {
+  const ghost = state.carryZone.find(t => t.id === carryId && !t.result);
+  if (!ghost) return;
+  const src = state.tiles.find(t => t.id === ghost.sourceId);
+  if (src) src.reserved = false;
+  state.carryZone = state.carryZone.filter(t => t.id !== carryId);
+}
+
+// ── くりあがり確定 ───────────────────────────────────
+function confirmCarryZone(placeValue) {
+  const ghosts = state.carryZone.filter(t => !t.result && t.placeValue === placeValue);
+  const group = ghosts.slice(0, 10);
+  if (group.length < 10) return;
+  const srcIdSet  = new Set(group.map(g => g.sourceId));
+  const carryIdSet = new Set(group.map(g => g.id));
+  state.carryZone = state.carryZone.filter(t => !carryIdSet.has(t.id));
+  state.tiles = state.tiles.filter(t => !srcIdSet.has(t.id));
+  const upper = getUpperPlace(placeValue);
+  if (upper === null) return;
+  state.carryZone.push({ id: state.nextId++, placeValue: upper, result: true });
+}
+
+// ── くりあがり結果タイルを位の表に配置 ──────────────
+function placeCarryResult(carryId, targetPV, targetRow) {
+  const result = state.carryZone.find(t => t.id === carryId && t.result);
+  if (!result || result.placeValue !== targetPV) return;
+  state.carryZone = state.carryZone.filter(t => t.id !== carryId);
+  const newId = state.nextId++;
+  state.tiles.push({ id: newId, placeValue: targetPV, row: targetRow });
+  state.animNewTiles.add(newId);
+  state.animNewTileOrder.push(newId);
 }
 
 function getUpperPlace(pv) {
@@ -1106,28 +1160,16 @@ function renderPlaceTable() {
       tileArea.dataset.place = p.value;
       if (rowKey) tileArea.dataset.row = rowKey;
 
-      // バンドルを描画
-      const bundleIds = [...new Set(
-        state.tiles.filter(t => t.placeValue === p.value && t.bundleId !== undefined && rowFilter(t))
-                   .map(t => t.bundleId)
-      )];
-      bundleIds.forEach(bid => {
-        const bTiles = state.tiles.filter(t => t.bundleId === bid);
-        const wrap = document.createElement('div');
-        wrap.className = 'bundle' + (state.animNewBundles.has(bid) ? ' bundle-new' : '');
-        wrap.dataset.bundleId = bid;
-        wrap.dataset.place = p.value;
-        bTiles.forEach(tile => wrap.appendChild(makeTileEl(tile, p)));
-        attachBundleDrag(wrap, bid, p.value);
-        tileArea.appendChild(wrap);
-      });
+      const allCellTiles  = state.tiles.filter(t => t.placeValue === p.value && rowFilter(t));
+      const normalTiles   = allCellTiles.filter(t => !t.reserved);
+      const reservedTiles = allCellTiles.filter(t => t.reserved);
 
-      // 単体タイルを描画
-      state.tiles.filter(t => t.placeValue === p.value && t.bundleId === undefined && rowFilter(t))
-                 .forEach(tile => tileArea.appendChild(makeTileEl(tile, p)));
+      normalTiles.forEach(tile => tileArea.appendChild(makeTileEl(tile, p)));
+      reservedTiles.forEach(tile => tileArea.appendChild(makeTileEl(tile, p)));
 
-      const count = state.tiles.filter(t => t.placeValue === p.value && rowFilter(t)).length;
-      if (count >= 10) cell.classList.add('over-limit');
+      const realCount  = allCellTiles.length;
+      const totalCount = isSplit ? state.tiles.filter(t => t.placeValue === p.value).length : realCount;
+      if (realCount >= 10 || totalCount >= 10) cell.classList.add('over-limit');
 
       cell.appendChild(tileArea);
       body.appendChild(cell);
@@ -1167,6 +1209,7 @@ function renderPlaceTable() {
           nc.className = 'num-cell';
           const cnt = state.tiles.filter(t => t.placeValue === p.value).length;
           nc.textContent = String(cnt);
+          if (cnt >= 10) nc.classList.add('over-limit');
         }
         numRow.appendChild(nc);
       });
@@ -1174,7 +1217,6 @@ function renderPlaceTable() {
     });
   }
 
-  state.animNewBundles.clear();
   state.animNewTiles.clear();
   state.animNewTileOrder = [];
 }
@@ -1187,12 +1229,13 @@ function makeTileEl(tile, placeDef) {
   const useStagger = isNew && orderIdx >= 0 && state.animNewTileOrder.length > 1;
   el.className = 'tile ' + placeDef.cls
     + (isNew && !useStagger ? ' tile-new' : '')
-    + (useStagger ? ' tile-stagger' : '');
+    + (useStagger ? ' tile-stagger' : '')
+    + (tile.reserved ? ' reserved' : '');
   if (useStagger) el.style.animationDelay = (orderIdx * 55) + 'ms';
   el.dataset.tileId = tile.id;
   el.textContent = placeLabelShort(placeDef.value);
 
-  attachTileDrag(el, tile);
+  if (!tile.reserved) attachTileDrag(el, tile);
   return el;
 }
 
@@ -1215,11 +1258,71 @@ function attachTileDrag(el, tile) {
   });
 }
 
-function attachBundleDrag(el, bundleId, placeValue) {
-  const meta = state.bundles.get(bundleId);
+// ── くりあがりゾーン描画 ─────────────────────────────
+function renderCarryZone() {
+  carryZoneEl.innerHTML = '';
+  const ghosts  = state.carryZone.filter(t => !t.result);
+  const results = state.carryZone.filter(t =>  t.result);
+
+  if (ghosts.length === 0 && results.length === 0) {
+    carryZoneEl.innerHTML = '<div class="carry-zone-empty">ここにタイルをおくる</div>';
+    return;
+  }
+
+  // ゴーストをplaceValueでグループ化（降順）
+  const byPlace = {};
+  ghosts.forEach(t => {
+    if (!byPlace[t.placeValue]) byPlace[t.placeValue] = [];
+    byPlace[t.placeValue].push(t);
+  });
+  Object.keys(byPlace).sort((a,b) => b - a).forEach(pv => {
+    const tiles = byPlace[pv];
+    const pd = PLACE_DEFS.find(d => d.value === parseFloat(pv));
+    if (!pd) return;
+    const wrap = document.createElement('div');
+    if (tiles.length >= 10) {
+      wrap.className = 'carry-group';
+      wrap.addEventListener('click', e => { e.stopPropagation(); showCarryConfirm(parseFloat(pv)); });
+    } else {
+      wrap.className = 'carry-zone-group';
+    }
+    tiles.forEach(t => {
+      const el = document.createElement('div');
+      el.className = `tile ${pd.cls} carry-ghost`;
+      el.dataset.carryId = t.id;
+      el.textContent = placeLabelShort(pd.value);
+      attachCarryZoneGhostDrag(el, t);
+      wrap.appendChild(el);
+    });
+    carryZoneEl.appendChild(wrap);
+  });
+
+  // 結果タイル
+  results.forEach(t => {
+    const pd = PLACE_DEFS.find(d => d.value === t.placeValue);
+    if (!pd) return;
+    const el = document.createElement('div');
+    el.className = `tile ${pd.cls} carry-result`;
+    el.dataset.carryId = t.id;
+    el.textContent = placeLabelShort(pd.value);
+    attachCarryResultDrag(el, t);
+    carryZoneEl.appendChild(el);
+  });
+}
+
+function attachCarryZoneGhostDrag(el, tile) {
   el.addEventListener('pointerdown', e => {
     e.preventDefault();
-    startDrag(e, el, { type: 'bundle', bundleId, placeValue, row: meta?.row || 'a' });
+    e.stopPropagation();
+    startDrag(e, el, { type: 'carry-zone-ghost', carryId: tile.id, placeValue: tile.placeValue, sourceId: tile.sourceId });
+  });
+}
+
+function attachCarryResultDrag(el, tile) {
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    startDrag(e, el, { type: 'carry-result', carryId: tile.id, placeValue: tile.placeValue });
   });
 }
 
@@ -1245,7 +1348,7 @@ function startDrag(e, el, payload) {
   el.setPointerCapture(e.pointerId);
 
   function clearHighlights() {
-    document.querySelectorAll('.place-cell, .exchange-area')
+    document.querySelectorAll('.place-cell, .carry-zone-area')
             .forEach(t => t.classList.remove('drag-over', 'valid-drop'));
   }
 
@@ -1262,6 +1365,11 @@ function startDrag(e, el, payload) {
 
     if (cell) {
       cell.classList.add(isValidDrop(payload, targetPV) ? 'valid-drop' : 'drag-over');
+    }
+    // くりあがりゾーンのハイライト
+    const onCarryZone = under?.closest('#carryZone');
+    if (onCarryZone && payload.type === 'tile') {
+      onCarryZone.classList.add('drag-over');
     }
   }
 
@@ -1289,21 +1397,41 @@ function startDrag(e, el, payload) {
       return;
     }
 
+    // くりあがりゾーンゴースト → 元の位に戻してキャンセル
+    if (payload.type === 'carry-zone-ghost') {
+      const src = state.tiles.find(t => t.id === payload.sourceId);
+      if (targetPV !== null && src && targetPV === src.placeValue) {
+        removeFromCarryZone(payload.carryId);
+        renderAll();
+      }
+      return;
+    }
+
+    // くりあがり結果タイル → 位の表に配置
+    if (payload.type === 'carry-result') {
+      if (targetPV !== null && targetPV === payload.placeValue) {
+        const tileArea = under?.closest('.tile-area');
+        const targetRow = tileArea?.dataset.row || cell?.dataset.row || 'a';
+        placeCarryResult(payload.carryId, targetPV, targetRow);
+        renderAll();
+      }
+      return;
+    }
+
+    // 通常タイル → くりあがりゾーンにドロップ
+    const onCarryZone = under?.closest('#carryZone');
+    if (onCarryZone && payload.type === 'tile') {
+      addToCarryZone(payload.tileId);
+      renderAll();
+      return;
+    }
+
     if (targetPV !== null && isValidDrop(payload, targetPV)) {
-      const lower = getLowerPlace(payload.placeValue);
-      const upper = getUpperPlace(payload.placeValue);
-      if (payload.type === 'bundle' && targetPV === upper) {
-        // バンドル → 上位セルで繰り上がり
-        const rowSel = payload.row ? `[data-row="${payload.row}"]` : '';
-        const tgtCell = document.querySelector(`.place-cell[data-place="${targetPV}"]${rowSel}`)
-                     || document.querySelector(`.place-cell[data-place="${targetPV}"]`);
-        animFlyGhost(el, tgtCell, () => { promoteBundle(payload.bundleId); renderAll(); });
-      } else if (targetPV === lower) {
-        // タイル/バンドル → 下位セルでりょうがえ確認
+      if (targetPV === getLowerPlace(payload.placeValue)) {
         showExchangeConfirm(payload);
       }
-    } else if (!cell) {
-      // セル外にドロップ → タイルを削除
+    } else if (!cell && !onCarryZone) {
+      // セル外・ゾーン外にドロップ → タイルを削除
       if (payload.type === 'tile') {
         removeTile(payload.tileId);
         renderAll();
@@ -1368,28 +1496,14 @@ function animFlyGhost(srcEl, targetEl, callback) {
   }, { once: true });
 }
 
-// バンドル形成ヒント（繰り上がり示唆パルス）
-function animBundleHint(bundleId) {
-  setTimeout(() => {
-    const el = document.querySelector(`.bundle[data-bundle-id="${bundleId}"]`);
-    if (!el) return;
-    el.classList.remove('bundle-hint');
-    void el.offsetWidth;
-    el.classList.add('bundle-hint');
-    setTimeout(() => el?.classList.remove('bundle-hint'), 2300);
-  }, 80);
-}
 
 function isValidDrop(payload, targetPV) {
-  if (payload.type === 'source') {
-    return targetPV === payload.placeValue;
+  if (payload.type === 'source') return targetPV === payload.placeValue;
+  if (payload.type === 'carry-zone-ghost') {
+    const src = state.tiles.find(t => t.id === payload.sourceId);
+    return src !== undefined && targetPV === src.placeValue;
   }
-  if (payload.type === 'bundle') {
-    const upper = getUpperPlace(payload.placeValue);
-    const lower = getLowerPlace(payload.placeValue);
-    return (upper !== null && targetPV === upper)
-        || (lower !== null && targetPV === lower);
-  }
+  if (payload.type === 'carry-result') return targetPV === payload.placeValue;
   if (payload.type === 'tile') {
     const lower = getLowerPlace(payload.placeValue);
     return lower !== null && targetPV === lower;
@@ -1399,23 +1513,30 @@ function isValidDrop(payload, targetPV) {
 
 // ── りょうがえ確認モーダル ────────────────────────────
 function showExchangeConfirm(payload) {
-  pendingExchange = payload;
+  pendingAction = { type: 'exchange', ...payload };
+  confirmMsg.innerHTML = 'りょうがえ<br>しますか？';
+  confirmModal.style.display = 'flex';
+}
+
+function showCarryConfirm(placeValue) {
+  pendingAction = { type: 'carry', placeValue };
+  confirmMsg.innerHTML = 'くりあがりを<br>しますか？';
   confirmModal.style.display = 'flex';
 }
 
 confirmYesBtn.addEventListener('click', () => {
   confirmModal.style.display = 'none';
-  if (!pendingExchange) return;
-  const p = pendingExchange;
-  pendingExchange = null;
-  if (p.type === 'tile')   exchangeTile(p.tileId);
-  if (p.type === 'bundle') exchangeBundle(p.bundleId);
+  if (!pendingAction) return;
+  const p = pendingAction;
+  pendingAction = null;
+  if (p.type === 'exchange') exchangeTile(p.tileId);
+  if (p.type === 'carry')    confirmCarryZone(p.placeValue);
   renderAll();
 });
 
 confirmNoBtn.addEventListener('click', () => {
   confirmModal.style.display = 'none';
-  pendingExchange = null;
+  pendingAction = null;
 });
 
 // ── 筆算レンダリング ─────────────────────────────────
@@ -1480,20 +1601,56 @@ function renderTilePalette() {
   });
 }
 
+// ── タイルエリア自動縮小 ─────────────────────────────
+function autoScaleTileAreas() {
+  requestAnimationFrame(() => {
+    // まずzoomをリセット（タイル自体にかける）
+    document.querySelectorAll('.tile-area .tile, .carry-group .tile, .carry-zone-group .tile').forEach(t => { t.style.zoom = ''; });
+
+    // 位の表：各セルのtile-areaタイルを縮小
+    document.querySelectorAll('.place-body').forEach(body => {
+      const availH = body.clientHeight;
+      if (availH <= 0) return;
+      body.querySelectorAll('.place-cell:not(.decimal-sep)').forEach(cell => {
+        let contentH = 0;
+        cell.querySelectorAll('.tile-area').forEach(a => { contentH += a.scrollHeight; });
+        if (contentH > availH) {
+          // tile-areaのコンテナ幅を維持したままタイルのサイズを縮小
+          // → 横に複数列並ぶようになり、縦を節約できる
+          const scale = Math.max(0.25, availH / contentH);
+          cell.querySelectorAll('.tile-area .tile').forEach(t => { t.style.zoom = String(scale); });
+        }
+      });
+    });
+
+    // くりあがりゾーン：carry-zone-areaのタイルを縮小
+    const czArea = document.getElementById('carryZone');
+    if (czArea) {
+      const availH = czArea.clientHeight;
+      if (availH > 0) {
+        let contentH = czArea.scrollHeight;
+        if (contentH > availH) {
+          const scale = Math.max(0.25, availH / contentH);
+          czArea.querySelectorAll('.tile').forEach(t => { t.style.zoom = String(scale); });
+        }
+      }
+    }
+  });
+}
+
 // ── 全体レンダリング ─────────────────────────────────
 function renderAll() {
   renderPlaceTable();
   renderTilePalette();
+  renderCarryZone();
   renderHissan();
-  // バンドル形成ヒントアニメーション
-  state.pendingBundleHints.forEach(bid => animBundleHint(bid));
-  state.pendingBundleHints.clear();
+  autoScaleTileAreas();
   // タイルからinput値を更新（たし算モード・input側からの更新中は除く）
   if (state.opMode === 'add' && !syncingFromInput) {
     let valA = 0, valB = 0;
     realPlaces().forEach(p => {
-      valA += state.tiles.filter(t => t.placeValue === p.value && t.row === 'a').length * p.value;
-      valB += state.tiles.filter(t => t.placeValue === p.value && t.row === 'b').length * p.value;
+      valA += state.tiles.filter(t => t.placeValue === p.value && t.row === 'a' && !t.ghost).length * p.value;
+      valB += state.tiles.filter(t => t.placeValue === p.value && t.row === 'b' && !t.ghost).length * p.value;
     });
     const strA = valA > 0 ? String(Math.round(valA * 100000) / 100000) : '';
     const strB = valB > 0 ? String(Math.round(valB * 100000) / 100000) : '';
@@ -1507,9 +1664,9 @@ let syncingFromInput = false;
 
 function syncTilesFromInput(row, rawValue) {
   syncingFromInput = true;
-  // そのrowのタイルとバンドルを全削除
-  const removedBids = new Set(state.tiles.filter(t => t.row === row && t.bundleId !== undefined).map(t => t.bundleId));
-  removedBids.forEach(bid => state.bundles.delete(bid));
+  // このrowの予約済みタイルに対応するcarryZoneゴーストも削除
+  const reservedIds = new Set(state.tiles.filter(t => t.row === row && t.reserved).map(t => t.id));
+  state.carryZone = state.carryZone.filter(t => t.result || !reservedIds.has(t.sourceId));
   state.tiles = state.tiles.filter(t => t.row !== row);
 
   const value = parseFloat(rawValue);
@@ -1522,7 +1679,6 @@ function syncTilesFromInput(row, rawValue) {
       }
       remaining = Math.round((remaining - count * p.value) * 100000) / 100000;
     });
-    checkBundles();
   }
 
   renderAll();
@@ -1557,10 +1713,11 @@ showNumBtn.addEventListener('click', () => {
   state.showNumbers = !state.showNumbers; applyUIState(); renderAll();
 });
 resetBtn.addEventListener('click', () => {
-  state.tiles = []; state.bundles.clear();
-  state.nextId = 0; state.nextBundleId = 0;
-  state.animNewBundles.clear(); state.animNewTiles.clear();
-  state.animNewTileOrder = []; state.pendingBundleHints.clear();
+  state.tiles = [];
+  state.carryZone = [];
+  state.nextId = 0;
+  state.animNewTiles.clear();
+  state.animNewTileOrder = [];
   inputA.value = ''; inputB.value = '';
   renderAll();
 });
@@ -1605,6 +1762,8 @@ paneDivider.addEventListener('pointerdown', e => {
   paneDivider.addEventListener('pointerup',   onUp);
   paneDivider.addEventListener('pointercancel', onUp);
 });
+
+window.addEventListener('resize', autoScaleTileAreas);
 
 // ── 初期化 ───────────────────────────────────────────
 applyUIState();
