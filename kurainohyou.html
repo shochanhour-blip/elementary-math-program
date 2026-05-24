@@ -459,7 +459,9 @@
     .carry-group {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      justify-content: flex-start;
       gap: 4px;
       padding: 6px;
       border: 3px solid #10b981;
@@ -649,7 +651,9 @@
     .carry-zone-group {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      justify-content: flex-start;
       gap: 4px;
       padding: 4px;
     }
@@ -1603,6 +1607,7 @@ function autoScaleTileAreas() {
     document.querySelectorAll('.tile-area .tile, .carry-group .tile, .carry-zone-group .tile')
       .forEach(t => { t.style.zoom = ''; });
     document.querySelectorAll('.tile-area').forEach(a => { a.style.height = ''; });
+    document.querySelectorAll('.carry-group, .carry-zone-group').forEach(g => { g.style.height = ''; });
 
     // ② 位の表：tile-areaに高さをセット → 縦が溢れたら右へ折り返す（多列）
     document.querySelectorAll('.place-body').forEach(body => {
@@ -1625,13 +1630,23 @@ function autoScaleTileAreas() {
       });
     });
 
-    // ④ くりあがりゾーン：縦が溢れたらタイルを縮小
+    // ④ くりあがりゾーン：グループに高さをセット → 縦が埋まったら右へ折り返す
     const czArea = document.getElementById('carryZone');
     if (czArea) {
       const availH = czArea.clientHeight;
-      if (availH > 0 && czArea.scrollHeight > availH) {
-        const scale = Math.max(0.25, availH / czArea.scrollHeight);
-        czArea.querySelectorAll('.tile').forEach(t => { t.style.zoom = String(scale); });
+      if (availH > 0) {
+        const groupH = Math.max(48, availH - 16);
+        czArea.querySelectorAll('.carry-group, .carry-zone-group').forEach(g => {
+          g.style.height = groupH + 'px';
+        });
+        // 横方向に溢れる場合はタイルを縮小
+        czArea.querySelectorAll('.carry-group, .carry-zone-group').forEach(g => {
+          const gW = czArea.clientWidth - 20; // padding分
+          if (g.scrollWidth > gW) {
+            const scale = Math.max(0.25, gW / g.scrollWidth);
+            g.querySelectorAll('.tile').forEach(t => { t.style.zoom = String(scale); });
+          }
+        });
       }
     }
   });
