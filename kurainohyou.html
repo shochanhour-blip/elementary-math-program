@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>たしざん・ひきざん — ぐたいぶつでかんがえよう</title>
+  <style>
+    :root {
+      --panel:    #fff;
+      --text:     #1f2933;
+      --shadow:   0 6px 18px rgba(0,0,0,0.08);
+      --c-add:    #ef4444;
+      --c-sub:    #3b82f6;
+      --c-place:  #7c3aed;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: "Noto Sans JP","Helvetica Neue",Arial,sans-serif;
+      background: #f3f4f6;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #pageWrap {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding: 14px 48px;
+      overflow: hidden;
+    }
+
+    /* ── コントロールパネル ── */
+    .controls {
+      width: 100%;
+      padding: 14px 18px;
+      border-radius: 20px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .mode-btn {
+      padding: 9px 20px;
+      font-size: 15px;
+      font-weight: 800;
+      border: 2.5px solid #d1d5db;
+      border-radius: 50px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: transform .05s, background .15s, color .15s, border-color .15s;
+    }
+    .mode-btn:active { transform: translateY(1px); }
+    #addBtn.on    { background: var(--c-add);   color: #fff; border-color: var(--c-add); }
+    #subBtn.on    { background: var(--c-sub);   color: #fff; border-color: var(--c-sub); }
+    #gutiBtn.on   { background: #16a34a;        color: #fff; border-color: #16a34a; }
+    #hissanBtn.on { background: #0ea5e9;        color: #fff; border-color: #0ea5e9; }
+    .divider { width: 1px; height: 28px; background: #e5e7eb; flex-shrink: 0; }
+    .reset-btn {
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      margin-left: auto;
+    }
+    .reset-btn:active { transform: translateY(1px); }
+    .num-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-radius: 50px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .num-chip label { white-space: nowrap; font-weight: 800; }
+    .num-chip input {
+      width: 110px;
+      padding: 7px 10px;
+      font-size: 28px;
+      font-weight: 700;
+      border: 3px solid currentColor;
+      border-radius: 12px;
+      text-align: center;
+      background: #fff;
+      transition: box-shadow .15s;
+    }
+    .num-chip input:focus { outline: none; box-shadow: 0 0 0 3px rgba(0,0,0,.12); }
+    .chip-a { background: #fef2f2; color: var(--c-add); }
+    .chip-b { background: #eff6ff; color: var(--c-sub); }
+    .op-display { font-size: 32px; font-weight: 900; color: #6b7280; padding: 0 4px; }
+
+    /* ── メインレイアウト ── */
+    .app-layout {
+      width: 100%;
+      flex: 1 1 0;
+      min-height: 0;
+      display: flex;
+      gap: 16px;
+      align-items: stretch;
+      overflow: hidden;
+    }
+    .left-pane {
+      flex: 1 1 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      transition: flex-basis .35s ease;
+    }
+    .app-layout.hissan-active .left-pane { flex: 1 1 58%; }
+
+    /* ペイン境界ドラッグハンドル */
+    .pane-divider {
+      flex: 0 0 8px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: col-resize;
+      border-radius: 4px;
+      transition: background .15s;
+      z-index: 20;
+      touch-action: none;
+    }
+    .pane-divider::after {
+      content: '';
+      width: 3px;
+      height: 40px;
+      background: #d1d5db;
+      border-radius: 2px;
+      transition: background .15s;
+    }
+    .app-layout.guti-active .pane-divider { display: flex; }
+    .pane-divider:hover::after, .pane-divider.dragging::after { background: #7c3aed; }
+
+    /* 具体物ペイン */
+    .guti-pane {
+      flex: 0 0 0px;
+      overflow: hidden;
+      opacity: 0;
+      transition: flex-basis .35s ease, opacity .3s ease;
+      min-width: 0;
+      min-height: 0;
+    }
+    .app-layout.guti-active .left-pane { flex: 1 1 50%; }
+    .app-layout.guti-active .guti-pane {
+      flex: 1 1 50%;
+      overflow: hidden;
+      opacity: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .right-pane {
+      flex: 0 0 0px;
+      overflow: hidden;
+      opacity: 0;
+      transition: flex-basis .35s ease, opacity .3s ease;
+      min-width: 0;
+      min-height: 0;
+    }
+    .app-layout.hissan-active .right-pane {
+      flex: 1 1 34%;
+      overflow: hidden;
+      opacity: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── 位の表ゾーン ── */
+    .zone-place {
+      background: var(--panel);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+      flex: 1 1 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .zone-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      color: var(--c-place);
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+    .place-table-wrap {
+      flex: 1 1 0;
+      min-height: 0;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* 分数表記 */
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 11px;
+      line-height: 1.2;
+      gap: 1px;
+    }
+    .frac-num { border-bottom: 1.5px solid currentColor; padding: 0 3px; }
+    .frac-den { padding: 0 3px; }
+
+    /* コーナーボタン（常時表示） */
+    .place-header-cell { position: relative; }
+    .place-corner-btn {
+      position: absolute;
+      top: 4px;
+      width: 17px;
+      height: 17px;
+      background: rgba(255,255,255,0.22);
+      border-radius: 4px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      opacity: 0;
+      transition: opacity .15s, background .1s;
+      z-index: 10;
+    }
+    .place-header-cell:hover .place-corner-btn { opacity: 1; }
+    .place-corner-btn:hover { background: rgba(255,255,255,0.45); }
+    .place-corner-btn.disabled { opacity: 0 !important; cursor: default; pointer-events: none; }
+    .place-corner-btn.at-left  { left: 3px; }
+    .place-corner-btn.at-right { right: 3px; }
+    .place-table {
+      display: flex;
+      flex-direction: column;
+      min-width: max-content;
+      flex: 1 1 0;
+      min-height: 0;
+    }
+
+    /* ヘッダー */
+    .place-header { display: flex; flex-shrink: 0; }
+    .place-header-cell {
+      flex: 1 1 0;
+      min-width: 60px;
+      text-align: center;
+      padding: 6px 4px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff;
+      background: var(--c-place);
+      border: 2px solid #5b21b6;
+    }
+    .place-header-cell:first-child { border-radius: 10px 0 0 0; }
+    .place-header-cell:last-child  { border-radius: 0 10px 0 0; }
+    .place-header-cell.decimal-sep {
+      flex: 0 0 28px; min-width: 28px;
+      background: #f3f4f6; color: #374151;
+      font-size: 22px; font-weight: 900;
+      border-color: #d1d5db;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* 4列以下：固定幅 */
+    .place-table.cols-fixed .place-header-cell:not(.decimal-sep):not(.row-label-hdr),
+    .place-table.cols-fixed .place-cell:not(.decimal-sep):not(.row-label-cell) {
+      flex: 0 0 140px;
+    }
+
+    /* 上下分割（たし算モード）の色分けと点線 */
+    .place-body[data-row="a"] .place-cell {
+      border-bottom: none;
+      border-radius: 0 !important;
+      background: #fff5f5;
+      border-color: #fecaca;
+    }
+    .place-body[data-row="b"] .place-cell {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+    .place-body[data-row="a"] .place-cell.over-limit,
+    .place-body[data-row="b"] .place-cell.over-limit { background: #fff1f1 !important; }
+    .place-divider-row {
+      flex-shrink: 0;
+      height: 0;
+      border-top: 2.5px dashed #d1d5db;
+    }
+
+    /* ボディ */
+    .place-body { display: flex; align-items: stretch; flex: 1 1 0; min-height: 0; }
+    .place-cell {
+      flex: 1 1 0;
+      min-width: 60px;
+      border: 2px solid #e5e7eb;
+      border-top: none;
+      background: #fafafa;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      overflow: visible;
+      transition: background .15s;
+    }
+    .place-cell:first-child { border-radius: 0 0 0 10px; }
+    .place-cell:last-child  { border-radius: 0 0 10px 0; }
+    .place-table.nums-visible .place-cell:first-child,
+    .place-table.nums-visible .place-cell:last-child { border-radius: 0 !important; }
+    .place-cell.drag-over   { background: #ede9fe !important; }
+    .place-cell.valid-drop  { box-shadow: inset 0 0 0 3px #a78bfa; }
+    .place-cell.decimal-sep {
+      flex: 0 0 28px; min-width: 28px;
+      background: #f9fafb; border-color: #d1d5db;
+      display: flex; align-items: flex-end; justify-content: center;
+      padding-bottom: 6px;
+      font-size: 20px; font-weight: 900; color: #374151;
+      cursor: default;
+    }
+
+    /* 点線分割 */
+
+    /* タイルエリア — 縦並び・クリップなし */
+    .tile-area {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 4px;
+      min-height: 48px;
+    }
+
+    /* 数字行（位の表の下） */
+    .num-row { display: flex; flex-shrink: 0; }
+    .num-cell {
+      flex: 1 1 0;
+      min-width: 60px;
+      border: 2px solid #e5e7eb;
+      border-top: none;
+      border-bottom: none;
+      background: #f5f3ff;
+      text-align: center;
+      font-size: 42px;
+      font-weight: 900;
+      color: var(--c-place);
+      padding: 6px 4px;
+    }
+    .num-cell.decimal-sep {
+      flex: 0 0 28px; min-width: 28px;
+      background: transparent; border-color: transparent;
+    }
+    .num-row:last-child .num-cell { border-bottom: 2px solid #e5e7eb; }
+    .num-row:last-child .num-cell:first-child:not(.decimal-sep) { border-radius: 0 0 0 10px; }
+    .num-row:last-child .num-cell:last-child:not(.decimal-sep)  { border-radius: 0 0 10px 0; }
+    .place-table.cols-fixed .num-cell:not(.decimal-sep) { flex: 0 0 140px; }
+
+    /* 10個以上エラー表示 */
+    @keyframes over-pulse {
+      0%,100% { box-shadow: inset 0 0 0 4px #ef4444, 0 0 0 4px #ef4444; }
+      50%      { box-shadow: inset 0 0 0 4px #fca5a5, 0 0 0 8px #fca5a5; }
+    }
+    .place-cell.over-limit {
+      animation: over-pulse .7s ease-in-out infinite;
+      background: #fff1f1 !important;
+    }
+    .cell-number.over {
+      display: block !important;
+      background: #ef4444;
+      color: #fff;
+      border-top: 2px solid #b91c1c;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 5px 4px;
+      letter-spacing: .02em;
+      animation: over-pulse-text .5s ease-in-out infinite alternate;
+    }
+    @keyframes over-pulse-text {
+      from { background: #ef4444; }
+      to   { background: #dc2626; }
+    }
+
+    /* 合計数表示 */
+
+    /* ── タイル ── */
+    .tile {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      font-weight: 800;
+      border-radius: 8px;
+      flex-shrink: 0;
+      transition: transform .08s, opacity .15s;
+    }
+    .tile:active { cursor: grabbing; }
+    .tile.t1000 { width:52px;height:52px;font-size:17px;background:#0ea5e9;color:#fff;border-radius:12px;box-shadow:0 3px 0 #0369a1; }
+    .tile.t100  { width:46px;height:46px;font-size:19px;background:#7c3aed;color:#fff;border-radius:11px;box-shadow:0 3px 0 #4c1d95; }
+    .tile.t10   { width:40px;height:40px;font-size:20px;background:#f59e0b;color:#fff;border-radius:10px;box-shadow:0 3px 0 #b45309; }
+    .tile.t1    { width:34px;height:34px;font-size:22px;background:#ef4444;color:#fff;border-radius:50%;box-shadow:0 3px 0 #b91c1c; }
+    .tile.t01   { width:28px;height:28px;font-size:12px;background:#f97316;color:#fff;border-radius:50%;box-shadow:0 2px 0 #c2410c; }
+    .tile.t001  { width:22px;height:22px;font-size:9px; background:#22c55e;color:#fff;border-radius:50%;box-shadow:0 2px 0 #15803d; }
+    .tile.dragging { opacity: .15; }
+
+    /* remove モード */
+    .remove-mode .tile-area .tile { cursor: pointer; }
+    .remove-mode .tile-area .tile:hover { filter: brightness(1.4); transform: scale(1.1); }
+
+    /* 10個まとまり */
+    .bundle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      padding: 5px;
+      border: 3px solid #fbbf24;
+      border-radius: 10px;
+      background: rgba(251,191,36,0.12);
+      cursor: grab;
+      flex-shrink: 0;
+      transition: transform .08s;
+    }
+    .bundle:active { cursor: grabbing; }
+
+    /* タイルパレット */
+    .tile-palette {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding: 8px 4px;
+    }
+    /* パレット内タイルは大きめ統一 */
+    .tile-source {
+      width: 72px !important;
+      height: 72px !important;
+      font-size: 32px !important;
+      font-weight: 900 !important;
+      border-radius: 14px !important;
+      box-shadow: 0 0 0 3px #a78bfa, 0 4px 0 rgba(0,0,0,0.25) !important;
+      cursor: grab;
+      opacity: 0.9;
+      transition: transform .1s, opacity .1s;
+    }
+    .tile-source.t1, .tile-source.t01, .tile-source.t001 { border-radius: 50% !important; }
+    .tile-source:hover  { opacity: 1; transform: scale(1.1); }
+    .tile-source:active { cursor: grabbing; transform: scale(1.05); }
+
+    /* 削除ゾーン */
+    .trash-zone {
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 2px dashed #fca5a5;
+      border-radius: 50px;
+      background: #fff1f1;
+      color: #ef4444;
+      cursor: default;
+      transition: background .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .trash-zone.drag-over {
+      background: #fee2e2;
+      border-color: #ef4444;
+      border-style: solid;
+    }
+
+    /* ツールバー */
+    .place-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
+    .toolbar-btn {
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 2px solid #d1d5db;
+      border-radius: 50px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: background .12s, color .12s, border-color .12s;
+    }
+    .toolbar-btn.on { background: var(--c-place); color: #fff; border-color: var(--c-place); }
+    #removeModeBtn.on { background: #dc2626; color: #fff; border-color: #dc2626; }
+
+    /* りょうがえ確認モーダル */
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+    .confirm-box {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px 36px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.22);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      min-width: 260px;
+    }
+    .confirm-msg {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .confirm-btns {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    .confirm-yes {
+      padding: 12px 32px;
+      font-size: 18px;
+      font-weight: 800;
+      border: none;
+      border-radius: 12px;
+      background: var(--c-place);
+      color: #fff;
+      cursor: pointer;
+      transition: opacity .1s;
+    }
+    .confirm-yes:hover { opacity: .85; }
+    .confirm-no {
+      padding: 12px 32px;
+      font-size: 18px;
+      font-weight: 800;
+      border: 2.5px solid #d1d5db;
+      border-radius: 12px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+    }
+    .confirm-no:hover { background: #f9fafb; }
+
+    /* 具体物ペイン内ゾーン */
+    .zone-palette {
+      background: var(--panel);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .zone-palette .zone-title { color: var(--c-place); }
+    .tile-palette {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .zone-exchange {
+      background: #fdf4ff;
+      border: 3px dashed #c084fc;
+      border-radius: 14px;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1 1 0;
+      min-height: 80px;
+    }
+    .zone-exchange .zone-title { color: #7c3aed; margin-bottom: 0; }
+    .exchange-area {
+      flex: 1 1 0;
+      min-height: 40px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-content: flex-start;
+      border-radius: 10px;
+      padding: 6px;
+      transition: background .15s;
+    }
+    .exchange-area.drag-over { background: #ede9fe; }
+    .exchange-hint { color: #a78bfa; font-size: 11px; font-weight: 700; line-height: 1.4; }
+
+    /* 削除ゾーン（ペイン内） */
+    .trash-zone {
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 2px dashed #fca5a5;
+      border-radius: 12px;
+      background: #fff1f1;
+      color: #ef4444;
+      cursor: default;
+      transition: background .15s, border-color .15s;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .trash-zone.drag-over {
+      background: #fee2e2;
+      border-color: #ef4444;
+      border-style: solid;
+    }
+
+    /* 筆算ゾーン */
+    .zone-hissan {
+      background: #f0f9ff;
+      border: 3px solid #7dd3fc;
+      border-radius: 20px;
+      width: 100%;
+      flex: 1 1 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 14px 16px;
+      overflow: hidden;
+    }
+    .zone-hissan .zone-title { color: #0284c7; }
+    #hissanDisplay {
+      flex: 1 1 0;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-start;
+      padding: 8px 0;
+    }
+    .hissan-wrap { display: inline-block; transform-origin: top left; }
+    .hissan-table {
+      border-collapse: collapse;
+      font-size: 40px;
+      font-weight: 900;
+    }
+    .hissan-table td {
+      padding: 4px 10px;
+      text-align: right;
+      min-width: 52px;
+    }
+    .hissan-table .op-col {
+      text-align: left;
+      padding-right: 8px;
+      min-width: 36px;
+      color: #374151;
+    }
+    .hissan-line td { border-top: 4px solid #1f2933; padding-top: 8px; }
+    .hissan-answer td { color: var(--c-place); }
+
+    /* ゴースト */
+    .ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: .9;
+      transform: scale(1.15) rotate(5deg);
+    }
+
+    /* アニメーション */
+    @keyframes tile-pop {
+      0%   { transform: scale(0.5); opacity: 0; }
+      65%  { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+    .tile-new { animation: tile-pop 0.3s cubic-bezier(.17,.67,.46,1.2); }
+
+    @keyframes bundle-pop {
+      0%   { transform: scale(0.6); opacity: 0; }
+      70%  { transform: scale(1.06); opacity: 1; }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+    .bundle-new { animation: bundle-pop 0.4s cubic-bezier(.17,.67,.46,1.2); }
+
+    /* バンドル形成ヒント（繰り上がり示唆）*/
+    @keyframes bundle-hint-pulse {
+      0%,100% { box-shadow: 0 0 0 0   rgba(251,191,36,0);    border-color: #fbbf24; }
+      50%     { box-shadow: 0 0 0 12px rgba(251,191,36,0.55); border-color: #f59e0b; }
+    }
+    .bundle-hint { animation: bundle-hint-pulse 0.7s ease-in-out 3; }
+
+    /* りょうがえゾーン フラッシュ */
+    @keyframes exch-flash {
+      0%,100% { background: #fdf4ff; border-color: #c084fc; }
+      35%     { background: #ede9fe; border-color: #7c3aed;
+                box-shadow: 0 0 0 6px rgba(124,58,237,0.22); }
+    }
+    .zone-exchange.flashing { animation: exch-flash 0.45s ease; }
+
+    /* 新タイル スタガー */
+    @keyframes tile-stagger {
+      0%   { transform: scale(0.3) translateY(-18px); opacity: 0; }
+      65%  { transform: scale(1.12) translateY(2px);  opacity: 1; }
+      100% { transform: scale(1)   translateY(0);      opacity: 1; }
+    }
+    .tile-stagger { animation: tile-stagger 0.38s cubic-bezier(.17,.67,.46,1.2) both; }
+
+    /* フライングゴースト */
+    .fly-ghost {
+      position: fixed;
+      z-index: 9998;
+      pointer-events: none;
+      transition: left 0.38s cubic-bezier(0.4,0,0.2,1),
+                  top  0.38s cubic-bezier(0.4,0,0.2,1),
+                  transform 0.38s ease,
+                  opacity   0.38s ease;
+    }
+  </style>
+</head>
+<body>
+<div id="pageWrap">
+
+  <header class="controls">
+    <div class="controls-row">
+      <button id="addBtn"    class="mode-btn on">たしざん</button>
+      <button id="subBtn"    class="mode-btn">ひきざん</button>
+      <div class="divider"></div>
+      <div class="num-chip chip-a" id="numberInputRow">
+        <label id="labelA">たされるかず</label>
+        <input id="inputA" type="number" min="0" placeholder="0">
+      </div>
+      <span id="opDisplay" class="op-display">＋</span>
+      <div class="num-chip chip-b">
+        <label id="labelB">たすかず</label>
+        <input id="inputB" type="number" min="0" placeholder="0">
+      </div>
+      <div class="divider"></div>
+      <button id="hissanBtn" class="mode-btn">ひっさん</button>
+      <div class="divider"></div>
+      <button id="resetBtn" class="reset-btn">リセット</button>
+    </div>
+  </header>
+
+  <div class="app-layout" id="appLayout">
+    <div class="left-pane" id="leftPane">
+      <section class="zone-place">
+        <div class="zone-title">くらいのひょう</div>
+        <div class="place-table-wrap" id="placeTableWrap">
+          <div class="place-table" id="placeTable"></div>
+        </div>
+        <div class="place-toolbar">
+<button id="showNumBtn" class="toolbar-btn">かずをひょうじ</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="pane-divider" id="paneDivider"></div>
+
+    <!-- 具体物ペイン（gutiMode時にスライドイン） -->
+    <div class="guti-pane" id="gutiPane">
+      <section class="zone-palette">
+        <div class="zone-title">タイル</div>
+        <div id="tilePalette" class="tile-palette"></div>
+      </section>
+    </div>
+
+    <!-- りょうがえ確認モーダル -->
+    <div id="confirmModal" class="confirm-overlay" style="display:none">
+      <div class="confirm-box">
+        <div class="confirm-msg">りょうがえ<br>しますか？</div>
+        <div class="confirm-btns">
+          <button id="confirmYes" class="confirm-yes">はい</button>
+          <button id="confirmNo"  class="confirm-no">いいえ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-pane" id="rightPane">
+      <section class="zone-hissan">
+        <div class="zone-title">ひっさん</div>
+        <div id="hissanDisplay">
+          <div class="hissan-wrap" id="hissanWrap"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+// ── 定数 ────────────────────────────────────────────
+const PLACE_DEFS = [
+  { value: 1000, label: 'せん',          cls: 't1000' },
+  { value: 100,  label: 'ひゃく',        cls: 't100'  },
+  { value: 10,   label: 'じゅう',        cls: 't10'   },
+  { value: 1,    label: 'いち',          cls: 't1'    },
+  { value: 0.1,  label: 'じゅうぶんのいち', cls: 't01'   },
+  { value: 0.01, label: 'ひゃくぶんのいち', cls: 't001'  },
+];
+
+// ── 状態 ────────────────────────────────────────────
+const state = {
+  opMode:      'add',
+  gutiMode:    true,
+  hissanMode:  false,
+  showNumbers: false,
+  topPlace:    10,
+  botPlace:    1,
+  nextId:      0,
+  nextBundleId: 0,
+  tiles:       [],   // { id, placeValue, bundleId? }
+  bundles:     new Map(), // bundleId → { placeValue }
+  animNewBundles:    new Set(), // アニメーション対象のbundleId
+  animNewTiles:      new Set(), // アニメーション対象のtileId
+  animNewTileOrder:  [],        // pop-in の順序（stagger用）
+  pendingBundleHints: new Set(), // hint pulse を表示するbundleId
+};
+
+// ── DOM ─────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const addBtn        = $('addBtn');
+const subBtn        = $('subBtn');
+const hissanBtn     = $('hissanBtn');
+const resetBtn      = $('resetBtn');
+const showNumBtn    = $('showNumBtn');
+const tilePalette   = $('tilePalette');
+const gutiPane      = $('gutiPane');
+const appLayout     = $('appLayout');
+const leftPane      = $('leftPane');
+const paneDivider   = $('paneDivider');
+const confirmModal  = $('confirmModal');
+const confirmYesBtn = $('confirmYes');
+const confirmNoBtn  = $('confirmNo');
+let pendingExchange = null;
+const inputA        = $('inputA');
+const inputB        = $('inputB');
+const opDisplay     = $('opDisplay');
+const labelA        = $('labelA');
+const labelB        = $('labelB');
+const hissanWrap    = $('hissanWrap');
+
+// ── アクティブな位リスト ─────────────────────────────
+function getActivePlaces() {
+  const topIdx = PLACE_DEFS.findIndex(p => p.value === state.topPlace);
+  const botIdx = PLACE_DEFS.findIndex(p => p.value === state.botPlace);
+  if (topIdx < 0 || botIdx < 0 || topIdx > botIdx) return [];
+  const list = PLACE_DEFS.slice(topIdx, botIdx + 1);
+  // 整数・小数混在なら小数点セパレータを挿入
+  const hasInt = list.some(p => p.value >= 1);
+  const hasDec = list.some(p => p.value < 1);
+  if (hasInt && hasDec) {
+    const oneIdx = list.findIndex(p => p.value === 1);
+    list.splice(oneIdx + 1, 0, { value: 'dot', label: '．', cls: 'decimal-sep', isDot: true });
+  }
+  return list;
+}
+
+function realPlaces() {
+  return getActivePlaces().filter(p => !p.isDot);
+}
+
+// ── バンドル確認（10個溜まったら自動グループ）────────
+function checkBundles() {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const pd of realPlaces()) {
+      const pv = pd.value;
+      for (const row of ['a', 'b']) {
+      const loose = state.tiles.filter(t => t.placeValue === pv && t.bundleId === undefined && t.row === row);
+      if (loose.length >= 10) {
+        const bid = state.nextBundleId++;
+        state.bundles.set(bid, { placeValue: pv, row });
+        loose.slice(0, 10).forEach(t => { t.bundleId = bid; });
+        state.animNewBundles.add(bid);
+        state.pendingBundleHints.add(bid);
+        changed = true;
+      }
+      } // end for row
+    }
+  }
+}
+
+// ── タイル追加 ───────────────────────────────────────
+function addTile(placeValue, row = 'a') {
+  const id = state.nextId++;
+  state.tiles.push({ id, placeValue, row });
+  state.animNewTiles.add(id);
+  state.animNewTileOrder.push(id);
+  checkBundles();
+}
+
+// ── タイル削除 ───────────────────────────────────────
+function removeTile(tileId) {
+  const tile = state.tiles.find(t => t.id === tileId);
+  if (!tile) return;
+  if (tile.bundleId !== undefined) {
+    // バンドルから取り出す：バンドル全体の bundleId を外す（バラバラに）
+    const bid = tile.bundleId;
+    state.tiles.filter(t => t.bundleId === bid).forEach(t => { t.bundleId = undefined; });
+    state.bundles.delete(bid);
+  }
+  state.tiles = state.tiles.filter(t => t.id !== tileId);
+}
+
+// ── 繰り上がり（バンドル → 上位1枚）────────────────
+function promoteBundle(bundleId) {
+  const meta = state.bundles.get(bundleId);
+  if (!meta) return;
+  const upper = getUpperPlace(meta.placeValue);
+  if (upper === null) return;
+  const promoteRow = meta.row || 'a';
+  state.tiles = state.tiles.filter(t => t.bundleId !== bundleId);
+  state.bundles.delete(bundleId);
+  const newId = state.nextId++;
+  state.tiles.push({ id: newId, placeValue: upper, row: promoteRow });
+  state.animNewTiles.add(newId);
+  state.animNewTileOrder.push(newId);
+  checkBundles();
+}
+
+// ── 両替（タイル/バンドル → 下位10枚）──────────────
+function exchangeTile(tileId) {
+  const tile = state.tiles.find(t => t.id === tileId);
+  if (!tile) return;
+  const lower = getLowerPlace(tile.placeValue);
+  if (lower === null) return;
+  if (tile.bundleId !== undefined) {
+    // バンドルから1枚だけ切り離す（残りはバンドル解除してバラバラに）
+    const bid = tile.bundleId;
+    state.tiles.filter(t => t.bundleId === bid).forEach(t => { t.bundleId = undefined; });
+    state.bundles.delete(bid);
+  }
+  const tileRow = tile.row || 'a';
+  state.tiles = state.tiles.filter(t => t.id !== tileId);
+  const newIds = [];
+  for (let i = 0; i < 10; i++) {
+    const nid = state.nextId++;
+    state.tiles.push({ id: nid, placeValue: lower, row: tileRow });
+    newIds.push(nid);
+  }
+  newIds.forEach(id => { state.animNewTiles.add(id); state.animNewTileOrder.push(id); });
+  checkBundles();
+}
+
+function exchangeBundle(bundleId) {
+  const meta = state.bundles.get(bundleId);
+  if (!meta) return;
+  const lower = getLowerPlace(meta.placeValue);
+  if (lower === null) return;
+  const bundleRow = meta.row || 'a';
+  state.tiles = state.tiles.filter(t => t.bundleId !== bundleId);
+  state.bundles.delete(bundleId);
+  const newIds = [];
+  for (let i = 0; i < 10; i++) {
+    const nid = state.nextId++;
+    state.tiles.push({ id: nid, placeValue: lower, row: bundleRow });
+    newIds.push(nid);
+  }
+  newIds.forEach(id => { state.animNewTiles.add(id); state.animNewTileOrder.push(id); });
+  checkBundles();
+}
+
+function getUpperPlace(pv) {
+  const idx = PLACE_DEFS.findIndex(d => d.value === pv);
+  return (idx > 0) ? PLACE_DEFS[idx - 1].value : null;
+}
+function getLowerPlace(pv) {
+  const idx = PLACE_DEFS.findIndex(d => d.value === pv);
+  return (idx >= 0 && idx < PLACE_DEFS.length - 1) ? PLACE_DEFS[idx + 1].value : null;
+}
+
+// ── 位の表レンダリング ───────────────────────────────
+function renderPlaceTable() {
+  const table      = $('placeTable');
+  const places     = getActivePlaces();
+  const realList   = places.filter(p => !p.isDot);
+
+  const isSplit = state.opMode === 'add';
+
+  // ヘッダー
+  const allDefs     = PLACE_DEFS.filter(d => !d.isDot);
+  const canAddLeft  = allDefs.findIndex(d => d.value === state.topPlace) > 0;
+  const canAddRight = allDefs.findIndex(d => d.value === state.botPlace) < allDefs.length - 1;
+  const canRemove   = realList.length > 1;
+
+  function makeCornerBtn(symbol, side, disabled, onClick) {
+    const btn = document.createElement('div');
+    btn.className = `place-corner-btn at-${side}` + (disabled ? ' disabled' : '');
+    btn.textContent = symbol;
+    if (!disabled) btn.addEventListener('click', e => { e.stopPropagation(); onClick(); });
+    return btn;
+  }
+
+  const header = document.createElement('div');
+  header.className = 'place-header';
+
+  places.forEach(p => {
+    const cell = document.createElement('div');
+    if (p.isDot) {
+      cell.className = 'place-header-cell decimal-sep';
+      cell.textContent = '．';
+    } else {
+      cell.className = 'place-header-cell';
+      if (p.value === 0.1 || p.value === 0.01) {
+        const frac = document.createElement('span');
+        frac.className = 'frac';
+        const num = document.createElement('span'); num.className = 'frac-num'; num.textContent = '1';
+        const den = document.createElement('span'); den.className = 'frac-den';
+        den.textContent = p.value === 0.1 ? '10' : '100';
+        frac.appendChild(num); frac.appendChild(den);
+        cell.appendChild(frac);
+      } else {
+        cell.textContent = p.label;
+      }
+
+      if (p.value === state.topPlace) {
+        // 最左：左に＋（上位追加）、右に－（この列削除）
+        cell.appendChild(makeCornerBtn('＋', 'left', !canAddLeft, () => {
+          const idx = PLACE_DEFS.findIndex(d => d.value === state.topPlace);
+          state.topPlace = PLACE_DEFS[idx - 1].value; renderAll();
+        }));
+        cell.appendChild(makeCornerBtn('－', 'right', !canRemove, () => {
+          const idx = PLACE_DEFS.findIndex(d => d.value === state.topPlace);
+          state.tiles = state.tiles.filter(t => t.placeValue !== state.topPlace);
+          state.topPlace = PLACE_DEFS[idx + 1].value; renderAll();
+        }));
+      }
+      if (p.value === state.botPlace && state.botPlace !== state.topPlace) {
+        // 最右：左に－（この列削除）、右に＋（下位追加）
+        cell.appendChild(makeCornerBtn('－', 'left', !canRemove, () => {
+          const idx = PLACE_DEFS.findIndex(d => d.value === state.botPlace);
+          state.tiles = state.tiles.filter(t => t.placeValue !== state.botPlace);
+          state.botPlace = PLACE_DEFS[idx - 1].value; renderAll();
+        }));
+        cell.appendChild(makeCornerBtn('＋', 'right', !canAddRight, () => {
+          const idx = PLACE_DEFS.findIndex(d => d.value === state.botPlace);
+          state.botPlace = PLACE_DEFS[idx + 1].value; renderAll();
+        }));
+      }
+      if (p.value === state.topPlace && state.topPlace === state.botPlace) {
+        // 1列のみ：左に＋、右に＋（削除不可）
+        cell.appendChild(makeCornerBtn('＋', 'left', !canAddLeft, () => {
+          const idx = PLACE_DEFS.findIndex(d => d.value === state.topPlace);
+          state.topPlace = PLACE_DEFS[idx - 1].value; renderAll();
+        }));
+        cell.appendChild(makeCornerBtn('＋', 'right', !canAddRight, () => {
+          const idx = PLACE_DEFS.findIndex(d => d.value === state.botPlace);
+          state.botPlace = PLACE_DEFS[idx + 1].value; renderAll();
+        }));
+      }
+    }
+    header.appendChild(cell);
+  });
+
+  // ボディ生成ヘルパー（rowKey: 'a'|'b'|null で全タイル）
+  function buildBody(rowKey, isLast) {
+    const body = document.createElement('div');
+    body.className = 'place-body';
+    if (rowKey) body.dataset.row = rowKey;
+
+    places.forEach((p, i) => {
+      const cell = document.createElement('div');
+      if (p.isDot) {
+        cell.className = 'place-cell decimal-sep';
+        cell.textContent = '●';
+        body.appendChild(cell);
+        return;
+      }
+
+      cell.className = 'place-cell';
+      cell.dataset.place = p.value;
+      if (rowKey) cell.dataset.row = rowKey;
+      if (isLast && !state.showNumbers && i === 0)              cell.style.borderRadius = '0 0 0 10px';
+      if (isLast && !state.showNumbers && i === places.length-1) cell.style.borderRadius = '0 0 10px 0';
+
+      const rowFilter = rowKey ? (t => t.row === rowKey) : () => true;
+
+      // ─ タイルエリア ─
+      const tileArea = document.createElement('div');
+      tileArea.className = 'tile-area';
+      tileArea.dataset.place = p.value;
+      if (rowKey) tileArea.dataset.row = rowKey;
+
+      // バンドルを描画
+      const bundleIds = [...new Set(
+        state.tiles.filter(t => t.placeValue === p.value && t.bundleId !== undefined && rowFilter(t))
+                   .map(t => t.bundleId)
+      )];
+      bundleIds.forEach(bid => {
+        const bTiles = state.tiles.filter(t => t.bundleId === bid);
+        const wrap = document.createElement('div');
+        wrap.className = 'bundle' + (state.animNewBundles.has(bid) ? ' bundle-new' : '');
+        wrap.dataset.bundleId = bid;
+        wrap.dataset.place = p.value;
+        bTiles.forEach(tile => wrap.appendChild(makeTileEl(tile, p)));
+        attachBundleDrag(wrap, bid, p.value);
+        tileArea.appendChild(wrap);
+      });
+
+      // 単体タイルを描画
+      state.tiles.filter(t => t.placeValue === p.value && t.bundleId === undefined && rowFilter(t))
+                 .forEach(tile => tileArea.appendChild(makeTileEl(tile, p)));
+
+      const count = state.tiles.filter(t => t.placeValue === p.value && rowFilter(t)).length;
+      if (count >= 10) cell.classList.add('over-limit');
+
+      cell.appendChild(tileArea);
+      body.appendChild(cell);
+    });
+
+    return body;
+  }
+
+  // 4列以下は固定幅、5列以上は画面に収まるよう自動縮小
+  table.classList.toggle('cols-fixed',   realPlaces().length <= 4);
+  table.classList.toggle('nums-visible', state.showNumbers);
+
+  table.innerHTML = '';
+  table.appendChild(header);
+
+  if (isSplit) {
+    table.appendChild(buildBody('a', false));
+    const divider = document.createElement('div');
+    divider.className = 'place-divider-row';
+    table.appendChild(divider);
+    table.appendChild(buildBody('b', true));
+  } else {
+    table.appendChild(buildBody(null, true));
+  }
+
+  // 数字行（各位のタイル合計を1行で表示）
+  if (state.showNumbers) {
+    const rowKeys = [null];
+    rowKeys.forEach(rowKey => {
+      const numRow = document.createElement('div');
+      numRow.className = 'num-row';
+      places.forEach(p => {
+        const nc = document.createElement('div');
+        if (p.isDot) {
+          nc.className = 'num-cell decimal-sep';
+        } else {
+          nc.className = 'num-cell';
+          const cnt = state.tiles.filter(t => t.placeValue === p.value).length;
+          nc.textContent = String(cnt);
+        }
+        numRow.appendChild(nc);
+      });
+      table.appendChild(numRow);
+    });
+  }
+
+  state.animNewBundles.clear();
+  state.animNewTiles.clear();
+  state.animNewTileOrder = [];
+}
+
+function makeTileEl(tile, placeDef) {
+  const el = document.createElement('div');
+  const isNew = state.animNewTiles.has(tile.id);
+  // 複数タイルが同時に生成された場合はstagger、単体は通常pop
+  const orderIdx = state.animNewTileOrder.indexOf(tile.id);
+  const useStagger = isNew && orderIdx >= 0 && state.animNewTileOrder.length > 1;
+  el.className = 'tile ' + placeDef.cls
+    + (isNew && !useStagger ? ' tile-new' : '')
+    + (useStagger ? ' tile-stagger' : '');
+  if (useStagger) el.style.animationDelay = (orderIdx * 55) + 'ms';
+  el.dataset.tileId = tile.id;
+  el.textContent = placeLabelShort(placeDef.value);
+
+  attachTileDrag(el, tile);
+  return el;
+}
+
+function placeLabelShort(v) {
+  if (v === 1000) return '1000';
+  if (v === 100)  return '100';
+  if (v === 10)   return '10';
+  if (v === 1)    return '1';
+  if (v === 0.1)  return '0.1';
+  if (v === 0.01) return '0.01';
+  return String(v);
+}
+
+// ── ドラッグ＆ドロップ ───────────────────────────────
+function attachTileDrag(el, tile) {
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    startDrag(e, el, { type: 'tile', tileId: tile.id, placeValue: tile.placeValue, row: tile.row || 'a' });
+  });
+}
+
+function attachBundleDrag(el, bundleId, placeValue) {
+  const meta = state.bundles.get(bundleId);
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    startDrag(e, el, { type: 'bundle', bundleId, placeValue, row: meta?.row || 'a' });
+  });
+}
+
+// パレットタイル（ソース）のドラッグ
+function attachSourceDrag(el, placeValue) {
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    startDrag(e, el, { type: 'source', placeValue });
+  });
+}
+
+function startDrag(e, el, payload) {
+  const rect = el.getBoundingClientRect();
+  const offX = e.clientX - rect.left;
+  const offY = e.clientY - rect.top;
+
+  const ghost = el.cloneNode(true);
+  ghost.className = el.className.replace('tile-source', '').trim() + ' ghost';
+  ghost.style.cssText += `left:${rect.left}px;top:${rect.top}px;`
+    + `width:${rect.width}px;height:${rect.height}px;`;
+  document.body.appendChild(ghost);
+  if (payload.type !== 'source') el.classList.add('dragging');
+  el.setPointerCapture(e.pointerId);
+
+  function clearHighlights() {
+    document.querySelectorAll('.place-cell, .exchange-area')
+            .forEach(t => t.classList.remove('drag-over', 'valid-drop'));
+  }
+
+  function onMove(ev) {
+    ghost.style.left = (ev.clientX - offX) + 'px';
+    ghost.style.top  = (ev.clientY - offY) + 'px';
+    ghost.style.pointerEvents = 'none';
+    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    ghost.style.pointerEvents = '';
+    clearHighlights();
+
+    const cell  = under?.closest('.place-cell:not(.decimal-sep)');
+    const targetPV = cell ? parseFloat(cell.dataset.place) : null;
+
+    if (cell) {
+      cell.classList.add(isValidDrop(payload, targetPV) ? 'valid-drop' : 'drag-over');
+    }
+  }
+
+  function onEnd(ev) {
+    ghost.style.pointerEvents = 'none';
+    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    ghost.remove();
+    el.classList.remove('dragging');
+    clearHighlights();
+    el.removeEventListener('pointermove', onMove);
+    el.removeEventListener('pointerup',   onEnd);
+    el.removeEventListener('pointercancel', onEnd);
+
+    const cell  = under?.closest('.place-cell:not(.decimal-sep)');
+    const targetPV = cell ? parseFloat(cell.dataset.place) : null;
+
+    // パレットタイル → 対応セルにドロップで追加
+    if (payload.type === 'source') {
+      if (targetPV !== null && targetPV === payload.placeValue) {
+        const tileArea = under?.closest('.tile-area');
+        const targetRow = tileArea?.dataset.row || cell?.dataset.row || 'a';
+        addTile(payload.placeValue, targetRow);
+        renderAll();
+      }
+      return;
+    }
+
+    if (targetPV !== null && isValidDrop(payload, targetPV)) {
+      const lower = getLowerPlace(payload.placeValue);
+      const upper = getUpperPlace(payload.placeValue);
+      if (payload.type === 'bundle' && targetPV === upper) {
+        // バンドル → 上位セルで繰り上がり
+        const rowSel = payload.row ? `[data-row="${payload.row}"]` : '';
+        const tgtCell = document.querySelector(`.place-cell[data-place="${targetPV}"]${rowSel}`)
+                     || document.querySelector(`.place-cell[data-place="${targetPV}"]`);
+        animFlyGhost(el, tgtCell, () => { promoteBundle(payload.bundleId); renderAll(); });
+      } else if (targetPV === lower) {
+        // タイル/バンドル → 下位セルでりょうがえ確認
+        showExchangeConfirm(payload);
+      }
+    } else if (!cell) {
+      // セル外にドロップ → タイルを削除
+      if (payload.type === 'tile') {
+        removeTile(payload.tileId);
+        renderAll();
+      }
+    }
+  }
+
+  el.addEventListener('pointermove', onMove);
+  el.addEventListener('pointerup',   onEnd);
+  el.addEventListener('pointercancel', onEnd);
+}
+
+// ── アニメーション関数 ─────────────────────────────────
+
+// りょうがえゾーンをフラッシュしてからコールバック
+function animFlashExchange(callback) {
+  const zone = exchangeArea.closest('.zone-exchange');
+  if (zone) {
+    zone.classList.remove('flashing');
+    void zone.offsetWidth;
+    zone.classList.add('flashing');
+    setTimeout(() => zone.classList.remove('flashing'), 500);
+  }
+  setTimeout(callback, 360);
+}
+
+// バンドル/タイルが targetEl へ飛んでいくアニメーション
+function animFlyGhost(srcEl, targetEl, callback) {
+  if (!srcEl || !targetEl) { callback(); return; }
+  const srcR = srcEl.getBoundingClientRect();
+  const tgtR = targetEl.getBoundingClientRect();
+  if (!srcR.width || !tgtR.width) { callback(); return; }
+
+  const g = srcEl.cloneNode(true);
+  g.className = 'fly-ghost';
+  // アニメーション系クラスをリセット
+  g.querySelectorAll('*').forEach(c => {
+    c.classList.remove('bundle-new','tile-new','tile-stagger','bundle-hint','dragging');
+    c.style.animationDelay = '';
+  });
+  Object.assign(g.style, {
+    left: srcR.left + 'px',
+    top:  srcR.top  + 'px',
+    width: srcR.width + 'px',
+    height: srcR.height + 'px',
+  });
+  document.body.appendChild(g);
+
+  const destX = tgtR.left + (tgtR.width  - srcR.width)  / 2;
+  const destY = tgtR.top  + (tgtR.height - srcR.height) / 2;
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    g.style.left      = destX + 'px';
+    g.style.top       = destY + 'px';
+    g.style.transform = 'scale(0.18)';
+    g.style.opacity   = '0';
+  }));
+
+  const tid = setTimeout(() => { g.remove(); callback(); }, 430);
+  g.addEventListener('transitionend', () => {
+    clearTimeout(tid); g.remove(); callback();
+  }, { once: true });
+}
+
+// バンドル形成ヒント（繰り上がり示唆パルス）
+function animBundleHint(bundleId) {
+  setTimeout(() => {
+    const el = document.querySelector(`.bundle[data-bundle-id="${bundleId}"]`);
+    if (!el) return;
+    el.classList.remove('bundle-hint');
+    void el.offsetWidth;
+    el.classList.add('bundle-hint');
+    setTimeout(() => el?.classList.remove('bundle-hint'), 2300);
+  }, 80);
+}
+
+function isValidDrop(payload, targetPV) {
+  if (payload.type === 'source') {
+    return targetPV === payload.placeValue;
+  }
+  if (payload.type === 'bundle') {
+    const upper = getUpperPlace(payload.placeValue);
+    const lower = getLowerPlace(payload.placeValue);
+    return (upper !== null && targetPV === upper)
+        || (lower !== null && targetPV === lower);
+  }
+  if (payload.type === 'tile') {
+    const lower = getLowerPlace(payload.placeValue);
+    return lower !== null && targetPV === lower;
+  }
+  return false;
+}
+
+// ── りょうがえ確認モーダル ────────────────────────────
+function showExchangeConfirm(payload) {
+  pendingExchange = payload;
+  confirmModal.style.display = 'flex';
+}
+
+confirmYesBtn.addEventListener('click', () => {
+  confirmModal.style.display = 'none';
+  if (!pendingExchange) return;
+  const p = pendingExchange;
+  pendingExchange = null;
+  if (p.type === 'tile')   exchangeTile(p.tileId);
+  if (p.type === 'bundle') exchangeBundle(p.bundleId);
+  renderAll();
+});
+
+confirmNoBtn.addEventListener('click', () => {
+  confirmModal.style.display = 'none';
+  pendingExchange = null;
+});
+
+// ── 筆算レンダリング ─────────────────────────────────
+function renderHissan() {
+  if (!state.hissanMode) { hissanWrap.innerHTML = ''; return; }
+  const a = parseFloat(inputA.value);
+  const b = parseFloat(inputB.value);
+  const hasA = !isNaN(a);
+  const hasB = !isNaN(b);
+  const isAdd = state.opMode === 'add';
+  const op = isAdd ? '＋' : '－';
+
+  const aStr   = hasA ? fmtNum(a) : '？';
+  const bStr   = hasB ? fmtNum(b) : '？';
+  let   ansStr = '？';
+  if (hasA && hasB) {
+    const ans = isAdd ? a + b : a - b;
+    ansStr = fmtNum(ans);
+  }
+
+  hissanWrap.innerHTML = `
+    <table class="hissan-table">
+      <tr><td class="op-col"></td><td>${aStr}</td></tr>
+      <tr><td class="op-col">${op}</td><td>${bStr}</td></tr>
+      <tr class="hissan-line hissan-answer">
+        <td class="op-col"></td><td>${ansStr}</td>
+      </tr>
+    </table>`;
+  scaleHissanToFit();
+}
+
+function fmtNum(n) {
+  return String(Math.round(n * 100000) / 100000);
+}
+
+function scaleHissanToFit() {
+  const display = $('hissanDisplay');
+  if (!display || !hissanWrap) return;
+  hissanWrap.style.zoom = '1';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const aw = display.clientWidth - 24, ah = display.clientHeight - 24;
+    const nw = hissanWrap.offsetWidth, nh = hissanWrap.offsetHeight;
+    if (aw > 0 && ah > 0 && nw > 0 && nh > 0) {
+      const s = Math.min(1, aw / nw, ah / nh);
+      hissanWrap.style.zoom = s < 1 ? String(Math.max(0.3, s)) : '';
+    }
+  }));
+}
+
+// ── タイルパレット描画 ────────────────────────────────
+function renderTilePalette() {
+  tilePalette.innerHTML = '';
+  if (!state.gutiMode) return;
+
+  realPlaces().forEach(pd => {
+    const el = document.createElement('div');
+    el.className = `tile ${pd.cls} tile-source`;
+    el.textContent = placeLabelShort(pd.value);
+    el.title = `${pd.label}のタイルをドラッグしてはいち`;
+    attachSourceDrag(el, pd.value);
+    tilePalette.appendChild(el);
+  });
+}
+
+// ── 全体レンダリング ─────────────────────────────────
+function renderAll() {
+  renderPlaceTable();
+  renderTilePalette();
+  renderHissan();
+  // バンドル形成ヒントアニメーション
+  state.pendingBundleHints.forEach(bid => animBundleHint(bid));
+  state.pendingBundleHints.clear();
+  // タイルからinput値を更新（たし算モード・input側からの更新中は除く）
+  if (state.opMode === 'add' && !syncingFromInput) {
+    let valA = 0, valB = 0;
+    realPlaces().forEach(p => {
+      valA += state.tiles.filter(t => t.placeValue === p.value && t.row === 'a').length * p.value;
+      valB += state.tiles.filter(t => t.placeValue === p.value && t.row === 'b').length * p.value;
+    });
+    const strA = valA > 0 ? String(Math.round(valA * 100000) / 100000) : '';
+    const strB = valB > 0 ? String(Math.round(valB * 100000) / 100000) : '';
+    if (inputA.value !== strA) inputA.value = strA;
+    if (inputB.value !== strB) inputB.value = strB;
+  }
+}
+
+// ── input → タイル同期 ────────────────────────────────
+let syncingFromInput = false;
+
+function syncTilesFromInput(row, rawValue) {
+  syncingFromInput = true;
+  // そのrowのタイルとバンドルを全削除
+  const removedBids = new Set(state.tiles.filter(t => t.row === row && t.bundleId !== undefined).map(t => t.bundleId));
+  removedBids.forEach(bid => state.bundles.delete(bid));
+  state.tiles = state.tiles.filter(t => t.row !== row);
+
+  const value = parseFloat(rawValue);
+  if (value > 0) {
+    let remaining = Math.round(value * 100000) / 100000;
+    realPlaces().forEach(p => {
+      const count = Math.floor(Math.round(remaining / p.value * 1000000) / 1000000);
+      for (let i = 0; i < count; i++) {
+        state.tiles.push({ id: state.nextId++, placeValue: p.value, row });
+      }
+      remaining = Math.round((remaining - count * p.value) * 100000) / 100000;
+    });
+    checkBundles();
+  }
+
+  renderAll();
+  syncingFromInput = false;
+}
+
+// ── UI 状態適用 ──────────────────────────────────────
+function applyUIState() {
+  addBtn.classList.toggle('on',        state.opMode === 'add');
+  subBtn.classList.toggle('on',        state.opMode === 'sub');
+  hissanBtn.classList.toggle('on',     state.hissanMode);
+  showNumBtn.classList.toggle('on',    state.showNumbers);
+  appLayout.classList.toggle('hissan-active', state.hissanMode);
+  appLayout.classList.toggle('guti-active',   state.gutiMode);
+
+  opDisplay.textContent = state.opMode === 'add' ? '＋' : '－';
+  labelA.textContent    = state.opMode === 'add' ? 'たされるかず' : 'ひかれるかず';
+  labelB.textContent    = state.opMode === 'add' ? 'たすかず'    : 'ひくかず';
+}
+
+// ── イベント ─────────────────────────────────────────
+addBtn.addEventListener('click', () => {
+  state.opMode = 'add'; applyUIState(); renderAll();
+});
+subBtn.addEventListener('click', () => {
+  state.opMode = 'sub'; applyUIState(); renderAll();
+});
+hissanBtn.addEventListener('click', () => {
+  state.hissanMode = !state.hissanMode; applyUIState(); renderAll();
+});
+showNumBtn.addEventListener('click', () => {
+  state.showNumbers = !state.showNumbers; applyUIState(); renderAll();
+});
+resetBtn.addEventListener('click', () => {
+  state.tiles = []; state.bundles.clear();
+  state.nextId = 0; state.nextBundleId = 0;
+  state.animNewBundles.clear(); state.animNewTiles.clear();
+  state.animNewTileOrder = []; state.pendingBundleHints.clear();
+  inputA.value = ''; inputB.value = '';
+  renderAll();
+});
+inputA.addEventListener('input', () => {
+  if (state.opMode === 'add') syncTilesFromInput('a', inputA.value);
+  else renderAll();
+});
+inputB.addEventListener('input', () => {
+  if (state.opMode === 'add') syncTilesFromInput('b', inputB.value);
+  else renderAll();
+});
+
+// ── ペイン境界ドラッグ ────────────────────────────────
+paneDivider.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  paneDivider.setPointerCapture(e.pointerId);
+  paneDivider.classList.add('dragging');
+  // ドラッグ中はトランジションを無効化
+  leftPane.style.transition  = 'none';
+  gutiPane.style.transition  = 'none';
+
+  function onMove(ev) {
+    const rect  = appLayout.getBoundingClientRect();
+    const divW  = paneDivider.offsetWidth;
+    const total = rect.width - divW;
+    const leftW = ev.clientX - rect.left;
+    const pct   = Math.max(20, Math.min(80, (leftW / rect.width) * 100));
+    leftPane.style.flex  = `0 0 ${pct}%`;
+    gutiPane.style.flex  = `0 0 ${100 - pct}%`;
+  }
+
+  function onUp() {
+    paneDivider.classList.remove('dragging');
+    leftPane.style.transition  = '';
+    gutiPane.style.transition  = '';
+    paneDivider.removeEventListener('pointermove', onMove);
+    paneDivider.removeEventListener('pointerup',   onUp);
+    paneDivider.removeEventListener('pointercancel', onUp);
+  }
+
+  paneDivider.addEventListener('pointermove', onMove);
+  paneDivider.addEventListener('pointerup',   onUp);
+  paneDivider.addEventListener('pointercancel', onUp);
+});
+
+// ── 初期化 ───────────────────────────────────────────
+applyUIState();
+renderAll();
+</script>
+</body>
+</html>
