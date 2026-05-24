@@ -347,14 +347,12 @@
 
     /* 点線分割 */
 
-    /* タイルエリア — 横折り返し・クリップなし */
+    /* タイルエリア — 縦並び・クリップなし */
     .tile-area {
       width: 100%;
       display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-content: flex-start;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
       gap: 4px;
       padding: 6px 4px;
       min-height: 48px;
@@ -459,10 +457,8 @@
     /* くりあがりグループ枠（10個溜まったとき） */
     .carry-group {
       display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-content: flex-start;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
       gap: 4px;
       padding: 6px;
       border: 3px solid #10b981;
@@ -651,10 +647,8 @@
     }
     .carry-zone-group {
       display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-content: flex-start;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
       gap: 4px;
       padding: 4px;
     }
