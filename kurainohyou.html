@@ -347,15 +347,17 @@
 
     /* 点線分割 */
 
-    /* タイルエリア — 縦並び・クリップなし */
+    /* タイルエリア — 縦並び・多列折り返し・クリップなし */
     .tile-area {
-      width: 100%;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      justify-content: flex-start;
       gap: 4px;
       padding: 6px 4px;
       min-height: 48px;
+      /* height は JS で動的にセット → 縦が埋まったら右へ折り返す */
     }
 
     /* 数字行（位の表の下） */
@@ -1594,38 +1596,42 @@ function renderTilePalette() {
   });
 }
 
-// ── タイルエリア自動縮小 ─────────────────────────────
+// ── タイルエリア自動レイアウト（縦並び多列） ────────────────
 function autoScaleTileAreas() {
   requestAnimationFrame(() => {
-    // まずzoomをリセット（タイル自体にかける）
-    document.querySelectorAll('.tile-area .tile, .carry-group .tile, .carry-zone-group .tile').forEach(t => { t.style.zoom = ''; });
+    // ① リセット
+    document.querySelectorAll('.tile-area .tile, .carry-group .tile, .carry-zone-group .tile')
+      .forEach(t => { t.style.zoom = ''; });
+    document.querySelectorAll('.tile-area').forEach(a => { a.style.height = ''; });
 
-    // 位の表：各セルのtile-areaタイルを縮小
+    // ② 位の表：tile-areaに高さをセット → 縦が溢れたら右へ折り返す（多列）
     document.querySelectorAll('.place-body').forEach(body => {
       const availH = body.clientHeight;
       if (availH <= 0) return;
+      const tileAreaH = Math.max(48, availH - 12); // 上下padding分を引く
       body.querySelectorAll('.place-cell:not(.decimal-sep)').forEach(cell => {
-        let contentH = 0;
-        cell.querySelectorAll('.tile-area').forEach(a => { contentH += a.scrollHeight; });
-        if (contentH > availH) {
-          // tile-areaのコンテナ幅を維持したままタイルのサイズを縮小
-          // → 横に複数列並ぶようになり、縦を節約できる
-          const scale = Math.max(0.25, availH / contentH);
+        const cellW = cell.clientWidth;
+        if (cellW <= 0) return;
+        cell.querySelectorAll('.tile-area').forEach(a => {
+          a.style.height = tileAreaH + 'px';
+        });
+        // ③ 多列になっても横方向に溢れる場合はタイルを縮小
+        let totalW = 0;
+        cell.querySelectorAll('.tile-area').forEach(a => { totalW = Math.max(totalW, a.scrollWidth); });
+        if (totalW > cellW) {
+          const scale = Math.max(0.25, cellW / totalW);
           cell.querySelectorAll('.tile-area .tile').forEach(t => { t.style.zoom = String(scale); });
         }
       });
     });
 
-    // くりあがりゾーン：carry-zone-areaのタイルを縮小
+    // ④ くりあがりゾーン：縦が溢れたらタイルを縮小
     const czArea = document.getElementById('carryZone');
     if (czArea) {
       const availH = czArea.clientHeight;
-      if (availH > 0) {
-        let contentH = czArea.scrollHeight;
-        if (contentH > availH) {
-          const scale = Math.max(0.25, availH / contentH);
-          czArea.querySelectorAll('.tile').forEach(t => { t.style.zoom = String(scale); });
-        }
+      if (availH > 0 && czArea.scrollHeight > availH) {
+        const scale = Math.max(0.25, availH / czArea.scrollHeight);
+        czArea.querySelectorAll('.tile').forEach(t => { t.style.zoom = String(scale); });
       }
     }
   });
