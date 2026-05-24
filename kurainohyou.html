@@ -462,8 +462,8 @@
       flex-wrap: wrap;
       align-content: flex-start;
       justify-content: flex-start;
-      gap: 4px;
-      padding: 6px;
+      gap: 8px;
+      padding: 8px;
       border: 3px solid #10b981;
       border-radius: 12px;
       background: rgba(16,185,129,0.1);
@@ -654,8 +654,8 @@
       flex-wrap: wrap;
       align-content: flex-start;
       justify-content: flex-start;
-      gap: 4px;
-      padding: 4px;
+      gap: 8px;
+      padding: 8px;
     }
     /* 結果タイル（くりあがり後） */
     .tile.carry-result {
@@ -1630,24 +1630,24 @@ function autoScaleTileAreas() {
       });
     });
 
-    // ④ くりあがりゾーン：グループに高さをセット → 縦が埋まったら右へ折り返す
+    // ④ くりあがりゾーン：1列最大5タイルになるよう高さをセット
     const czArea = document.getElementById('carryZone');
     if (czArea) {
-      const availH = czArea.clientHeight;
-      if (availH > 0) {
-        const groupH = Math.max(48, availH - 16);
-        czArea.querySelectorAll('.carry-group, .carry-zone-group').forEach(g => {
-          g.style.height = groupH + 'px';
-        });
+      const czW = czArea.clientWidth - 20;
+      czArea.querySelectorAll('.carry-group, .carry-zone-group').forEach(g => {
+        const firstTile = g.querySelector('.tile');
+        if (!firstTile) return;
+        const tileH = firstTile.offsetHeight;
+        const MAX_PER_COL = 5;
+        // 5タイル分の高さ + gap(8px)×4 + padding(8px)×2
+        const groupH = MAX_PER_COL * tileH + (MAX_PER_COL - 1) * 8 + 16;
+        g.style.height = groupH + 'px';
         // 横方向に溢れる場合はタイルを縮小
-        czArea.querySelectorAll('.carry-group, .carry-zone-group').forEach(g => {
-          const gW = czArea.clientWidth - 20; // padding分
-          if (g.scrollWidth > gW) {
-            const scale = Math.max(0.25, gW / g.scrollWidth);
-            g.querySelectorAll('.tile').forEach(t => { t.style.zoom = String(scale); });
-          }
-        });
-      }
+        if (g.scrollWidth > czW) {
+          const scale = Math.max(0.25, czW / g.scrollWidth);
+          g.querySelectorAll('.tile').forEach(t => { t.style.zoom = String(scale); });
+        }
+      });
     }
   });
 }
