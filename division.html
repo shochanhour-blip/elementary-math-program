@@ -786,7 +786,7 @@
 
 <script>
   const TRAY_COLORS = ['tray-0','tray-1','tray-2','tray-3','tray-4','tray-5'];
-  const ANIMALS = ['😺','🐱','😼','🐶','🐭','🐹','🐰','🐙','🐣','🐼','🐷','🙈','🙉','🙊','🦁','🐻','🐸','🐯','🐮','🐧','🐦','🐟','🐢','🦊','🐨','🦋','🐳'];
+  const ANIMALS = ['😺','🐱','😼','🐶','🐭','🐹','🐰','🐙','🐣','🐼','🐷','🙈','🙉','🙊','🦁','🐻','🐸','🐯','🐮','🐧','🐦','🐟','🐢','🦊','🐨','🦋','🐳','🐴','🦄','🐑','🐐','🦌','🐕','🐈','🐇','🦝','🦨','🦡','🦦','🦥','🐿','🦔','🐘','🦏','🦛','🐪','🦒','🦓','🦆','🦅','🦉','🦚','🦜','🐓','🦈','🐠','🦑','🦞','🦀','🐡','🐊','🦎','🐍','🐝','🐛','🐞'];
 
   const state = {
     total:        null,
@@ -809,12 +809,20 @@
 
   function getPersonIcon(i) {
     if (!state.personIcons[i]) {
-      if (Math.random() < 0.001) {
-        state.personIcons[i] = '🐉';
-      } else if (Math.random() < 0.0001) {
-        state.personIcons[i] = '🏄';
+      if (Math.random() < 0.0001) {
+        state.personIcons[i] = '🏄';       // 1/10000
+      } else if (Math.random() < 0.0002) {
+        state.personIcons[i] = '🐦‍🔥';    // 1/5000
+      } else if (Math.random() < 0.001) {
+        state.personIcons[i] = '🐉';       // 1/1000
+      } else if (Math.random() < 0.001) {
+        state.personIcons[i] = '🦕';       // 1/1000
+      } else if (Math.random() < 0.002) {
+        state.personIcons[i] = '🦖';       // 1/500
       } else if (Math.random() < 0.01) {
-        state.personIcons[i] = '🦍';
+        state.personIcons[i] = '🦍';       // 1/100
+      } else if (Math.random() < 0.01) {
+        state.personIcons[i] = '🐬';       // 1/100
       } else {
         const pool = ANIMALS.filter(a => !state.personIcons.includes(a));
         const src  = pool.length > 0 ? pool : ANIMALS;
