@@ -809,9 +809,13 @@
 
   function getPersonIcon(i) {
     if (!state.personIcons[i]) {
-      const pool = ANIMALS.filter(a => !state.personIcons.includes(a));
-      const src  = pool.length > 0 ? pool : ANIMALS;
-      state.personIcons[i] = src[Math.floor(Math.random() * src.length)];
+      if (Math.random() < 0.001) {
+        state.personIcons[i] = '🐉';
+      } else {
+        const pool = ANIMALS.filter(a => !state.personIcons.includes(a));
+        const src  = pool.length > 0 ? pool : ANIMALS;
+        state.personIcons[i] = src[Math.floor(Math.random() * src.length)];
+      }
     }
     return state.personIcons[i];
   }
