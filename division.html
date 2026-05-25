@@ -819,12 +819,12 @@
         state.personIcons[i] = '🦕';       // 1/1000
       } else if (Math.random() < 0.002) {
         state.personIcons[i] = '🦖';       // 1/500
-      } else if (Math.random() < 0.01) {
-        state.personIcons[i] = '🦍';       // 1/100
+      } else if (Math.random() < 0.004) {
+        state.personIcons[i] = '🦍';       // 1/250
       } else if (Math.random() < 0.0033) {
         state.personIcons[i] = '🦄';       // 1/300
-      } else if (Math.random() < 0.01) {
-        state.personIcons[i] = '🐬';       // 1/100
+      } else if (Math.random() < 0.004) {
+        state.personIcons[i] = '🐬';       // 1/250
       } else {
         const pool = ANIMALS.filter(a => !state.personIcons.includes(a));
         const src  = pool.length > 0 ? pool : ANIMALS;
