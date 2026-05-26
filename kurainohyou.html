@@ -332,8 +332,9 @@
     }
     .place-cell:first-child { border-radius: 0 0 0 10px; }
     .place-cell:last-child  { border-radius: 0 0 10px 0; }
-    .place-table.nums-visible .place-cell:first-child,
-    .place-table.nums-visible .place-cell:last-child { border-radius: 0 !important; }
+    /* 手書き行があるときはセルの角丸を消す */
+    .place-table.has-write .place-cell:first-child,
+    .place-table.has-write .place-cell:last-child { border-radius: 0 !important; }
     .place-cell.drag-over   { background: #ede9fe !important; }
     .place-cell.valid-drop  { box-shadow: inset 0 0 0 3px #a78bfa; }
     .place-cell.decimal-sep {
@@ -360,34 +361,52 @@
       /* height は JS で動的にセット → 縦が埋まったら右へ折り返す */
     }
 
-    /* 数字行（位の表の下） */
-    .num-row { display: flex; flex-shrink: 0; }
-    .num-cell {
+    /* 手書きエリア行 */
+    .write-row { display: flex; flex-shrink: 0; }
+    .write-cell {
       flex: 1 1 0;
       min-width: 80px;
       border: 2px solid #e5e7eb;
       border-top: none;
-      border-bottom: none;
-      background: #f5f3ff;
-      text-align: center;
-      font-size: 42px;
-      font-weight: 900;
-      color: var(--c-place);
-      padding: 6px 4px;
+      background: #fff;
+      position: relative;
+      display: flex;
+      flex-direction: column;
     }
-    .num-cell.decimal-sep {
+    .write-cell:first-child { border-radius: 0 0 0 10px; }
+    .write-cell:last-child  { border-radius: 0 0 10px 0; }
+    .write-cell.decimal-sep {
       flex: 0 0 28px; min-width: 28px;
       background: transparent; border-color: transparent;
     }
-    .num-cell.over-limit {
-      animation: over-pulse-text .5s ease-in-out infinite alternate;
-      background: #f59e0b !important;
-      color: #fff !important;
+    .place-table.cols-fixed .write-cell:not(.decimal-sep) { flex: 1 1 0; }
+    .write-canvas {
+      display: block;
+      width: 100%;
+      height: 80px;
+      touch-action: none;
+      cursor: crosshair;
     }
-    .num-row:last-child .num-cell { border-bottom: 2px solid #e5e7eb; }
-    .num-row:last-child .num-cell:first-child:not(.decimal-sep) { border-radius: 0 0 0 10px; }
-    .num-row:last-child .num-cell:last-child:not(.decimal-sep)  { border-radius: 0 0 10px 0; }
-    .place-table.cols-fixed .num-cell:not(.decimal-sep) { flex: 1 1 0; }
+    .write-clear {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 18px;
+      height: 18px;
+      font-size: 11px;
+      line-height: 1;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background: #f9fafb;
+      color: #9ca3af;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .write-cell:hover .write-clear { opacity: 1; }
 
     /* 10個以上エラー表示 */
     @keyframes over-pulse {
@@ -840,7 +859,7 @@
           <div class="place-table" id="placeTable"></div>
         </div>
         <div class="place-toolbar">
-<button id="showNumBtn" class="toolbar-btn">かずをひょうじ</button>
+          <button id="writeRowBtn" class="toolbar-btn">かずをかく</button>
         </div>
       </section>
     </div>
@@ -902,7 +921,7 @@ const state = {
   opMode:      'add',
   gutiMode:    true,
   hissanMode:  false,
-  showNumbers: false,
+  showWriteRow: false,
   topPlace:    10,
   botPlace:    1,
   nextId:      0,
@@ -918,7 +937,7 @@ const addBtn        = $('addBtn');
 const subBtn        = $('subBtn');
 const hissanBtn     = $('hissanBtn');
 const resetBtn      = $('resetBtn');
-const showNumBtn    = $('showNumBtn');
+const writeRowBtn   = $('writeRowBtn');
 const tilePalette   = $('tilePalette');
 const gutiPane      = $('gutiPane');
 const appLayout     = $('appLayout');
@@ -1150,8 +1169,8 @@ function renderPlaceTable() {
       cell.className = 'place-cell';
       cell.dataset.place = p.value;
       if (rowKey) cell.dataset.row = rowKey;
-      if (isLast && !state.showNumbers && i === 0)              cell.style.borderRadius = '0 0 0 10px';
-      if (isLast && !state.showNumbers && i === places.length-1) cell.style.borderRadius = '0 0 10px 0';
+      if (isLast && !state.showWriteRow && i === 0)              cell.style.borderRadius = '0 0 0 10px';
+      if (isLast && !state.showWriteRow && i === places.length-1) cell.style.borderRadius = '0 0 10px 0';
 
       const rowFilter = rowKey ? (t => t.row === rowKey) : () => true;
 
@@ -1180,8 +1199,8 @@ function renderPlaceTable() {
   }
 
   // 4列以下は固定幅、5列以上は画面に収まるよう自動縮小
-  table.classList.toggle('cols-fixed',   realPlaces().length <= 4);
-  table.classList.toggle('nums-visible', state.showNumbers);
+  table.classList.toggle('cols-fixed',  realPlaces().length <= 4);
+  table.classList.toggle('has-write',   state.showWriteRow);
 
   table.innerHTML = '';
   table.appendChild(header);
@@ -1196,25 +1215,40 @@ function renderPlaceTable() {
     table.appendChild(buildBody(null, true));
   }
 
-  // 数字行（各位のタイル合計を1行で表示）
-  if (state.showNumbers) {
-    const rowKeys = [null];
-    rowKeys.forEach(rowKey => {
-      const numRow = document.createElement('div');
-      numRow.className = 'num-row';
-      places.forEach(p => {
-        const nc = document.createElement('div');
-        if (p.isDot) {
-          nc.className = 'num-cell decimal-sep';
-        } else {
-          nc.className = 'num-cell';
-          const cnt = state.tiles.filter(t => t.placeValue === p.value).length;
-          nc.textContent = String(cnt);
-          if (cnt >= 10) nc.classList.add('over-limit');
-        }
-        numRow.appendChild(nc);
+  // 手書き行
+  if (state.showWriteRow) {
+    const writeRow = document.createElement('div');
+    writeRow.className = 'write-row';
+    places.forEach(p => {
+      const cell = document.createElement('div');
+      if (p.isDot) {
+        cell.className = 'write-cell decimal-sep';
+      } else {
+        cell.className = 'write-cell';
+        const canvas = document.createElement('canvas');
+        canvas.className = 'write-canvas';
+        canvas.dataset.place = p.value;
+        cell.appendChild(canvas);
+        const clrBtn = document.createElement('div');
+        clrBtn.className = 'write-clear';
+        clrBtn.textContent = '×';
+        clrBtn.addEventListener('click', () => {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+        cell.appendChild(clrBtn);
+        attachWriteCanvas(canvas);
+      }
+      writeRow.appendChild(cell);
+    });
+    table.appendChild(writeRow);
+    // canvas サイズを実寸に合わせる（CSS px → 実ピクセル）
+    requestAnimationFrame(() => {
+      writeRow.querySelectorAll('.write-canvas').forEach(c => {
+        const r = c.getBoundingClientRect();
+        c.width  = Math.round(r.width);
+        c.height = Math.round(r.height);
       });
-      table.appendChild(numRow);
     });
   }
 
@@ -1257,6 +1291,42 @@ function attachTileDrag(el, tile) {
     e.stopPropagation();
     startDrag(e, el, { type: 'tile', tileId: tile.id, placeValue: tile.placeValue, row: tile.row || 'a' });
   });
+}
+
+// ── 手書き canvas ────────────────────────────────────
+function attachWriteCanvas(canvas) {
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#1f2933';
+  ctx.lineWidth   = 3;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  let drawing = false;
+
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / r.width;
+    const scaleY = canvas.height / r.height;
+    return [(e.clientX - r.left) * scaleX, (e.clientY - r.top) * scaleY];
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    canvas.setPointerCapture(e.pointerId);
+    drawing = true;
+    ctx.beginPath();
+    ctx.moveTo(...pos(e));
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    e.preventDefault();
+    ctx.lineTo(...pos(e));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(...pos(e));
+  });
+  canvas.addEventListener('pointerup',     () => { drawing = false; });
+  canvas.addEventListener('pointercancel', () => { drawing = false; });
 }
 
 // ── くりあがりゾーン描画 ─────────────────────────────
@@ -1705,7 +1775,7 @@ function applyUIState() {
   addBtn.classList.toggle('on',        state.opMode === 'add');
   subBtn.classList.toggle('on',        state.opMode === 'sub');
   hissanBtn.classList.toggle('on',     state.hissanMode);
-  showNumBtn.classList.toggle('on',    state.showNumbers);
+  writeRowBtn.classList.toggle('on',   state.showWriteRow);
   appLayout.classList.toggle('hissan-active', state.hissanMode);
   appLayout.classList.toggle('guti-active',   state.gutiMode);
 
@@ -1724,8 +1794,8 @@ subBtn.addEventListener('click', () => {
 hissanBtn.addEventListener('click', () => {
   state.hissanMode = !state.hissanMode; applyUIState(); renderAll();
 });
-showNumBtn.addEventListener('click', () => {
-  state.showNumbers = !state.showNumbers; applyUIState(); renderAll();
+writeRowBtn.addEventListener('click', () => {
+  state.showWriteRow = !state.showWriteRow; applyUIState(); renderAll();
 });
 resetBtn.addEventListener('click', () => {
   state.tiles = [];
