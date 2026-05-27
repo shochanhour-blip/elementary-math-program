@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>いくつといくつ</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      background: #fef9f0;
+      color: #1f2933;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 8px 120px;
+      overflow-x: hidden;
+    }
+
+    /* Scale down content on narrow screens */
+    .content-scale {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      transform-origin: top center;
+    }
+
+header {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 40px;
+      padding-top: 8px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin: 0;
+      text-align: center;
+    }
+
+    .mode-toggle {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      gap: 4px;
+      z-index: 10;
+    }
+
+    .mode-btn {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 20px;
+      background: #fff;
+      color: #9ca3af;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+
+    .mode-btn.active {
+      background: #f3f4f6;
+      color: #374151;
+      border-color: #9ca3af;
+    }
+
+    /* ─── Sakuranbo diagram ─── */
+    /*
+      Diagram: 480px × 320px  branch length ≈ 285px, angle ≈ 85°
+      Top circle 120px: left=180, center x=240, center y=60
+      Bottom-left 94px: left=0, top=223, center x=47, center y=270
+      Bottom-right 94px: right=0 (left=386), top=223, center x=433, center y=270
+      horizontal=193, vertical=210  →  length=sqrt(193²+210²)≈285, angle≈85°
+    */
+    .diagram-wrap {
+      position: relative;
+      width: 560px;
+      height: 320px;
+      flex-shrink: 0;
+    }
+
+    .diagram-wrap svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+
+    .circle {
+      position: absolute;
+      border-radius: 50%;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      user-select: none;
+    }
+
+    .circle-top {
+      width: 120px;
+      height: 120px;
+      left: 220px; top: 0;
+      border: 4px solid #60a5fa;
+      font-size: 4rem;
+      color: #1d4ed8;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .circle-top:hover    { background: #eff6ff; }
+    .circle-top.editing  { background: #dbeafe; border-color: #3b82f6; }
+
+    .circle-left {
+      width: 94px;
+      height: 94px;
+      left: 0; top: 223px;
+      border: 4px solid #34d399;
+      font-size: 3.2rem;
+      color: #065f46;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .circle-left:hover   { background: #f0fdf4; }
+    .circle-left.editing { background: #dcfce7; border-color: #16a34a; }
+
+    .circle-right {
+      width: 94px;
+      height: 94px;
+      right: 0; top: 223px;
+      border: 4px dashed #fb923c;
+      font-size: 3.2rem;
+      color: #c2410c;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+    }
+
+    .circle-right:hover,
+    .circle-right.active {
+      background: #fff7ed;
+      border-color: #f97316;
+    }
+
+    .circle-right.correct {
+      background: #f0fdf4;
+      border: 4px solid #22c55e;
+      color: #16a34a;
+      cursor: default;
+    }
+
+    .circle-right.wrong {
+      background: #fef2f2;
+      border: 4px solid #ef4444;
+      color: #dc2626;
+    }
+
+    /* ─── Total-dots (n dots between top circle and fork) ─── */
+    .total-dots-area {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 128px;
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .dot-total {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #60a5fa;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .dot-total.tapped {
+      background: #f97316;
+    }
+
+    /* ─── Objects row ─── */
+    /*
+      Same 480px width as diagram-wrap.
+      dots-area: absolute left=0, width=94px (same as left circle)
+        → dots centered under left circle.
+      canvas-wrap: absolute right=0, width=240px
+    */
+    .objects-row {
+      position: relative;
+      width: 560px;
+      height: 190px;
+      margin-top: 8px;
+      flex-shrink: 0;
+      overflow: visible;
+    }
+
+    .dots-area {
+      position: absolute;
+      left: 47px;
+      transform: translateX(-50%);
+      top: 0;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      gap: 8px;
+      align-items: center;
+      padding: 4px 0;
+    }
+
+    .dot {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #f97316;
+      flex-shrink: 0;
+    }
+
+    .canvas-wrap {
+      position: absolute;
+      /* centered under right circle (x=513): 513-221=292, left(292)>center(280) ✓ */
+      left: 292px;
+      top: 0;
+      width: 442px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+
+    #writeCanvas {
+      width: 442px;
+      height: 150px;
+      border: 3px solid #fb923c;
+      border-radius: 12px;
+      background: #fff;
+      touch-action: none;
+      cursor: crosshair;
+      display: block;
+    }
+
+    .clear-btn {
+      font-size: 0.85rem;
+      padding: 5px 0;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: #f9fafb;
+      color: #9ca3af;
+      cursor: pointer;
+    }
+
+    /* ─── Feedback badge (top-right of right circle) ─── */
+    #feedbackBadge {
+      position: absolute;
+      right: -8px;
+      top: 186px;
+      font-size: 2rem;
+      line-height: 1;
+      display: none;
+      pointer-events: none;
+    }
+    #feedbackBadge.visible { display: block; }
+
+    /* ─── Next button ─── */
+    #nextBtn {
+      display: none;
+      margin-top: 12px;
+      padding: 16px 48px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      background: #f97316;
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: background 0.12s, transform 0.1s;
+    }
+    #nextBtn:hover  { background: #ea6c0a; }
+    #nextBtn:active { transform: scale(0.96); }
+    #nextBtn.visible { display: block; }
+
+    /* ─── Choices area ─── */
+    .choices-area {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 2px;
+      padding: 0 4px;
+      width: 560px;
+    }
+    .choices-area.visible { display: flex; }
+
+    .choices-label {
+      font-size: 0.95rem;
+      color: #6b7a8d;
+      font-weight: bold;
+    }
+
+    .choices-row {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .choice-btn {
+      flex: 1 1 0;
+      min-width: 0;
+      aspect-ratio: 1 / 1;
+      border-radius: 16px;
+      font-size: 2.6rem;
+      font-weight: bold;
+      border: 2px solid #e5e7eb;
+      background: #fff;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s, transform 0.08s;
+    }
+    .choice-btn:active { transform: scale(0.93); }
+
+    .choice-btn.blue   { border-color: #93c5fd; color: #1d4ed8; }
+    .choice-btn.blue:hover   { background: #eff6ff; border-color: #3b82f6; }
+    .choice-btn.green  { border-color: #6ee7b7; color: #065f46; }
+    .choice-btn.green:hover  { background: #f0fdf4; border-color: #34d399; }
+    .choice-btn.orange { border-color: #fdba74; color: #c2410c; }
+    .choice-btn.orange:hover { background: #fff7ed; border-color: #fb923c; }
+  </style>
+</head>
+<body>
+<header>
+    <h1>いくつといくつ</h1>
+  </header>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btnSequential">じゅんばん</button>
+    <button class="mode-btn"        id="btnRandom">ランダム</button>
+    <button class="mode-btn"        id="btnFullRandom">フルランダム</button>
+  </div>
+
+  <div class="content-scale" id="contentScale">
+  <!-- Sakuranbo diagram -->
+  <div class="diagram-wrap" id="diagramWrap">
+    <svg viewBox="0 0 560 320" preserveAspectRatio="xMidYMid meet">
+      <!-- left branch: green -->
+      <line id="lineLeft"  x1="280" y1="192" x2="47"  y2="270" stroke="#34d399" stroke-width="4"/>
+      <!-- right branch: orange -->
+      <line id="lineRight" x1="280" y1="192" x2="513" y2="270" stroke="#fb923c" stroke-width="4"/>
+    </svg>
+    <div class="circle circle-top"   id="topCircle">10</div>
+    <div class="total-dots-area"     id="totalDotsArea"></div>
+    <div class="circle circle-left"  id="leftCircle">1</div>
+    <div class="circle circle-right" id="answerCircle" tabindex="0" role="button" aria-label="こたえをいれる">?</div>
+    <div id="feedbackBadge"></div>
+  </div>
+
+  <!-- Dots + canvas -->
+  <div class="objects-row">
+    <div class="dots-area" id="dotsArea"></div>
+    <div class="canvas-wrap">
+      <canvas id="writeCanvas" width="480" height="300"></canvas>
+      <button class="clear-btn" id="clearCanvasBtn">けす ✕</button>
+    </div>
+  </div>
+
+  <button id="nextBtn">つぎへ ▶</button>
+
+  <!-- Choices area -->
+  <div class="choices-area" id="choicesArea">
+    <div class="choices-label" id="choicesLabel"></div>
+    <div class="choices-row" id="choicesRow"></div>
+  </div>
+
+  </div><!-- /content-scale -->
+
+  <script>
+    const state = {
+      n: 10,
+      m: 1,
+      mIndex: 0,
+      mList: [],
+      answered: false,
+    };
+
+    function getMList(n) {
+      const min = Math.max(1, n - 8);
+      const list = [];
+      for (let i = min; i <= n - 1; i++) list.push(i);
+      return list;
+    }
+
+    let currentMode = 'sequential';
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('btnSequential').classList.toggle('active', mode === 'sequential');
+      document.getElementById('btnRandom').classList.toggle('active', mode === 'random');
+      document.getElementById('btnFullRandom').classList.toggle('active', mode === 'fullrandom');
+      resetAndStart();
+    }
+
+    document.getElementById('btnSequential').addEventListener('click', () => setMode('sequential'));
+    document.getElementById('btnRandom').addEventListener('click',     () => setMode('random'));
+    document.getElementById('btnFullRandom').addEventListener('click', () => setMode('fullrandom'));
+
+    function getN() {
+      return 2 + Math.floor(Math.random() * 9);
+    }
+
+    function nextState() {
+      if (currentMode === 'sequential') {
+        if (!state.mList.length || state.mIndex >= state.mList.length) {
+          state.n = getN();
+          state.mList = getMList(state.n);
+          state.mIndex = 0;
+        }
+        state.m = state.mList[state.mIndex++];
+      } else if (currentMode === 'random') {
+        // n固定（変えない）、mだけランダム
+        if (!state.mList.length) {
+          state.n = getN();
+          state.mList = getMList(state.n);
+        }
+        state.m = state.mList[Math.floor(Math.random() * state.mList.length)];
+      } else {
+        // fullrandom: nもmもランダム
+        state.n = getN();
+        state.mList = getMList(state.n);
+        state.m = state.mList[Math.floor(Math.random() * state.mList.length)];
+      }
+      state.answered = false;
+    }
+
+    function renderRound() {
+      document.getElementById('topCircle').textContent = state.n;
+      document.getElementById('leftCircle').textContent = state.m;
+
+      const ac = document.getElementById('answerCircle');
+      ac.textContent = '?';
+      ac.className = 'circle circle-right';
+
+      const totalDotsArea = document.getElementById('totalDotsArea');
+      totalDotsArea.innerHTML = '';
+      for (let i = 0; i < state.n; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot-total';
+        d.addEventListener('click', () => d.classList.toggle('tapped'));
+        totalDotsArea.appendChild(d);
+      }
+
+      const dotsArea = document.getElementById('dotsArea');
+      dotsArea.innerHTML = '';
+      for (let i = 0; i < state.m; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot';
+        dotsArea.appendChild(d);
+      }
+
+      clearCanvas();
+
+      const badge = document.getElementById('feedbackBadge');
+      badge.textContent = '';
+      badge.classList.remove('visible');
+
+      document.getElementById('nextBtn').classList.remove('visible');
+      closeChoices();
+    }
+
+    function startRound() {
+      nextState();
+      renderRound();
+    }
+
+    function submitAnswer(val) {
+      if (state.answered) return;
+      const correct = state.n - state.m;
+      const ac = document.getElementById('answerCircle');
+      const badge = document.getElementById('feedbackBadge');
+
+      ac.textContent = val;
+
+      if (val === correct) {
+        state.answered = true;
+        ac.className = 'circle circle-right correct';
+        badge.textContent = '⭕';
+        badge.classList.add('visible');
+        document.getElementById('nextBtn').classList.add('visible');
+      } else {
+        ac.className = 'circle circle-right wrong';
+        badge.textContent = '❌';
+        badge.classList.add('visible');
+      }
+    }
+
+    // Choices
+    let editTarget = null;
+
+    function showChoices(target) {
+      if (target === 'answer' && state.answered) return;
+      // toggle off if same target tapped again
+      if (editTarget === target) { closeChoices(); return; }
+
+      editTarget = target;
+      document.getElementById('topCircle').classList.toggle('editing', target === 'n');
+      document.getElementById('leftCircle').classList.toggle('editing', target === 'm');
+      document.getElementById('answerCircle').classList.toggle('active', target === 'answer');
+
+      const labels = {
+        n:      'なんのかず？',
+        m:      '',
+        answer: '',
+      };
+      document.getElementById('choicesLabel').textContent = labels[target];
+
+      const colors = { n: 'blue', m: 'green', answer: 'orange' };
+      const cls = colors[target];
+
+      let opts = [];
+      if (target === 'n') {
+        for (let i = 2; i <= 10; i++) opts.push(i);
+      } else if (target === 'answer') {
+        for (let i = 1; i <= 9; i++) opts.push(i);
+      } else {
+        for (let i = 1; i <= state.n - 1; i++) opts.push(i);
+      }
+
+      const row = document.getElementById('choicesRow');
+      row.innerHTML = '';
+      opts.forEach(v => {
+        const btn = document.createElement('button');
+        btn.className = `choice-btn ${cls}`;
+        btn.textContent = v;
+        btn.addEventListener('click', () => applyChoice(v));
+        row.appendChild(btn);
+      });
+
+      document.getElementById('choicesArea').classList.add('visible');
+    }
+
+    function closeChoices() {
+      editTarget = null;
+      document.getElementById('choicesArea').classList.remove('visible');
+      document.getElementById('topCircle').classList.remove('editing');
+      document.getElementById('leftCircle').classList.remove('editing');
+      document.getElementById('answerCircle').classList.remove('active');
+    }
+
+    function applyChoice(val) {
+      if (editTarget === 'n') {
+        state.n = val;
+        state.mList = getMList(val);
+        state.mIndex = 0;
+        state.m = state.mList[0];
+        state.answered = false;
+        renderRound();
+        closeChoices();
+      } else if (editTarget === 'm') {
+        state.m = val;
+        state.answered = false;
+        renderRound();
+        closeChoices();
+      } else if (editTarget === 'answer') {
+        closeChoices();
+        submitAnswer(val);
+      }
+    }
+
+    document.getElementById('answerCircle').addEventListener('click', () => showChoices('answer'));
+    document.getElementById('answerCircle').addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showChoices('answer'); }
+    });
+    document.getElementById('topCircle').addEventListener('click',  () => showChoices('n'));
+    document.getElementById('leftCircle').addEventListener('click', () => showChoices('m'));
+
+    // Next
+    document.getElementById('nextBtn').addEventListener('click', startRound);
+
+    function resetAndStart() {
+      state.mList = [];
+      state.mIndex = 0;
+      startRound();
+    }
+
+    // Canvas
+    function clearCanvas() {
+      const canvas = document.getElementById('writeCanvas');
+      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    document.getElementById('clearCanvasBtn').addEventListener('click', clearCanvas);
+
+    (function attachCanvas() {
+      const canvas = document.getElementById('writeCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.strokeStyle = '#1f2933';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      let drawing = false;
+
+      function pt(e) {
+        const r = canvas.getBoundingClientRect();
+        return [(e.clientX - r.left) * (canvas.width / r.width),
+                (e.clientY - r.top)  * (canvas.height / r.height)];
+      }
+
+      canvas.addEventListener('pointerdown', e => {
+        e.preventDefault(); e.stopPropagation();
+        canvas.setPointerCapture(e.pointerId);
+        drawing = true;
+        ctx.beginPath();
+        ctx.moveTo(...pt(e));
+      });
+      canvas.addEventListener('pointermove', e => {
+        if (!drawing) return;
+        e.preventDefault();
+        ctx.lineTo(...pt(e));
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(...pt(e));
+      });
+      canvas.addEventListener('pointerup',     () => { drawing = false; });
+      canvas.addEventListener('pointercancel', () => { drawing = false; });
+    })();
+
+    // Responsive scale: fit 360px content into narrow screens
+    function scaleContent() {
+      const el = document.getElementById('contentScale');
+      const available = document.body.clientWidth - 16;
+      /* threshold=908: canvas right(734) offset from center(280)=454, 2×454=908 */
+      const scale = available < 908 ? available / 908 : 1;
+      el.style.transform = scale < 1 ? `scale(${scale})` : '';
+      if (scale < 1) {
+        el.style.marginBottom = `${(scale - 1) * el.scrollHeight}px`;
+      } else {
+        el.style.marginBottom = '';
+      }
+    }
+    scaleContent();
+    window.addEventListener('resize', scaleContent);
+
+    // Init
+    startRound();
+  </script>
+</body>
+</html>
