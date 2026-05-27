@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>とけいのがくしゅう</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      background: #ffffff;
+      color: #1f2933;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 16px 80px;
+      overflow-x: hidden;
+    }
+
+    .content-scale {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transform-origin: top center;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin: 0;
+      color: #1f2933;
+    }
+
+    /* ─── Clock ─── */
+    .clock-wrap {
+      position: relative;
+      width: 520px;
+      height: 520px;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: grab;
+      filter: drop-shadow(0 8px 24px rgba(30,64,175,0.18));
+    }
+    .clock-wrap:active { cursor: grabbing; }
+
+.ampm-badge {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #1e40af;
+      background: #eff6ff;
+      padding: 5px 18px;
+      border-radius: 24px;
+      border: 2px solid #bfdbfe;
+      cursor: pointer;
+      user-select: none;
+      line-height: 1.4;
+      align-self: flex-start;
+      margin-bottom: 0;
+    }
+    .ampm-badge.pm {
+      color: #c2410c;
+      background: #fff7ed;
+      border-color: #fed7aa;
+    }
+
+    /* SVG text styles */
+    .num-hour {
+      font-family: "Noto Sans JP", Arial, sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      fill: #f87171;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+    .num-min {
+      font-family: "Noto Sans JP", Arial, sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      fill: #3b82f6;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    /* ─── Clock area: 時計を中央、ボタンを右に絶対配置 ─── */
+    .clock-area {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .clock-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .clock-top-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      width: 520px;
+      margin-bottom: 8px;
+    }
+
+    /* ─── Number line bottom panel ─── */
+    .numline-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.10);
+      border-radius: 18px 18px 0 0;
+      transform: translateY(calc(100% - 44px));
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 200;
+    }
+    .numline-panel.open {
+      transform: translateY(0);
+    }
+    .numline-handle {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 44px;
+      user-select: none;
+    }
+    .numline-handle-inner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .numline-handle-btn {
+      font-size: 1.1rem;
+      color: #9ca3af;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 16px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .numline-handle-btn:hover { color: #6b7280; }
+    .draw-mode-btn, .draw-clear-btn {
+      font-size: 1.1rem;
+      background: none;
+      border: 2px solid transparent;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .draw-mode-btn.active {
+      border-color: #6366f1;
+      background: #eef2ff;
+    }
+    .numline-mode-select {
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 5px 8px;
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
+      background: #fff;
+      color: #6b7280;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 24px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+
+    /* ─── Number line ─── */
+    .numline-wrap {
+      padding: 0 12px 16px;
+      width: 100%;
+    }
+    .numline-label-row {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      padding: 0 4px;
+    }
+    .numline-ampm {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+    }
+    .numline-am { color: #3b82f6; }
+    .numline-pm { color: #f97316; }
+
+    /* ─── Memory button ─── */
+    .mem-row { display: none; }
+    .mem-btn {
+      font-size: 2.4rem;
+      line-height: 1;
+      width: 56px;
+      height: 56px;
+      border: 3px solid #d1d5db;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .mem-btn.recording {
+      background: #fef2f2;
+      border-color: #fca5a5;
+    }
+  </style>
+</head>
+<body>
+  <div class="content-scale" id="contentScale">
+    <div class="clock-area">
+      <!-- 時計左カラム: ごぜん/ごご + 時計 -->
+      <div class="clock-col">
+        <div class="clock-top-row">
+          <div class="ampm-badge" id="ampmBadge">ごぜん</div>
+          <button class="mem-btn" id="memBtn">📍</button>
+        </div>
+        <div class="clock-wrap" id="clockWrap">
+      <svg id="clockSvg" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <!-- Subtle inner shadow ring -->
+          <radialGradient id="faceGrad" cx="45%" cy="38%" r="65%">
+            <stop offset="0%"   stop-color="#ffffff"/>
+            <stop offset="100%" stop-color="#fef9e7"/>
+          </radialGradient>
+        </defs>
+
+        <!-- Outer bezel ring -->
+        <circle cx="210" cy="210" r="205" fill="#1e40af"/>
+        <!-- Bezel highlight ring -->
+        <circle cx="210" cy="210" r="198" fill="#3b82f6"/>
+        <!-- Clock face -->
+        <circle cx="210" cy="210" r="190" fill="url(#faceGrad)"/>
+
+        <!-- Tick marks (generated by JS) -->
+        <g id="ticksGroup"></g>
+
+        <!-- Hour numbers / minute marks (generated by JS) -->
+        <g id="numbersGroup"></g>
+
+        <!-- Ghost hands (shown when memory is active) -->
+        <line id="hourHandGhost"
+          stroke="#f87171" stroke-width="12" stroke-linecap="round" opacity="0.25"
+          x1="210" y1="210" x2="210" y2="120" style="display:none"/>
+        <line id="minuteHandGhost"
+          stroke="#3b82f6" stroke-width="7" stroke-linecap="round" opacity="0.25"
+          x1="210" y1="210" x2="210" y2="45" style="display:none"/>
+
+        <!-- Hour hand (red) -->
+        <line id="hourHand"
+          stroke="#f87171" stroke-width="12" stroke-linecap="round"
+          x1="210" y1="210" x2="210" y2="120"/>
+
+        <!-- Minute hand (blue) -->
+        <line id="minuteHand"
+          stroke="#3b82f6" stroke-width="7" stroke-linecap="round"
+          x1="210" y1="210" x2="210" y2="45"/>
+
+        <!-- AM/PM badge handled via HTML overlay -->
+
+        <!-- Center cap -->
+        <circle cx="210" cy="210" r="14" fill="#1e40af"/>
+        <circle cx="210" cy="210" r="8"  fill="#ffffff"/>
+        <circle cx="210" cy="210" r="4"  fill="#f87171"/>
+      </svg>
+    </div>
+      </div><!-- /clock-col -->
+
+    </div><!-- /clock-area -->
+
+  </div><!-- /content-scale -->
+
+  <!-- 数直線 ボトムパネル -->
+  <div class="numline-panel" id="numlinePanel">
+    <div class="numline-handle" id="numlineHandle">
+      <div class="numline-handle-inner">
+        <select class="numline-mode-select" id="numlineModeSelect" style="display:none">
+          <option value="24h">２４じかん</option>
+          <option value="12h">１２じかん</option>
+          <option value="6h">６じかん</option>
+          <option value="3h">３じかん</option>
+        </select>
+        <button class="draw-mode-btn" id="drawModeBtn" style="display:none" title="かく">✏️</button>
+        <button class="draw-clear-btn" id="drawClearBtn" style="display:none" title="けす">🗑️</button>
+        <button class="numline-handle-btn" id="numlineHandleBtn">▲</button>
+      </div>
+    </div>
+    <div class="numline-wrap" id="numlineWrap">
+      <div class="numline-label-row" id="numlineLabelRow">
+        <span class="numline-ampm numline-am" id="nlAmLabel">ごぜん</span>
+        <span id="nlSun" style="position:absolute; left:calc(30.3% - 0.7em); font-size:1.6rem; pointer-events:none; line-height:1;">☀️</span>
+        <span id="nlMoon" style="position:absolute; left:calc(77.5% - 0.7em); font-size:1.6rem; pointer-events:none; line-height:1;">🌙</span>
+        <span class="numline-ampm numline-pm" id="nlPmLabel">ごご</span>
+      </div>
+      <div style="position:relative;">
+        <svg id="numlineSvg" viewBox="-18 0 636 66" width="100%"
+             xmlns="http://www.w3.org/2000/svg">
+          <g id="numlineRects"></g>
+          <g id="numlineTicks"></g>
+          <g id="timeMarker"></g>
+          <g id="drawingLayer"></g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CX = 210, CY = 210, R = 190;
+    const MIN_LEN  = 148;  // minute hand tip
+    const MIN_TAIL = 26;   // minute hand tail
+    const HR_LEN   = 100;  // hour hand tip
+    const HR_TAIL  = 22;   // hour hand tail
+    const SVG_SIZE = 420;
+
+    const state = {
+      hours: 10,
+      minutes: 10.0,
+      showMinuteMarks: false,
+      ampm: 'am',
+    };
+
+    // ─── Geometry ────────────────────────────────────────
+
+    function clockPt(angleDeg, radius) {
+      const r = angleDeg * Math.PI / 180;
+      return { x: CX + radius * Math.sin(r), y: CY - radius * Math.cos(r) };
+    }
+
+    function minAngle(m)     { return m / 60 * 360; }
+    function hourAngle(h, m) { return ((h % 12) + m / 60) / 12 * 360; }
+
+    // ─── Render ──────────────────────────────────────────
+
+    function renderTicks() {
+      const g = document.getElementById('ticksGroup');
+      g.innerHTML = '';
+      for (let i = 0; i < 60; i++) {
+        const ang = i / 60 * 360;
+        const isHour  = i % 5 === 0;
+        const isQuart = i % 15 === 0;  // 12, 3, 6, 9
+
+        let len, width, color;
+        if (isQuart) {
+          len = 30; width = 7; color = '#1e40af';
+        } else if (isHour) {
+          len = 22; width = 5; color = '#374151';
+        } else {
+          len = 10; width = 2; color = '#94a3b8';
+        }
+
+        const p1 = clockPt(ang, R - len);
+        const p2 = clockPt(ang, R - 2);
+        const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        ln.setAttribute('x1', p1.x); ln.setAttribute('y1', p1.y);
+        ln.setAttribute('x2', p2.x); ln.setAttribute('y2', p2.y);
+        ln.setAttribute('stroke', color);
+        ln.setAttribute('stroke-width', width);
+        ln.setAttribute('stroke-linecap', 'round');
+        g.appendChild(ln);
+      }
+    }
+
+    function renderNumbers() {
+      const g = document.getElementById('numbersGroup');
+      g.innerHTML = '';
+      const numR = R - 50;
+
+      if (!state.showMinuteMarks) {
+        for (let i = 1; i <= 12; i++) {
+          const pos = clockPt(i / 12 * 360, numR);
+          addText(g, pos, i, 'num-hour');
+        }
+      } else {
+        for (let i = 0; i < 12; i++) {
+          const m = i * 5;
+          const pos = clockPt(m / 60 * 360, numR);
+          addText(g, pos, m, 'num-min');
+        }
+      }
+    }
+
+    function addText(parent, pos, label, cls) {
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', pos.x);
+      t.setAttribute('y', pos.y);
+      t.setAttribute('class', cls);
+      t.textContent = label;
+      parent.appendChild(t);
+    }
+
+    function renderHands() {
+      const mAng = minAngle(state.minutes);
+      const hAng = hourAngle(state.hours, state.minutes);
+      setLine('minuteHand', clockPt(mAng + 180, MIN_TAIL), clockPt(mAng, MIN_LEN));
+      setLine('hourHand',   clockPt(hAng + 180, HR_TAIL),  clockPt(hAng, HR_LEN));
+    }
+
+    function setLine(id, p1, p2) {
+      const el = document.getElementById(id);
+      el.setAttribute('x1', p1.x); el.setAttribute('y1', p1.y);
+      el.setAttribute('x2', p2.x); el.setAttribute('y2', p2.y);
+    }
+
+    function render() {
+      renderNumbers();
+      renderHands();
+      renderGhostHands();
+      // 時計が動いたとき、スライディングモードのオフセットを現在時刻に同期（数直線ドラッグ中は除く）
+      if (numlineVisible && isSliding() && !memory.active && !nl6hDrag) syncNlSlideOffset();
+      updateNumlineMarker();
+    }
+
+    // ─── Pointer events ──────────────────────────────────
+
+    function svgPoint(clientX, clientY) {
+      const rect = document.getElementById('clockSvg').getBoundingClientRect();
+      const s = rect.width / SVG_SIZE;
+      return { x: (clientX - rect.left) / s, y: (clientY - rect.top) / s };
+    }
+
+    function angleFromCenter(clientX, clientY) {
+      const { x, y } = svgPoint(clientX, clientY);
+      let a = Math.atan2(x - CX, -(y - CY)) * 180 / Math.PI;
+      return (a + 360) % 360;
+    }
+
+    function isNearMinuteHand(clientX, clientY) {
+      const { x, y } = svgPoint(clientX, clientY);
+      const rad = minAngle(state.minutes) * Math.PI / 180;
+      const ux = Math.sin(rad), uy = -Math.cos(rad);
+      const dx = x - CX, dy = y - CY;
+      const proj = dx * ux + dy * uy;
+      const perp = Math.abs(dx * uy - dy * ux);
+      return proj >= -MIN_TAIL - 5 && proj <= MIN_LEN + 15 && perp < 28;
+    }
+
+    function isNearHourHand(clientX, clientY) {
+      const { x, y } = svgPoint(clientX, clientY);
+      const rad = hourAngle(state.hours, state.minutes) * Math.PI / 180;
+      const ux = Math.sin(rad), uy = -Math.cos(rad);
+      const dx = x - CX, dy = y - CY;
+      const proj = dx * ux + dy * uy;
+      const perp = Math.abs(dx * uy - dy * ux);
+      return proj >= -HR_TAIL - 5 && proj <= HR_LEN + 15 && perp < 28;
+    }
+
+    let drag = null;
+    const wrap = document.getElementById('clockWrap');
+
+    wrap.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      drag = { startX: e.clientX, startY: e.clientY, moved: false, prevMin: state.minutes };
+    });
+
+    wrap.addEventListener('pointermove', e => {
+      if (!drag) return;
+      e.preventDefault();
+      if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 7) {
+        drag.moved = true;
+      }
+      if (drag.moved) {
+        const newMin = angleFromCenter(e.clientX, e.clientY) / 360 * 60;
+        if (drag.prevMin > 50 && newMin < 10) {
+          if (state.hours >= 12) {
+            state.hours = 1;          // 12→1: ごぜん/ごご変わらない
+          } else {
+            if (state.hours === 11) { // 11→12: ここが境目
+              state.ampm = state.ampm === 'am' ? 'pm' : 'am';
+              applyAmpm();
+            }
+            state.hours += 1;
+          }
+        } else if (drag.prevMin < 10 && newMin > 50) {
+          if (state.hours <= 1) {
+            state.hours = 12;         // 1→12: ごぜん/ごご変わらない
+          } else {
+            if (state.hours === 12) { // 12→11: ここが境目
+              state.ampm = state.ampm === 'am' ? 'pm' : 'am';
+              applyAmpm();
+            }
+            state.hours -= 1;
+          }
+        }
+        state.minutes = newMin;
+        drag.prevMin  = newMin;
+        render();
+      }
+    });
+
+    wrap.addEventListener('pointerup', e => {
+      if (!drag) return;
+      if (!drag.moved) {
+        if (isNearMinuteHand(e.clientX, e.clientY)) {
+          state.showMinuteMarks = true;
+          render();
+        } else if (isNearHourHand(e.clientX, e.clientY)) {
+          state.showMinuteMarks = false;
+          render();
+        }
+      }
+      drag = null;
+    });
+
+    wrap.addEventListener('pointercancel', () => { drag = null; });
+
+    function applyAmpm() {
+      const badge = document.getElementById('ampmBadge');
+      badge.textContent = state.ampm === 'am' ? 'ごぜん' : 'ごご';
+      badge.classList.toggle('pm', state.ampm === 'pm');
+      if (numlineVisible) {
+        if (numlineMode === '12h') renderNumline();
+        else updateNumlineMarker();
+      }
+    }
+
+    // AM/PM badge toggle (手動)
+    document.getElementById('ampmBadge').addEventListener('click', e => {
+      e.stopPropagation();
+      state.ampm = state.ampm === 'am' ? 'pm' : 'am';
+      applyAmpm();
+      updateNumlineMarker();
+    });
+
+    // ─── Memory (Phase 3) ────────────────────────────────
+
+    const memory = { active: false, hours: null, minutes: null };
+
+    document.getElementById('memBtn').addEventListener('click', () => {
+      if (memory.active) {
+        memory.active  = false;
+        memory.hours   = null;
+        memory.minutes = null;
+        document.getElementById('memBtn').classList.remove('recording');
+      } else {
+        memory.active  = true;
+        memory.hours   = state.hours;
+        memory.minutes = state.minutes;
+        memory.ampm    = state.ampm;
+        document.getElementById('memBtn').classList.add('recording');
+      }
+      render();
+    });
+
+    function renderGhostHands() {
+      const gh = document.getElementById('hourHandGhost');
+      const gm = document.getElementById('minuteHandGhost');
+      if (!memory.active) {
+        gh.style.display = 'none';
+        gm.style.display = 'none';
+        return;
+      }
+      gh.style.display = '';
+      gm.style.display = '';
+      const mAng = minAngle(memory.minutes);
+      const hAng = hourAngle(memory.hours, memory.minutes);
+      setLine('minuteHandGhost', clockPt(mAng + 180, MIN_TAIL), clockPt(mAng, MIN_LEN));
+      setLine('hourHandGhost',   clockPt(hAng + 180, HR_TAIL),  clockPt(hAng, HR_LEN));
+    }
+
+    // ─── Number line panel ───────────────────────────────
+
+    let numlineVisible = false;
+    let numlineMode = '24h'; // '24h' | '12h' | '6h'
+    let nl6hOffset = 0;      // 6hモード: 表示ウィンドウ左端のSVG座標
+    let nl6hDrag = null;
+
+    document.getElementById('numlineHandle').addEventListener('click', () => {
+      numlineVisible = !numlineVisible;
+      document.getElementById('numlinePanel').classList.toggle('open', numlineVisible);
+      document.getElementById('numlineHandleBtn').textContent = numlineVisible ? '▼' : '▲';
+      document.getElementById('numlineModeSelect').style.display = numlineVisible ? '' : 'none';
+      document.getElementById('drawModeBtn').style.display  = numlineVisible ? '' : 'none';
+      document.getElementById('drawClearBtn').style.display = numlineVisible ? '' : 'none';
+      if (numlineVisible) { renderNumline(); }
+    });
+
+    document.getElementById('numlineModeSelect').addEventListener('change', e => {
+      e.stopPropagation();
+      numlineMode = e.target.value;
+      if (numlineVisible) {
+        // モード変更時は新しいスケールで現在時刻を中心に表示
+        if (isSliding()) {
+          nl6hOffset = timeToXSlide(state.hours, state.minutes, state.ampm) - NL_W / 2;
+        }
+        renderNumline();
+      }
+    });
+    document.getElementById('numlineModeSelect').addEventListener('click', e => {
+      e.stopPropagation();
+    });
+
+    const NL_W = 600;
+    const NL_LINE_Y = 28;
+
+    // スライディングモード共通ヘルパー
+    function isSliding() { return numlineMode === '6h' || numlineMode === '3h'; }
+    function slidePxPerH() { return numlineMode === '3h' ? 200 : 100; } // 3h:200px/h, 6h:100px/h
+
+    function timeToXSlide(h, m, ampm) {
+      return ((h % 12) + m / 60 + (ampm === 'pm' ? 12 : 0)) * slidePxPerH();
+    }
+
+    function syncNlSlideOffset() {
+      if (!memory.active) {
+        nl6hOffset = timeToXSlide(state.hours, state.minutes, state.ampm) - NL_W / 2;
+      }
+    }
+
+    // SVG x座標 → {hours, minutes, ampm} 変換（スライディングモード用）
+    function slideXToState(x) {
+      const pph = slidePxPerH();
+      const totalH = Math.max(0, Math.min(24 - 1/3600, x / pph));
+      const ampm = totalH >= 12 ? 'pm' : 'am';
+      const h12 = totalH % 12;
+      const hours = Math.floor(h12) === 0 ? 12 : Math.floor(h12);
+      const minutes = (h12 % 1) * 60;
+      return { hours, minutes, ampm };
+    }
+
+    function updateNlSlideViewBox() {
+      document.getElementById('numlineSvg').setAttribute('viewBox',
+        `${nl6hOffset - 18} 0 636 66`);
+    }
+
+    // ─── 描画モード ────────────────────────────────────────
+    let drawMode = false;
+    let currentDrawPath = null;
+
+    function screenToSvgCoords(clientX, clientY) {
+      const svg = document.getElementById('numlineSvg');
+      const rect = svg.getBoundingClientRect();
+      const vb = svg.viewBox.baseVal;
+      return {
+        x: vb.x + (clientX - rect.left) * (vb.width / rect.width),
+        y: vb.y + (clientY - rect.top) * (vb.height / rect.height)
+      };
+    }
+
+    document.getElementById('drawModeBtn').addEventListener('click', e => {
+      e.stopPropagation();
+      drawMode = !drawMode;
+      document.getElementById('drawModeBtn').classList.toggle('active', drawMode);
+      nlSvg.style.cursor = drawMode ? 'crosshair' : '';
+    });
+
+    document.getElementById('drawClearBtn').addEventListener('click', e => {
+      e.stopPropagation();
+      document.getElementById('drawingLayer').innerHTML = '';
+    });
+
+    // 6hモードのドラッグ操作 + 描画モード
+    const nlSvg = document.getElementById('numlineSvg');
+    nlSvg.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (drawMode) {
+        const pt = screenToSvgCoords(e.clientX, e.clientY);
+        currentDrawPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        currentDrawPath.setAttribute('stroke', '#111827');
+        currentDrawPath.setAttribute('stroke-width', '0.5');
+        currentDrawPath.setAttribute('fill', 'none');
+        currentDrawPath.setAttribute('stroke-linecap', 'round');
+        currentDrawPath.setAttribute('stroke-linejoin', 'round');
+        currentDrawPath.setAttribute('d', `M ${pt.x} ${pt.y}`);
+        document.getElementById('drawingLayer').appendChild(currentDrawPath);
+        nlSvg.setPointerCapture(e.pointerId);
+        return;
+      }
+      if (!isSliding()) return;
+      nl6hDrag = { startX: e.clientX, startOffset: nl6hOffset };
+      nlSvg.setPointerCapture(e.pointerId);
+    });
+    nlSvg.addEventListener('pointermove', e => {
+      if (drawMode && currentDrawPath) {
+        const pt = screenToSvgCoords(e.clientX, e.clientY);
+        currentDrawPath.setAttribute('d',
+          currentDrawPath.getAttribute('d') + ` L ${pt.x} ${pt.y}`);
+        return;
+      }
+      if (!nl6hDrag) return;
+      const screenW = nlSvg.getBoundingClientRect().width;
+      const svgPerPx = 636 / screenW;
+      const dx = (e.clientX - nl6hDrag.startX) * svgPerPx;
+      const totalW = 24 * slidePxPerH();
+      nl6hOffset = Math.max(-300, Math.min(totalW - 300, nl6hDrag.startOffset - dx));
+      if (!memory.active) {
+        // 数直線の中心位置から時刻を逆算してクロックに反映
+        const ns = slideXToState(nl6hOffset + NL_W / 2);
+        state.hours = ns.hours;
+        state.minutes = ns.minutes;
+        if (state.ampm !== ns.ampm) {
+          state.ampm = ns.ampm;
+          applyAmpm();
+        }
+        render();
+      } else {
+        updateNlSlideViewBox();
+        updateNumlineMarker();
+      }
+    });
+    nlSvg.addEventListener('pointerup', () => { currentDrawPath = null; nl6hDrag = null; });
+    nlSvg.addEventListener('pointercancel', () => { currentDrawPath = null; nl6hDrag = null; });
+
+    function renderNumlineRects() {
+      const g = document.getElementById('numlineRects');
+      g.innerHTML = '';
+      const ns = 'http://www.w3.org/2000/svg';
+      function addRect(x, w, fill) {
+        const r = document.createElementNS(ns, 'rect');
+        r.setAttribute('x', x); r.setAttribute('y', 0);
+        r.setAttribute('width', w); r.setAttribute('height', NL_LINE_Y);
+        r.setAttribute('fill', fill); r.setAttribute('rx', 6);
+        g.appendChild(r);
+      }
+      if (numlineMode === '24h') {
+        addRect(0, 300, '#dbeafe'); addRect(300, 300, '#ffedd5');
+      } else if (numlineMode === '12h') {
+        addRect(0, NL_W, state.ampm === 'am' ? '#dbeafe' : '#ffedd5');
+      } else { // 6h / 3h スライディング
+        const noon = 12 * slidePxPerH();
+        addRect(0, noon, '#dbeafe'); addRect(noon, noon, '#ffedd5');
+      }
+    }
+
+    function renderNumlineLabels() {
+      const amEl = document.getElementById('nlAmLabel');
+      const pmEl = document.getElementById('nlPmLabel');
+      const sun  = document.getElementById('nlSun');
+      const moon = document.getElementById('nlMoon');
+      if (isSliding()) {
+        // スライディングモード: HTMLラベルは非表示。SVG内に描画する
+        amEl.style.display = 'none'; pmEl.style.display = 'none';
+        sun.style.display  = 'none'; moon.style.display = 'none';
+      } else if (numlineMode === '24h') {
+        amEl.style.display = ''; pmEl.style.display = '';
+        sun.style.display  = ''; moon.style.display = '';
+      } else { // 12h
+        amEl.style.display = state.ampm === 'am' ? '' : 'none';
+        pmEl.style.display = state.ampm === 'pm' ? '' : 'none';
+        sun.style.display  = state.ampm === 'am' ? '' : 'none';
+        moon.style.display = state.ampm === 'pm' ? '' : 'none';
+      }
+    }
+
+    function addSvgTick(g, x, label, showSub) {
+      const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      ln.setAttribute('x1', x); ln.setAttribute('x2', x);
+      ln.setAttribute('y1', NL_LINE_Y); ln.setAttribute('y2', NL_LINE_Y + 8);
+      ln.setAttribute('stroke', '#9ca3af'); ln.setAttribute('stroke-width', 1);
+      g.appendChild(ln);
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', x); t.setAttribute('y', NL_LINE_Y + 20);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('font-size', '12'); t.setAttribute('font-weight', '700');
+      t.setAttribute('fill', '#374151'); t.setAttribute('font-family', 'Arial, sans-serif');
+      t.textContent = label;
+      g.appendChild(t);
+      if (showSub) {
+        const t2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t2.setAttribute('x', x); t2.setAttribute('y', NL_LINE_Y + 32);
+        t2.setAttribute('text-anchor', 'middle');
+        t2.setAttribute('font-size', '10'); t2.setAttribute('font-weight', '700');
+        t2.setAttribute('fill', '#9ca3af'); t2.setAttribute('font-family', 'Arial, sans-serif');
+        t2.textContent = '(12)';
+        g.appendChild(t2);
+      }
+    }
+
+    function renderNumlineTicks() {
+      const g = document.getElementById('numlineTicks');
+      g.innerHTML = '';
+      if (isSliding()) {
+        const pph = slidePxPerH();
+        if (numlineMode === '3h') {
+          // 5分刻みの小目盛り（3hモード）
+          for (let i = 0; i <= 24 * 12; i++) {
+            if (i % 12 === 0) continue; // 時間目盛りは後で別途描画
+            const x = i * (pph / 12);
+            const isTenMin = (i % 2 === 0);
+            const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            ln.setAttribute('x1', x); ln.setAttribute('x2', x);
+            ln.setAttribute('y1', NL_LINE_Y); ln.setAttribute('y2', NL_LINE_Y + (isTenMin ? 5 : 3));
+            ln.setAttribute('stroke', '#d1d5db'); ln.setAttribute('stroke-width', 1);
+            g.appendChild(ln);
+          }
+        } else {
+          // 10分刻みの小目盛り（6hモード）
+          for (let m = 0; m <= 24 * 6; m++) {
+            if (m % 6 === 0) continue;
+            const x = m * (pph / 6);
+            const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            ln.setAttribute('x1', x); ln.setAttribute('x2', x);
+            ln.setAttribute('y1', NL_LINE_Y); ln.setAttribute('y2', NL_LINE_Y + 4);
+            ln.setAttribute('stroke', '#d1d5db'); ln.setAttribute('stroke-width', 1);
+            g.appendChild(ln);
+          }
+        }
+        // 時間目盛り
+        for (let h = 0; h <= 24; h++) {
+          const x = h * pph;
+          const label = h <= 12 ? h : h - 12;
+          addSvgTick(g, x, label, false);
+        }
+        // 正午境界に「ごぜん」「ごご」
+        const noon = 12 * pph;
+        function addAmPmLabel(x, text, anchor) {
+          const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          t.setAttribute('x', x); t.setAttribute('y', NL_LINE_Y / 2 + 4);
+          t.setAttribute('text-anchor', anchor);
+          t.setAttribute('font-size', '14'); t.setAttribute('font-weight', '900');
+          t.setAttribute('font-family', 'Noto Sans JP, Arial, sans-serif');
+          t.setAttribute('fill', anchor === 'end' ? '#3b82f6' : '#f97316');
+          t.textContent = text;
+          g.appendChild(t);
+        }
+        addAmPmLabel(noon - 8, 'ごぜん', 'end');
+        addAmPmLabel(noon + 8, 'ごご',   'start');
+        return;
+      }
+      const span = numlineMode === '24h' ? 24 : 12;
+      for (let h = 0; h <= span; h++) {
+        const x = (h / span) * NL_W;
+        const label = numlineMode === '24h' ? (h <= 12 ? h : h - 12) : h;
+        if (h === 0) {
+          addSvgTick(g, x, '0', numlineMode === '24h');
+        } else {
+          addSvgTick(g, x, label, false);
+        }
+      }
+    }
+
+    function renderNumline() {
+      if (isSliding()) syncNlSlideOffset();
+      renderNumlineRects();
+      renderNumlineLabels();
+      renderNumlineTicks();
+      if (isSliding()) updateNlSlideViewBox();
+      else document.getElementById('numlineSvg').setAttribute('viewBox', '-18 0 636 66');
+      updateNumlineMarker();
+    }
+
+    function makeTriangle(x, color) {
+      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      const tip = NL_LINE_Y;
+      poly.setAttribute('points', `${x},${tip} ${x - 6},${tip + 11} ${x + 6},${tip + 11}`);
+      poly.setAttribute('fill', color);
+      return poly;
+    }
+
+    function updateNumlineMarker() {
+      if (!numlineVisible) return;
+      const g = document.getElementById('timeMarker');
+      g.innerHTML = '';
+
+      if (isSliding()) {
+        updateNlSlideViewBox();
+        const currentX = timeToXSlide(state.hours, state.minutes, state.ampm);
+        if (memory.active) {
+          const memX = timeToXSlide(memory.hours, memory.minutes, memory.ampm);
+          const fillX = Math.min(memX, currentX);
+          const fillW = Math.abs(currentX - memX);
+          if (fillW > 0) {
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', fillX); rect.setAttribute('y', 0);
+            rect.setAttribute('width', fillW); rect.setAttribute('height', NL_LINE_Y);
+            rect.setAttribute('fill', 'rgba(99,102,241,0.22)'); rect.setAttribute('rx', 4);
+            g.appendChild(rect);
+          }
+          g.appendChild(makeTriangle(memX, '#ef4444'));
+          g.appendChild(makeTriangle(currentX, '#3b82f6'));
+        } else {
+          g.appendChild(makeTriangle(nl6hOffset + NL_W / 2, '#ef4444'));
+        }
+        return;
+      }
+
+      // 24h / 12h モード
+      const span = numlineMode === '24h' ? 24 : 12;
+      const off  = (numlineMode === '24h' && state.ampm === 'pm') ? 12 : 0;
+      const x    = ((state.hours % 12) + state.minutes / 60 + off) / span * NL_W;
+      if (memory.active) {
+        const mOff = (numlineMode === '24h' && memory.ampm === 'pm') ? 12 : 0;
+        const memX = ((memory.hours % 12) + memory.minutes / 60 + mOff) / span * NL_W;
+        const fillX = Math.min(memX, x), fillW = Math.abs(x - memX);
+        if (fillW > 0) {
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', fillX); rect.setAttribute('y', 0);
+          rect.setAttribute('width', fillW); rect.setAttribute('height', NL_LINE_Y);
+          rect.setAttribute('fill', 'rgba(99,102,241,0.22)'); rect.setAttribute('rx', 4);
+          g.appendChild(rect);
+        }
+        g.appendChild(makeTriangle(memX, '#ef4444'));
+        g.appendChild(makeTriangle(x, '#3b82f6'));
+      } else {
+        g.appendChild(makeTriangle(x, '#ef4444'));
+      }
+    }
+
+    // ─── Responsive scale ────────────────────────────────
+
+    function scaleContent() {
+      const el = document.getElementById('contentScale');
+      const available = document.body.clientWidth - 16;
+      const scale = available < 536 ? available / 536 : 1;
+      el.style.transform = scale < 1 ? `scale(${scale})` : '';
+      el.style.marginBottom = scale < 1 ? `${(scale - 1) * el.scrollHeight}px` : '';
+    }
+    scaleContent();
+    window.addEventListener('resize', scaleContent);
+
+    // ─── Init ────────────────────────────────────────────
+    renderTicks();
+    render();
+  </script>
+</body>
+</html>
