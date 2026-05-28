@@ -306,6 +306,7 @@
         </select>
         <button class="draw-mode-btn" id="drawModeBtn" style="display:none" title="かく">✏️</button>
         <button class="draw-clear-btn" id="drawClearBtn" style="display:none" title="けす">🗑️</button>
+        <button class="draw-clear-btn" id="nlMemBtn" style="display:none" title="きろく">📍</button>
         <button class="numline-handle-btn" id="numlineHandleBtn">▲</button>
       </div>
     </div>
@@ -545,21 +546,25 @@
 
     const memory = { active: false, hours: null, minutes: null };
 
-    document.getElementById('memBtn').addEventListener('click', () => {
+    function toggleMemory() {
       if (memory.active) {
         memory.active  = false;
         memory.hours   = null;
         memory.minutes = null;
-        document.getElementById('memBtn').classList.remove('recording');
+        memory.ampm    = null;
       } else {
         memory.active  = true;
         memory.hours   = state.hours;
         memory.minutes = state.minutes;
         memory.ampm    = state.ampm;
-        document.getElementById('memBtn').classList.add('recording');
       }
+      const rec = memory.active;
+      document.getElementById('memBtn').classList.toggle('recording', rec);
+      document.getElementById('nlMemBtn').classList.toggle('recording', rec);
       render();
-    });
+    }
+    document.getElementById('memBtn').addEventListener('click', toggleMemory);
+    document.getElementById('nlMemBtn').addEventListener('click', e => { e.stopPropagation(); toggleMemory(); });
 
     function renderGhostHands() {
       const gh = document.getElementById('hourHandGhost');
@@ -591,6 +596,7 @@
       document.getElementById('numlineModeSelect').style.display = numlineVisible ? '' : 'none';
       document.getElementById('drawModeBtn').style.display  = numlineVisible ? '' : 'none';
       document.getElementById('drawClearBtn').style.display = numlineVisible ? '' : 'none';
+      document.getElementById('nlMemBtn').style.display     = numlineVisible ? '' : 'none';
       if (numlineVisible) { renderNumline(); }
       // パネルのトランジション終了後に時計サイズを再計算
       setTimeout(scaleContent, 360);
@@ -647,6 +653,19 @@
     // ─── 描画モード ────────────────────────────────────────
     let drawMode = false;
     let currentDrawPath = null;
+    let nlLinearDrag = false; // 24h/12hモードの▲ドラッグ
+
+    // 24h/12h モードのSVG x座標 → {hours, minutes, ampm} 変換
+    function linearXToState(svgX) {
+      const span = numlineMode === '24h' ? 24 : 12;
+      const totalH = Math.max(0, Math.min(span - 1/3600, svgX * span / NL_W));
+      let ampm = state.ampm;
+      if (numlineMode === '24h') ampm = totalH >= 12 ? 'pm' : 'am';
+      const h12 = numlineMode === '24h' ? totalH % 12 : totalH;
+      const hours = Math.floor(h12) === 0 ? 12 : Math.floor(h12);
+      const minutes = (h12 % 1) * 60;
+      return { hours, minutes, ampm };
+    }
 
     function screenToSvgCoords(clientX, clientY) {
       const svg = document.getElementById('numlineSvg');
@@ -687,15 +706,40 @@
         nlSvg.setPointerCapture(e.pointerId);
         return;
       }
-      if (!isSliding()) return;
-      nl6hDrag = { startX: e.clientX, startOffset: nl6hOffset };
-      nlSvg.setPointerCapture(e.pointerId);
+      if (isSliding()) {
+        nl6hDrag = { startX: e.clientX, startOffset: nl6hOffset };
+        nlSvg.setPointerCapture(e.pointerId);
+        return;
+      }
+      // 24h/12h モード: ▲の近くをタップしたらドラッグ開始
+      {
+        const pt = screenToSvgCoords(e.clientX, e.clientY);
+        const span = numlineMode === '24h' ? 24 : 12;
+        const off  = numlineMode === '24h' && state.ampm === 'pm' ? 12 : 0;
+        const triX = ((state.hours % 12) + state.minutes / 60 + off) / span * NL_W;
+        if (Math.abs(pt.x - triX) < 20) {
+          nlLinearDrag = true;
+          nlSvg.setPointerCapture(e.pointerId);
+        }
+      }
     });
     nlSvg.addEventListener('pointermove', e => {
       if (drawMode && currentDrawPath) {
         const pt = screenToSvgCoords(e.clientX, e.clientY);
         currentDrawPath.setAttribute('d',
           currentDrawPath.getAttribute('d') + ` L ${pt.x} ${pt.y}`);
+        return;
+      }
+      if (nlLinearDrag) {
+        const pt = screenToSvgCoords(e.clientX, e.clientY);
+        const ns = linearXToState(pt.x);
+        state.hours = ns.hours;
+        state.minutes = ns.minutes;
+        if (state.ampm !== ns.ampm) {
+          state.ampm = ns.ampm;
+          applyAmpm();
+        }
+        render();
         return;
       }
       if (!nl6hDrag) return;
@@ -719,8 +763,8 @@
         updateNumlineMarker();
       }
     });
-    nlSvg.addEventListener('pointerup', () => { currentDrawPath = null; nl6hDrag = null; });
-    nlSvg.addEventListener('pointercancel', () => { currentDrawPath = null; nl6hDrag = null; });
+    nlSvg.addEventListener('pointerup',     () => { currentDrawPath = null; nl6hDrag = null; nlLinearDrag = false; });
+    nlSvg.addEventListener('pointercancel', () => { currentDrawPath = null; nl6hDrag = null; nlLinearDrag = false; });
 
     function renderNumlineRects() {
       const g = document.getElementById('numlineRects');
