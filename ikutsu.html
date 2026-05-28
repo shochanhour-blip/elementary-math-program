@@ -539,7 +539,7 @@
         state.n = val;
         state.mList = getMList(val);
         state.mIndex = 0;
-        state.m = state.mList[0];
+        state.m = state.mList[state.mIndex++]; // 次回nextStateがmList[1]から始まるよう進める
         state.answered = false;
         renderRound();
         closeChoices();
