@@ -103,30 +103,30 @@
       width: 94px;
       height: 94px;
       left: 0; top: 223px;
-      border: 4px solid #34d399;
+      border: 4px solid #fb923c;
       font-size: 3.2rem;
-      color: #065f46;
+      color: #c2410c;
       cursor: pointer;
       transition: background 0.12s;
     }
-    .circle-left:hover   { background: #f0fdf4; }
-    .circle-left.editing { background: #dcfce7; border-color: #16a34a; }
+    .circle-left:hover   { background: #fff7ed; }
+    .circle-left.editing { background: #ffedd5; border-color: #ea580c; }
 
     .circle-right {
       width: 94px;
       height: 94px;
       right: 0; top: 223px;
-      border: 4px dashed #fb923c;
+      border: 4px dashed #60a5fa;
       font-size: 3.2rem;
-      color: #c2410c;
+      color: #1d4ed8;
       cursor: pointer;
       transition: background 0.12s, border-color 0.12s;
     }
 
     .circle-right:hover,
     .circle-right.active {
-      background: #fff7ed;
-      border-color: #f97316;
+      background: #eff6ff;
+      border-color: #3b82f6;
     }
 
     .circle-right.correct {
@@ -320,16 +320,18 @@
       top: 16px;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      flex-wrap: wrap;
+      align-content: flex-start;
       gap: 5px;
       z-index: 5;
-      width: 88px;
+      width: 233px; /* 114px × 2列 + 5px gap */
+      max-height: min(565px, calc(100dvh - 32px)); /* 5個 × 109px + 4gap */
     }
   </style>
 </head>
 <body>
 <div class="history-col" id="historyCol"></div>
-<div style="overflow-x:clip;width:100%;display:flex;flex-direction:column;align-items:center;">
+<div style="overflow-x:hidden;width:100%;display:flex;flex-direction:column;align-items:center;">
 <div class="mode-toggle">
     <button class="mode-btn active" id="btnSequential">じゅんばん</button>
     <button class="mode-btn"        id="btnRandom">ランダム</button>
@@ -342,9 +344,9 @@
   <div class="diagram-wrap" id="diagramWrap">
     <svg viewBox="0 0 560 320" preserveAspectRatio="xMidYMid meet">
       <!-- left branch: green -->
-      <line id="lineLeft"  x1="280" y1="192" x2="47"  y2="270" stroke="#34d399" stroke-width="4"/>
-      <!-- right branch: orange -->
-      <line id="lineRight" x1="280" y1="192" x2="513" y2="270" stroke="#fb923c" stroke-width="4"/>
+      <line id="lineLeft"  x1="280" y1="192" x2="47"  y2="270" stroke="#fb923c" stroke-width="4"/>
+      <!-- right branch: blue -->
+      <line id="lineRight" x1="280" y1="192" x2="513" y2="270" stroke="#60a5fa" stroke-width="4"/>
     </svg>
     <div class="circle circle-top"   id="topCircle">10</div>
     <div class="total-dots-area"     id="totalDotsArea"></div>
@@ -601,9 +603,9 @@
     function createMiniSakuranbo(n, m) {
       const ans = n - m;
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('viewBox', '0 0 200 190');
-      svg.setAttribute('width', '88');
-      svg.setAttribute('height', '84');
+      svg.setAttribute('viewBox', '-4 -4 208 198');
+      svg.setAttribute('width', '114');
+      svg.setAttribute('height', '109');
       svg.style.display = 'block';
       const ns = 'http://www.w3.org/2000/svg';
       function mkLine(x1,y1,x2,y2,col) {
@@ -622,14 +624,14 @@
         e.textContent = txt;
         svg.appendChild(e);
       }
-      mkLine(100, 58, 24, 152, '#34d399');
-      mkLine(100, 58, 176, 152, '#fb923c');
+      mkLine(100, 58, 24, 152, '#fb923c');
+      mkLine(100, 58, 176, 152, '#60a5fa');
       mkCircle(100, 28, 28, '#60a5fa');
-      mkCircle(24, 164, 24, '#34d399');
-      mkCircle(176, 164, 24, '#22c55e');
+      mkCircle(24, 164, 24, '#fb923c');
+      mkCircle(176, 164, 24, '#60a5fa');
       mkText(100, 28, n, '#1d4ed8', 44);
-      mkText(24, 164, m, '#065f46', 38);
-      mkText(176, 164, ans, '#16a34a', 38);
+      mkText(24, 164, m, '#c2410c', 38);
+      mkText(176, 164, ans, '#1d4ed8', 38);
       return svg;
     }
 

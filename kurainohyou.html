@@ -479,10 +479,10 @@
       display: flex;
       flex-direction: row;
       align-items: flex-start;
-      gap: 6px;
-      padding: 5px;
+      gap: 8px;
+      padding: 4px;
       border: 3px solid transparent;
-      border-radius: 12px;
+      border-radius: 8px;
       flex-shrink: 0;
       background: transparent;
     }
@@ -499,6 +499,7 @@
       background: rgba(249,115,22,0.08);
       cursor: pointer;
       transition: background .15s;
+      align-self: flex-start;
     }
     .carry-group:hover { background: rgba(249,115,22,0.18); }
 
@@ -1709,13 +1710,22 @@ function autoScaleTileAreas() {
       });
     });
 
-    // ④ くりあがりゾーン：横幅に収まらなければタイルを縮小
+    // ④ くりあがりゾーン：幅・高さ両方に収まるよう縮小
     const czArea = document.getElementById('carryZone');
     if (czArea) {
-      const czW = czArea.clientWidth - 20;
-      czArea.querySelectorAll('.carry-group, .carry-zone-group').forEach(g => {
-        if (g.scrollWidth > czW) {
-          const scale = Math.max(0.25, czW / g.scrollWidth);
+      const pad = 16;
+      const czW = czArea.clientWidth  - pad;
+      const czH = czArea.clientHeight - pad;
+      const groups = czArea.querySelectorAll('.carry-group, .carry-zone-group');
+      // 複数グループがある場合は高さを均等配分
+      const perH = groups.length > 0 ? Math.floor((czH - (groups.length - 1) * 8) / groups.length) : czH;
+      groups.forEach(g => {
+        const gW = g.offsetWidth;
+        const gH = g.offsetHeight;
+        const scaleW = gW > czW ? czW / gW : 1;
+        const scaleH = gH > perH ? perH / gH : 1;
+        const scale  = Math.max(0.15, Math.min(scaleW, scaleH));
+        if (scale < 1) {
           g.querySelectorAll('.tile').forEach(t => { t.style.zoom = String(scale); });
         }
       });

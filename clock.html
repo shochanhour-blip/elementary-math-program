@@ -313,8 +313,6 @@
     <div class="numline-wrap" id="numlineWrap">
       <div class="numline-label-row" id="numlineLabelRow">
         <span class="numline-ampm numline-am" id="nlAmLabel">ごぜん</span>
-        <span id="nlSun" style="position:absolute; left:calc(30.3% - 0.7em); font-size:1.6rem; pointer-events:none; line-height:1;">☀️</span>
-        <span id="nlMoon" style="position:absolute; left:calc(77.5% - 0.7em); font-size:1.6rem; pointer-events:none; line-height:1;">🌙</span>
         <span class="numline-ampm numline-pm" id="nlPmLabel">ごご</span>
       </div>
       <div style="position:relative;">
@@ -324,7 +322,9 @@
           <g id="numlineTicks"></g>
           <g id="timeMarker"></g>
           <g id="drawingLayer"></g>
+          <g id="dayNightBar"></g>
         </svg>
+        <div id="emojiRow" style="position:absolute; top:76%; left:0; right:0; height:28px; pointer-events:none;"></div>
       </div>
     </div>
   </div>
@@ -788,22 +788,52 @@
     }
 
     function renderNumlineLabels() {
-      const amEl = document.getElementById('nlAmLabel');
-      const pmEl = document.getElementById('nlPmLabel');
-      const sun  = document.getElementById('nlSun');
-      const moon = document.getElementById('nlMoon');
+      const amEl       = document.getElementById('nlAmLabel');
+      const pmEl       = document.getElementById('nlPmLabel');
+      const emojiRow   = document.getElementById('emojiRow');
+      const barG       = document.getElementById('dayNightBar');
+      emojiRow.innerHTML = '';
+      barG.innerHTML = '';
+
+      const BAR_Y = 58, BAR_H = 4, BAR_R = 2;
+
+      function addEmoji(leftPct, emoji) {
+        const s = document.createElement('span');
+        s.textContent = emoji;
+        s.style.cssText = `position:absolute; top:0; left:${leftPct}%;
+          transform:translateX(-50%); font-size:1.3rem; line-height:1;`;
+        emojiRow.appendChild(s);
+      }
+
+      function addBarRect(x, w, fill, rx, ry) {
+        const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        r.setAttribute('x', x); r.setAttribute('y', BAR_Y);
+        r.setAttribute('width', w); r.setAttribute('height', BAR_H);
+        r.setAttribute('fill', fill);
+        if (rx) { r.setAttribute('rx', rx); r.setAttribute('ry', ry); }
+        barG.appendChild(r);
+      }
+
       if (isSliding()) {
-        // スライディングモード: HTMLラベルは非表示。SVG内に描画する
         amEl.style.display = 'none'; pmEl.style.display = 'none';
-        sun.style.display  = 'none'; moon.style.display = 'none';
+        pmEl.style.position = ''; pmEl.style.left = '';
       } else if (numlineMode === '24h') {
         amEl.style.display = ''; pmEl.style.display = '';
-        sun.style.display  = ''; moon.style.display = '';
+        pmEl.style.position = 'absolute';
+        pmEl.style.left = '50%';
+        const x7  = 7  / 24 * NL_W;  // 175
+        const x19 = 19 / 24 * NL_W;  // 475
+        // 夜(0〜7) → 昼(7〜19) → 夜(19〜24)
+        addBarRect(0,   x7,           '#c7d2fe', BAR_R, BAR_R);
+        addBarRect(x7,  x19 - x7,     '#fef9c3');
+        addBarRect(x19, NL_W - x19,   '#c7d2fe', BAR_R, BAR_R);
+        // SVG x → % : (svgX + 18) / 636 * 100
+        addEmoji((x7  + 18) / 636 * 100, '☀️');
+        addEmoji((x19 + 18) / 636 * 100, '🌙');
       } else { // 12h
         amEl.style.display = state.ampm === 'am' ? '' : 'none';
         pmEl.style.display = state.ampm === 'pm' ? '' : 'none';
-        sun.style.display  = state.ampm === 'am' ? '' : 'none';
-        moon.style.display = state.ampm === 'pm' ? '' : 'none';
+        pmEl.style.position = ''; pmEl.style.left = '';
       }
     }
 
@@ -822,9 +852,9 @@
       g.appendChild(t);
       if (showSub) {
         const t2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        t2.setAttribute('x', x); t2.setAttribute('y', NL_LINE_Y + 32);
+        t2.setAttribute('x', x); t2.setAttribute('y', NL_LINE_Y + 27);
         t2.setAttribute('text-anchor', 'middle');
-        t2.setAttribute('font-size', '10'); t2.setAttribute('font-weight', '700');
+        t2.setAttribute('font-size', '8'); t2.setAttribute('font-weight', '700');
         t2.setAttribute('fill', '#9ca3af'); t2.setAttribute('font-family', 'Arial, sans-serif');
         t2.textContent = '(12)';
         g.appendChild(t2);
