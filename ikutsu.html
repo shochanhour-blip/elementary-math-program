@@ -315,9 +315,21 @@
     .choice-btn.green:hover  { background: #f0fdf4; border-color: #34d399; }
     .choice-btn.orange { border-color: #fdba74; color: #c2410c; }
     .choice-btn.orange:hover { background: #fff7ed; border-color: #fb923c; }
+    .history-col {
+      position: fixed;
+      left: 4px;
+      top: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      z-index: 5;
+      width: 65px;
+    }
   </style>
 </head>
 <body>
+<div class="history-col" id="historyCol"></div>
 <div class="mode-toggle">
     <button class="mode-btn active" id="btnSequential">じゅんばん</button>
     <button class="mode-btn"        id="btnRandom">ランダム</button>
@@ -559,8 +571,9 @@
         state.n = val;
         state.mList = getMList(val);
         state.mIndex = 0;
-        state.m = state.mList[state.mIndex++]; // 次回nextStateがmList[1]から始まるよう進める
+        state.m = state.mList[state.mIndex++];
         state.answered = false;
+        clearHistory();
         renderRound();
         closeChoices();
       } else if (editTarget === 'm') {
@@ -581,12 +594,65 @@
     document.getElementById('topCircle').addEventListener('click',  () => showChoices('n'));
     document.getElementById('leftCircle').addEventListener('click', () => showChoices('m'));
 
+    // ─── History ─────────────────────────────────────────
+    let historyN = null;
+
+    function createMiniSakuranbo(n, m) {
+      const ans = n - m;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 280 195');
+      svg.setAttribute('width', '65');
+      svg.setAttribute('height', '45');
+      svg.style.display = 'block';
+      const ns = 'http://www.w3.org/2000/svg';
+      function mkLine(x1,y1,x2,y2,col) {
+        const e = document.createElementNS(ns,'line');
+        [['x1',x1],['y1',y1],['x2',x2],['y2',y2],['stroke',col],['stroke-width',9],['stroke-linecap','round']].forEach(([k,v])=>e.setAttribute(k,v));
+        svg.appendChild(e);
+      }
+      function mkCircle(cx,cy,r,col) {
+        const e = document.createElementNS(ns,'circle');
+        [['cx',cx],['cy',cy],['r',r],['fill','#fff'],['stroke',col],['stroke-width',9]].forEach(([k,v])=>e.setAttribute(k,v));
+        svg.appendChild(e);
+      }
+      function mkText(x,y,txt,col,size) {
+        const e = document.createElementNS(ns,'text');
+        [['x',x],['y',y],['text-anchor','middle'],['dominant-baseline','central'],['font-size',size],['font-weight','900'],['fill',col],['font-family','Arial,sans-serif']].forEach(([k,v])=>e.setAttribute(k,v));
+        e.textContent = txt;
+        svg.appendChild(e);
+      }
+      mkLine(140, 62, 28, 155, '#34d399');
+      mkLine(140, 62, 252, 155, '#fb923c');
+      mkCircle(140, 30, 28, '#60a5fa');
+      mkCircle(28, 167, 24, '#34d399');
+      mkCircle(252, 167, 24, '#22c55e');
+      mkText(140, 30, n, '#1d4ed8', 40);
+      mkText(28, 167, m, '#065f46', 34);
+      mkText(252, 167, ans, '#16a34a', 34);
+      return svg;
+    }
+
+    function addMiniToHistory(n, m) {
+      const col = document.getElementById('historyCol');
+      if (historyN !== n) { col.innerHTML = ''; historyN = n; }
+      col.appendChild(createMiniSakuranbo(n, m));
+    }
+
+    function clearHistory() {
+      document.getElementById('historyCol').innerHTML = '';
+      historyN = null;
+    }
+
     // Next
-    document.getElementById('nextBtn').addEventListener('click', startRound);
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (currentMode !== 'fullrandom') addMiniToHistory(state.n, state.m);
+      startRound();
+    });
 
     function resetAndStart() {
       state.mList = [];
       state.mIndex = 0;
+      clearHistory();
       startRound();
     }
 
