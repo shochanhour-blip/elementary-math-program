@@ -792,29 +792,15 @@
       g.innerHTML = '';
       if (isSliding()) {
         const pph = slidePxPerH();
-        if (numlineMode === '3h') {
-          // 5分刻みの小目盛り（3hモード）
-          for (let i = 0; i <= 24 * 12; i++) {
-            if (i % 12 === 0) continue; // 時間目盛りは後で別途描画
-            const x = i * (pph / 12);
-            const isTenMin = (i % 2 === 0);
-            const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            ln.setAttribute('x1', x); ln.setAttribute('x2', x);
-            ln.setAttribute('y1', NL_LINE_Y); ln.setAttribute('y2', NL_LINE_Y + (isTenMin ? 5 : 3));
-            ln.setAttribute('stroke', '#d1d5db'); ln.setAttribute('stroke-width', 1);
-            g.appendChild(ln);
-          }
-        } else {
-          // 10分刻みの小目盛り（6hモード）
-          for (let m = 0; m <= 24 * 6; m++) {
-            if (m % 6 === 0) continue;
-            const x = m * (pph / 6);
-            const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            ln.setAttribute('x1', x); ln.setAttribute('x2', x);
-            ln.setAttribute('y1', NL_LINE_Y); ln.setAttribute('y2', NL_LINE_Y + 4);
-            ln.setAttribute('stroke', '#d1d5db'); ln.setAttribute('stroke-width', 1);
-            g.appendChild(ln);
-          }
+        // 10分刻みの小目盛り（6h・3h共通）
+        for (let m = 0; m <= 24 * 6; m++) {
+          if (m % 6 === 0) continue;
+          const x = m * (pph / 6);
+          const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          ln.setAttribute('x1', x); ln.setAttribute('x2', x);
+          ln.setAttribute('y1', NL_LINE_Y); ln.setAttribute('y2', NL_LINE_Y + 4);
+          ln.setAttribute('stroke', '#d1d5db'); ln.setAttribute('stroke-width', 1);
+          g.appendChild(ln);
         }
         // 時間目盛り
         for (let h = 0; h <= 24; h++) {
