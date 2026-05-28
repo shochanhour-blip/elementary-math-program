@@ -383,6 +383,10 @@
       const v = dotsVisible ? '' : 'none';
       document.getElementById('totalDotsArea').style.display = v;
       document.getElementById('dotsArea').style.display = v;
+      // 枝の起点: ●あり→分岐点(y=192)、●なし→上の丸の下端(y=120)
+      const forkY = dotsVisible ? 192 : 120;
+      document.getElementById('lineLeft').setAttribute('y1', forkY);
+      document.getElementById('lineRight').setAttribute('y1', forkY);
     }
 
     document.getElementById('btnDots').addEventListener('click', () => {
