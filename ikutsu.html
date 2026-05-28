@@ -322,7 +322,7 @@
     <button class="mode-btn active" id="btnSequential">じゅんばん</button>
     <button class="mode-btn"        id="btnRandom">ランダム</button>
     <button class="mode-btn"        id="btnFullRandom">フルランダム</button>
-    <button class="mode-btn active" id="btnDots">●</button>
+    <button class="mode-btn active" id="btnDots" style="display:flex;flex-direction:column;align-items:center;line-height:1;padding:4px 8px;gap:2px"><span style="font-size:1.1rem">●</span><span id="btnDotsLabel" style="font-size:0.6rem">on</span></button>
   </div>
 
   <div class="content-scale" id="contentScale">
@@ -388,6 +388,7 @@
     document.getElementById('btnDots').addEventListener('click', () => {
       dotsVisible = !dotsVisible;
       document.getElementById('btnDots').classList.toggle('active', dotsVisible);
+      document.getElementById('btnDotsLabel').textContent = dotsVisible ? 'on' : 'off';
       applyDotsVisibility();
     });
 
