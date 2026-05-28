@@ -15,7 +15,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 28px 16px 80px;
+      padding: 28px 16px 8px;
       overflow-x: hidden;
     }
 
@@ -923,10 +923,17 @@
 
     function scaleContent() {
       const el = document.getElementById('contentScale');
-      const available = document.body.clientWidth - 16;
-      const scale = available < 536 ? available / 536 : 1;
+      const availW = document.body.clientWidth - 16;
+      const naturalH = el.scrollHeight;
+      // 44px = 閉じた状態のパネルタブ分を確保
+      const usableH = document.documentElement.clientHeight - el.offsetTop - 44 - 8;
+
+      const scaleW = availW < 536 ? availW / 536 : 1;
+      const scaleH = naturalH > usableH ? usableH / naturalH : 1;
+      const scale = Math.min(scaleW, scaleH);
+
       el.style.transform = scale < 1 ? `scale(${scale})` : '';
-      el.style.marginBottom = scale < 1 ? `${(scale - 1) * el.scrollHeight}px` : '';
+      el.style.marginBottom = scale < 1 ? `${(scale - 1) * naturalH}px` : '';
     }
     scaleContent();
     window.addEventListener('resize', scaleContent);
