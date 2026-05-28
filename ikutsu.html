@@ -306,17 +306,18 @@ header {
 
     .choices-row {
       display: flex;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       gap: 6px;
       width: 100%;
+      justify-content: center;
     }
 
     .choice-btn {
-      flex: 1 1 0;
-      min-width: 0;
-      aspect-ratio: 1 / 1;
-      border-radius: 16px;
-      font-size: 2.6rem;
+      flex: 0 0 56px;
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      font-size: 2.2rem;
       font-weight: bold;
       border: 2px solid #e5e7eb;
       background: #fff;
