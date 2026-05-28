@@ -596,6 +596,8 @@
       document.getElementById('drawModeBtn').style.display  = numlineVisible ? '' : 'none';
       document.getElementById('drawClearBtn').style.display = numlineVisible ? '' : 'none';
       if (numlineVisible) { renderNumline(); }
+      // パネルのトランジション終了後に時計サイズを再計算
+      setTimeout(scaleContent, 360);
     });
 
     document.getElementById('numlineModeSelect').addEventListener('change', e => {
@@ -923,10 +925,12 @@
 
     function scaleContent() {
       const el = document.getElementById('contentScale');
+      const panel = document.getElementById('numlinePanel');
       const availW = document.body.clientWidth - 16;
       const naturalH = el.scrollHeight;
-      // 44px = 閉じた状態のパネルタブ分を確保
-      const usableH = document.documentElement.clientHeight - el.offsetTop - 44 - 8;
+      // パネル開閉状態に応じて確保する高さを変える
+      const reservedH = numlineVisible ? panel.offsetHeight : 44;
+      const usableH = document.documentElement.clientHeight - el.offsetTop - reservedH - 8;
 
       const scaleW = availW < 536 ? availW / 536 : 1;
       const scaleH = naturalH > usableH ? usableH / naturalH : 1;
