@@ -515,10 +515,8 @@
     wrap.addEventListener('pointerup', e => {
       if (!drag) return;
       if (!drag.moved) {
-        if (isNearMinuteHand(e.clientX, e.clientY) || isNearHourHand(e.clientX, e.clientY)) {
-          state.showMinuteMarks = !state.showMinuteMarks;
-          render();
-        }
+        state.showMinuteMarks = !state.showMinuteMarks;
+        render();
       }
       drag = null;
     });
