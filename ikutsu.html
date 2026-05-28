@@ -322,6 +322,7 @@
     <button class="mode-btn active" id="btnSequential">じゅんばん</button>
     <button class="mode-btn"        id="btnRandom">ランダム</button>
     <button class="mode-btn"        id="btnFullRandom">フルランダム</button>
+    <button class="mode-btn active" id="btnDots">●</button>
   </div>
 
   <div class="content-scale" id="contentScale">
@@ -376,6 +377,19 @@
     }
 
     let currentMode = 'sequential';
+    let dotsVisible = true;
+
+    function applyDotsVisibility() {
+      const v = dotsVisible ? '' : 'none';
+      document.getElementById('totalDotsArea').style.display = v;
+      document.getElementById('dotsArea').style.display = v;
+    }
+
+    document.getElementById('btnDots').addEventListener('click', () => {
+      dotsVisible = !dotsVisible;
+      document.getElementById('btnDots').classList.toggle('active', dotsVisible);
+      applyDotsVisibility();
+    });
 
     function setMode(mode) {
       currentMode = mode;
@@ -442,6 +456,7 @@
         dotsArea.appendChild(d);
       }
 
+      applyDotsVisibility();
       clearCanvas();
 
       const badge = document.getElementById('feedbackBadge');
