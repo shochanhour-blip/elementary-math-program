@@ -324,7 +324,7 @@
       align-items: center;
       gap: 5px;
       z-index: 5;
-      width: 65px;
+      width: 70px;
     }
   </style>
 </head>
@@ -600,19 +600,19 @@
     function createMiniSakuranbo(n, m) {
       const ans = n - m;
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('viewBox', '0 0 280 195');
-      svg.setAttribute('width', '65');
-      svg.setAttribute('height', '45');
+      svg.setAttribute('viewBox', '0 0 200 190');
+      svg.setAttribute('width', '70');
+      svg.setAttribute('height', '67');
       svg.style.display = 'block';
       const ns = 'http://www.w3.org/2000/svg';
       function mkLine(x1,y1,x2,y2,col) {
         const e = document.createElementNS(ns,'line');
-        [['x1',x1],['y1',y1],['x2',x2],['y2',y2],['stroke',col],['stroke-width',9],['stroke-linecap','round']].forEach(([k,v])=>e.setAttribute(k,v));
+        [['x1',x1],['y1',y1],['x2',x2],['y2',y2],['stroke',col],['stroke-width',10],['stroke-linecap','round']].forEach(([k,v])=>e.setAttribute(k,v));
         svg.appendChild(e);
       }
       function mkCircle(cx,cy,r,col) {
         const e = document.createElementNS(ns,'circle');
-        [['cx',cx],['cy',cy],['r',r],['fill','#fff'],['stroke',col],['stroke-width',9]].forEach(([k,v])=>e.setAttribute(k,v));
+        [['cx',cx],['cy',cy],['r',r],['fill','#fff'],['stroke',col],['stroke-width',10]].forEach(([k,v])=>e.setAttribute(k,v));
         svg.appendChild(e);
       }
       function mkText(x,y,txt,col,size) {
@@ -621,14 +621,14 @@
         e.textContent = txt;
         svg.appendChild(e);
       }
-      mkLine(140, 62, 28, 155, '#34d399');
-      mkLine(140, 62, 252, 155, '#fb923c');
-      mkCircle(140, 30, 28, '#60a5fa');
-      mkCircle(28, 167, 24, '#34d399');
-      mkCircle(252, 167, 24, '#22c55e');
-      mkText(140, 30, n, '#1d4ed8', 40);
-      mkText(28, 167, m, '#065f46', 34);
-      mkText(252, 167, ans, '#16a34a', 34);
+      mkLine(100, 58, 24, 152, '#34d399');
+      mkLine(100, 58, 176, 152, '#fb923c');
+      mkCircle(100, 28, 28, '#60a5fa');
+      mkCircle(24, 164, 24, '#34d399');
+      mkCircle(176, 164, 24, '#22c55e');
+      mkText(100, 28, n, '#1d4ed8', 40);
+      mkText(24, 164, m, '#065f46', 34);
+      mkText(176, 164, ans, '#16a34a', 34);
       return svg;
     }
 
