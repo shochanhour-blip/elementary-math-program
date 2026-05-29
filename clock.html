@@ -46,7 +46,7 @@
       user-select: none;
       -webkit-user-select: none;
       cursor: grab;
-      filter: drop-shadow(0 8px 24px rgba(30,64,175,0.18));
+      filter: none;
     }
     .clock-wrap:active { cursor: grabbing; }
 
@@ -89,6 +89,15 @@
       dominant-baseline: central;
       pointer-events: none;
     }
+    .num-conv {
+      font-family: "Noto Sans JP", Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 900;
+      fill: #f87171;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
 
     /* ─── Clock area: 時計を中央、ボタンを右に絶対配置 ─── */
     .clock-area {
@@ -118,8 +127,6 @@
       left: 0;
       right: 0;
       background: #fff;
-      box-shadow: 0 -4px 24px rgba(0,0,0,0.10);
-      border-radius: 18px 18px 0 0;
       transform: translateY(calc(100% - 44px));
       transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
       z-index: 200;
@@ -228,11 +235,191 @@
       background: #fef2f2;
       border-color: #fca5a5;
     }
+
+    /* ─── Conv sub-mode dots ─── */
+    .conv-submode-row { display:flex; gap:10px; align-items:center; }
+    .conv-sub-dot { width:20px; height:20px; border-radius:50%; cursor:pointer; transition:opacity .15s; flex-shrink:0; }
+    .conv-sub-dot.inactive { opacity:.22; }
+    .arc-dot   { background:#6366f1; }
+    .tiles-dot { background:#f97316; }
+
+    /* ─── Tiles panel ─── */
+    .tiles-panel { width:100%; display:flex; flex-direction:column; align-items:center; gap:20px; }
+    .tiles-layout { display:flex; gap:24px; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
+    .tiles-table { display:flex; border:2px solid #e5e7eb; border-radius:16px; overflow:hidden; flex-shrink:0; }
+    .tiles-col { display:flex; flex-direction:column; }
+    .tiles-col-sep { width:2px; background:#e5e7eb; flex-shrink:0; }
+    .tiles-col-hd { text-align:center; font-size:1.5rem; font-weight:900; padding:12px 20px; background:#f8fafc; border-bottom:2px solid #e5e7eb; }
+    .tiles-col-hd.hour-hd { color:#f97316; }
+    .tiles-col-hd.min-hd  { color:#3b82f6; }
+    .tiles-col-body { padding:12px; display:flex; flex-direction:column; align-items:center; gap:10px; min-height:350px; min-width:172px; transition:background .15s; }
+    .tiles-col-body.drag-over { background:#fef9c3; }
+    .tile-card { cursor:pointer; border-radius:14px; border:2px solid #e5e7eb; background:#fff; transition:border-color .15s,background .15s; touch-action:none; user-select:none; -webkit-user-select:none; }
+    .tile-card:hover    { border-color:#93c5fd; background:#eff6ff; }
+    .tile-card.selected { border-color:#3b82f6; background:#eff6ff; }
+    .tile-card.full     { border-color:rgba(251,146,60,0.45); border-width:3px; }
+    .tile-add-btn { width:148px; height:148px; border-radius:14px; border:2px dashed #d1d5db; background:#f9fafb; color:#9ca3af; font-size:2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+    .tile-add-btn:hover { border-color:#93c5fd; color:#3b82f6; background:#eff6ff; }
+    .tile-edit-panel { display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .tile-edit-label { font-size:1.3rem; font-weight:900; color:#6b7280; }
+    #tileEditSvg { touch-action:none; cursor:grab; width:280px; height:280px; display:block; }
+    #tileEditSvg:active { cursor:grabbing; }
+    .tile-card-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .tile-card-mins { font-size:1.1rem; font-weight:700; color:#9ca3af; line-height:1; }
+    .tile-drag-ghost { pointer-events:none; position:fixed; z-index:1000; opacity:.75; }
+    .tiles-draw-row { position:relative; border-top:2px solid #e5e7eb; flex:1; }
+    .tile-col-canvas { display:block; width:100%; height:180px; touch-action:none; cursor:crosshair; background:#fafafa; }
+    .tile-draw-clear { position:absolute; bottom:6px; right:6px; background:#f1f5f9; border:1px solid #d1d5db; border-radius:8px; padding:3px 10px; font-size:0.8rem; cursor:pointer; color:#6b7280; line-height:1.4; }
+    .tile-draw-clear:hover { background:#e2e8f0; }
+
+    /* ─── Mode bar ─── */
+    .mode-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .mode-btn {
+      width: 80px;
+      height: 18px;
+      border: none;
+      border-radius: 5px;
+      background: #bfdbfe;
+      cursor: pointer;
+      padding: 0;
+      transition: background 0.15s;
+    }
+    .mode-btn.active {
+      background: #f97316;
+    }
+
+    /* ─── Conv panel ─── */
+    .conv-panel {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .conv-instruction {
+      font-size: 1rem;
+      color: #6b7280;
+      text-align: center;
+    }
+    .conv-equation {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #1f2933;
+      background: #f1f5f9;
+      border-radius: 14px;
+      padding: 14px 28px;
+      min-width: 260px;
+      text-align: center;
+      min-height: 64px;
+    }
+    .conv-equation strong { color: #1e40af; }
+    .conv-btn-row {
+      display: flex;
+      gap: 12px;
+    }
+    .conv-btn {
+      font-size: 1.4rem;
+      line-height: 1;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid #d1d5db;
+      background: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: all 0.15s;
+    }
+    .conv-btn.primary { border-color: #93c5fd; background: #eff6ff; }
+    .conv-btn.primary:hover:not(:disabled) { background: #dbeafe; }
+    .conv-btn.primary:disabled { opacity: 0.35; cursor: default; }
+    .conv-btn.secondary { border-color: #d1d5db; background: #fff; }
+    .conv-btn.secondary:hover { background: #f1f5f9; }
+    /* ─── Conv equation panel (slide-in) ─── */
+    .conv-eq-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      transform: translateY(calc(100% - 60px));
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 200;
+      display: none;
+    }
+    .conv-eq-panel.open { transform: translateY(0); }
+    .conv-eq-handle {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 60px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .conv-body-wrap {
+      position: relative;
+      height: 88px;
+      overflow: hidden;
+    }
+    .conv-eq-body {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #1f2933;
+    }
+    .conv-eq-body strong { color: #1e40af; }
+    .conv-nl-body {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+    }
+    .conv-view-dots {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+    .conv-view-dots.visible { display: flex; }
+    .conv-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .conv-dot-eq { background: #6366f1; }
+    .conv-dot-nl { background: #14b8a6; }
+    .conv-dot.inactive { opacity: 0.25; }
   </style>
 </head>
 <body>
   <div class="content-scale" id="contentScale">
-    <div class="clock-area">
+    <!-- Mode toggle -->
+    <div class="mode-bar" id="modeBar">
+      <button class="mode-btn active" id="modeClockBtn"></button>
+      <button class="mode-btn" id="modeArcBtn"></button>
+      <button class="mode-btn" id="modeTilesBtn"></button>
+    </div>
+
+    <div class="clock-area" id="clockArea">
       <!-- 時計左カラム: ごぜん/ごご + 時計 -->
       <div class="clock-col">
         <div class="clock-top-row">
@@ -261,6 +448,9 @@
 
         <!-- Hour numbers / minute marks (generated by JS) -->
         <g id="numbersGroup"></g>
+
+        <!-- Conv mode arcs -->
+        <g id="convArcs"></g>
 
         <!-- Ghost hands (shown when memory is active) -->
         <line id="hourHandGhost"
@@ -292,7 +482,83 @@
 
     </div><!-- /clock-area -->
 
+    <!-- Conv panel -->
+    <div id="convPanel" style="display:none" class="conv-panel">
+      <div class="conv-btn-row">
+        <button id="convConfirmBtn" class="conv-btn primary">📍</button>
+        <button id="convResetBtn" class="conv-btn secondary">✕</button>
+      </div>
+    </div>
+
+    <!-- Tiles panel (conv sub-mode) -->
+    <div id="tilesPanel" style="display:none" class="tiles-panel">
+      <div class="tiles-layout">
+        <div class="tiles-table">
+          <div class="tiles-col" id="hourColDiv">
+            <div class="tiles-col-hd hour-hd">時間</div>
+            <div class="tiles-col-body" id="hourColBody"></div>
+            <div class="tiles-draw-row">
+              <canvas class="tile-col-canvas" id="hourDrawCanvas"></canvas>
+              <button class="tile-draw-clear" id="hourDrawClear">✕</button>
+            </div>
+          </div>
+          <div class="tiles-col-sep"></div>
+          <div class="tiles-col" id="minColDiv">
+            <div class="tiles-col-hd min-hd">分</div>
+            <div class="tiles-col-body" id="minColBody"></div>
+            <div class="tiles-draw-row">
+              <canvas class="tile-col-canvas" id="minDrawCanvas"></canvas>
+              <button class="tile-draw-clear" id="minDrawClear">✕</button>
+            </div>
+          </div>
+        </div>
+        <div class="tile-edit-panel" id="tileEditPanel" style="display:none">
+          <div class="tile-edit-label" id="tileEditLabel">0 分</div>
+          <svg id="tileEditSvg" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg" touch-action="none">
+            <defs>
+              <radialGradient id="tileEditGrad" cx="45%" cy="38%" r="65%">
+                <stop offset="0%"   stop-color="#ffffff"/>
+                <stop offset="100%" stop-color="#fef9e7"/>
+              </radialGradient>
+            </defs>
+            <circle cx="210" cy="210" r="205" fill="#1e40af"/>
+            <circle cx="210" cy="210" r="198" fill="#3b82f6"/>
+            <circle cx="210" cy="210" r="190" fill="url(#tileEditGrad)"/>
+            <g id="tileEditTicksGroup"></g>
+            <g id="tileEditNumbersGroup"></g>
+            <g id="tileEditArcGroup"></g>
+            <line id="tileEditHand" stroke="#3b82f6" stroke-width="7" stroke-linecap="round"
+                  x1="210" y1="210" x2="210" y2="62"/>
+            <circle cx="210" cy="210" r="14" fill="#1e40af"/>
+            <circle cx="210" cy="210" r="8"  fill="#fff"/>
+            <circle cx="210" cy="210" r="4"  fill="#f87171"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content-scale -->
+
+  <!-- 換算 式パネル -->
+  <div class="conv-eq-panel" id="convEqPanel">
+    <div class="conv-eq-handle" id="convEqHandle">
+      <button class="numline-handle-btn" id="convEqHandleBtn">▲</button>
+      <div class="conv-view-dots" id="convViewDots">
+        <span class="conv-dot conv-dot-eq" id="convDotEq" title="しき"></span>
+        <span class="conv-dot conv-dot-nl inactive" id="convDotNl" title="すうちょくせん"></span>
+      </div>
+    </div>
+    <div class="conv-body-wrap">
+    <div class="conv-eq-body" id="convEquation">　</div>
+    <div class="conv-nl-body" id="convNlBody" style="display:none">
+      <svg id="convNlSvg" viewBox="-18 -10 636 58" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <g id="convNlBg"></g>
+        <g id="convNlBars"></g>
+        <g id="convNlTicks"></g>
+      </svg>
+    </div>
+    </div><!-- /conv-body-wrap -->
+  </div>
 
   <!-- 数直線 ボトムパネル -->
   <div class="numline-panel" id="numlinePanel">
@@ -330,6 +596,10 @@
   </div>
 
   <script>
+    let appMode      = 'clock'; // 'clock' | 'conv'
+    let convEqOpen   = false;
+    let convSubMode  = 'arc';   // 'arc' | 'tiles'
+
     const CX = 210, CY = 210, R = 190;
     const MIN_LEN  = 148;  // minute hand tip
     const MIN_TAIL = 26;   // minute hand tail
@@ -389,6 +659,13 @@
       const g = document.getElementById('numbersGroup');
       g.innerHTML = '';
       const numR = R - 50;
+
+      if (appMode === 'conv') {
+        const pos = clockPt(0, numR);
+        addText(g, { x: pos.x, y: pos.y - 13 }, '0',    'num-conv');
+        addText(g, { x: pos.x, y: pos.y + 13 }, '(60)', 'num-conv');
+        return;
+      }
 
       if (!state.showMinuteMarks) {
         for (let i = 1; i <= 12; i++) {
@@ -475,10 +752,33 @@
     wrap.addEventListener('pointerdown', e => {
       e.preventDefault();
       wrap.setPointerCapture(e.pointerId);
+      if (appMode === 'conv') {
+        if (conv.phase === 3) return;
+        convDrag = { prevAngle: angleFromCenter(e.clientX, e.clientY) };
+        return;
+      }
       drag = { startX: e.clientX, startY: e.clientY, moved: false, prevMin: state.minutes };
     });
 
     wrap.addEventListener('pointermove', e => {
+      if (appMode === 'conv') {
+        if (!convDrag) return;
+        e.preventDefault();
+        const newAngle = angleFromCenter(e.clientX, e.clientY);
+        let delta = newAngle - convDrag.prevAngle;
+        if (delta > 180)  delta -= 360;
+        if (delta < -180) delta += 360;
+        const maxMin = conv.phase === 1 ? 120 : 120 - conv.min1;
+        conv.curMin = Math.max(0, Math.min(maxMin, conv.curMin + delta / 360 * 60));
+        convDrag.prevAngle = newAngle;
+        state.minutes = conv.phase === 1
+          ? conv.curMin % 60
+          : (conv.min1 % 60 + conv.curMin) % 60;
+        renderConvArcs();
+        updateConvDisplay();
+        render();
+        return;
+      }
       if (!drag) return;
       e.preventDefault();
       if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 7) {
@@ -514,6 +814,10 @@
     });
 
     wrap.addEventListener('pointerup', e => {
+      if (appMode === 'conv') {
+        convDrag = null;
+        return;
+      }
       if (!drag) return;
       if (!drag.moved) {
         state.showMinuteMarks = !state.showMinuteMarks;
@@ -522,7 +826,10 @@
       drag = null;
     });
 
-    wrap.addEventListener('pointercancel', () => { drag = null; });
+    wrap.addEventListener('pointercancel', () => {
+      if (appMode === 'conv') { convDrag = null; return; }
+      drag = null;
+    });
 
     function applyAmpm() {
       const badge = document.getElementById('ampmBadge');
@@ -994,12 +1301,17 @@
     // ─── Responsive scale ────────────────────────────────
 
     function scaleContent() {
-      const el = document.getElementById('contentScale');
-      const panel = document.getElementById('numlinePanel');
+      const el     = document.getElementById('contentScale');
       const availW = document.body.clientWidth - 16;
       const naturalH = el.scrollHeight;
-      // パネル開閉状態に応じて確保する高さを変える
-      const reservedH = numlineVisible ? panel.offsetHeight : 44;
+      let reservedH;
+      if (appMode === 'conv') {
+        const cp = document.getElementById('convEqPanel');
+        reservedH = convEqOpen ? cp.offsetHeight : 60;
+      } else {
+        const np = document.getElementById('numlinePanel');
+        reservedH = numlineVisible ? np.offsetHeight : 44;
+      }
       const usableH = document.documentElement.clientHeight - el.offsetTop - reservedH - 8;
 
       const scaleW = availW < 536 ? availW / 536 : 1;
@@ -1011,6 +1323,835 @@
     }
     scaleContent();
     window.addEventListener('resize', scaleContent);
+
+    // ─── App mode ────────────────────────────────────────
+
+    function updateModeBtns() {
+      document.getElementById('modeClockBtn').classList.toggle('active',  appMode === 'clock');
+      document.getElementById('modeArcBtn').classList.toggle('active',    appMode === 'conv' && convSubMode === 'arc');
+      document.getElementById('modeTilesBtn').classList.toggle('active',  appMode === 'conv' && convSubMode === 'tiles');
+    }
+
+    function setAppMode(mode) {
+      appMode = mode;
+      updateModeBtns();
+
+      ['ampmBadge', 'memBtn'].forEach(id => {
+        document.getElementById(id).style.display = mode === 'clock' ? '' : 'none';
+      });
+      document.getElementById('numlinePanel').style.display  = mode === 'clock' ? '' : 'none';
+      document.getElementById('convPanel').style.display     = mode === 'conv'  ? '' : 'none';
+      document.getElementById('convEqPanel').style.display   = mode === 'conv'  ? 'block' : 'none';
+      document.getElementById('hourHand').style.display      = mode === 'conv'  ? 'none' : '';
+      document.getElementById('hourHandGhost').style.display = 'none';
+
+      if (mode === 'conv') {
+        state.showMinuteMarks = true;
+        state.hours   = 12;
+        state.minutes = 0;
+        if (numlineVisible) {
+          numlineVisible = false;
+          document.getElementById('numlinePanel').classList.remove('open');
+          document.getElementById('numlineHandleBtn').textContent = '▲';
+        }
+        resetConv();
+        setConvSubMode('arc');
+      } else {
+        state.showMinuteMarks = false;
+        document.getElementById('convArcs').innerHTML = '';
+        document.getElementById('clockArea').style.display  = '';
+        document.getElementById('tilesPanel').style.display = 'none';
+        render();
+      }
+      setTimeout(scaleContent, 50);
+    }
+
+    document.getElementById('modeClockBtn').addEventListener('click',  () => setAppMode('clock'));
+    document.getElementById('modeArcBtn').addEventListener('click',   () => { setAppMode('conv'); setConvSubMode('arc'); });
+    document.getElementById('modeTilesBtn').addEventListener('click', () => { setAppMode('conv'); setConvSubMode('tiles'); });
+
+    // ─── Conv mode ───────────────────────────────────────
+
+    const conv = { phase: 1, min1: 0, min2: 0, curMin: 0 };
+    let convDrag = null;
+
+    const ARC_R_OUT = 158, ARC_W = 13;
+    const ARC_R_IN  = ARC_R_OUT - ARC_W - 7; // inner ring outer edge = 138
+
+    function arcSegPath(startMin, durMin, outerR, innerR) {
+      if (durMin <= 0) return '';
+      const dur   = Math.min(durMin, 59.99);
+      const large = dur > 30 ? 1 : 0;
+      const end   = startMin + dur;
+      const p1o = clockPt(startMin / 60 * 360, outerR);
+      const p2o = clockPt(end      / 60 * 360, outerR);
+      const p2i = clockPt(end      / 60 * 360, innerR);
+      const p1i = clockPt(startMin / 60 * 360, innerR);
+      return `M ${p1o.x} ${p1o.y} A ${outerR} ${outerR} 0 ${large} 1 ${p2o.x} ${p2o.y} L ${p2i.x} ${p2i.y} A ${innerR} ${innerR} 0 ${large} 0 ${p1i.x} ${p1i.y} Z`;
+    }
+
+    function renderConvArcs() {
+      const g = document.getElementById('convArcs');
+      g.innerHTML = '';
+      if (appMode !== 'conv') return;
+      const ns = 'http://www.w3.org/2000/svg';
+
+      function add(d, fill, alpha) {
+        if (!d) return;
+        const p = document.createElementNS(ns, 'path');
+        p.setAttribute('d', d);
+        p.setAttribute('fill', fill);
+        p.setAttribute('opacity', String(alpha));
+        g.appendChild(p);
+      }
+
+      const m1 = conv.phase >= 2 ? conv.min1 : Math.round(conv.curMin);
+      const m2 = conv.phase >= 3 ? conv.min2 : (conv.phase === 2 ? Math.round(conv.curMin) : 0);
+      const a1 = conv.phase >= 2 ? 0.6 : 0.35;
+      const a2 = conv.phase >= 3 ? 0.6 : 0.35;
+
+      // red arc: outer ring (0-60min), inner ring (60-120min)
+      if (m1 > 0) {
+        const outerDur = Math.min(m1, 60);
+        add(arcSegPath(0, outerDur, ARC_R_OUT, ARC_R_OUT - ARC_W), '#ef4444', a1);
+        if (m1 > 60) {
+          add(arcSegPath(0, m1 - 60, ARC_R_IN, ARC_R_IN - ARC_W), '#ef4444', a1);
+        }
+      }
+
+      // blue arc: continues from where red ends
+      if (m2 > 0) {
+        const redStart  = m1 % 60;  // minute-hand position where red ends
+        const redOnInner = m1 > 60; // red already uses inner ring
+        if (!redOnInner) {
+          // red only on outer ring — blue continues on outer, overflows to inner
+          const total = m1 + m2;
+          if (total <= 60) {
+            add(arcSegPath(m1, m2, ARC_R_OUT, ARC_R_OUT - ARC_W), '#3b82f6', a2);
+          } else {
+            const outerDur = 60 - m1;
+            const innerDur = total - 60;
+            if (outerDur > 0) add(arcSegPath(m1, outerDur, ARC_R_OUT, ARC_R_OUT - ARC_W), '#3b82f6', a2);
+            if (innerDur > 0) add(arcSegPath(0, innerDur, ARC_R_IN, ARC_R_IN - ARC_W), '#3b82f6', a2);
+          }
+        } else {
+          // red uses both rings — blue continues on inner ring from red's end
+          const innerStart = m1 - 60;
+          const total = innerStart + m2;
+          if (total <= 60) {
+            add(arcSegPath(innerStart, m2, ARC_R_IN, ARC_R_IN - ARC_W), '#3b82f6', a2);
+          }
+          // if even inner ring overflows, no more space — don't draw
+        }
+      }
+    }
+
+    function fmtMinutes(m) {
+      return `${m}分`;
+    }
+
+    function updateConvDisplay() {
+      const eq  = document.getElementById('convEquation');
+      const cur = Math.round(conv.curMin);
+
+      if (conv.phase === 1) {
+        eq.textContent = cur > 0 ? `${cur}分` : '　';
+      } else if (conv.phase === 2) {
+        eq.textContent = cur > 0
+          ? `${conv.min1}分 ＋ ${cur}分`
+          : `${conv.min1}分 ＋ ？分`;
+      } else {
+        const total = conv.min1 + conv.min2;
+        eq.innerHTML = `${conv.min1}分 ＋ ${conv.min2}分 ＝ <strong>${fmtMinutes(total)}</strong>`;
+      }
+      renderConvNl();
+    }
+
+    function resetConv() {
+      conv.phase  = 1;
+      conv.min1   = 0;
+      conv.min2   = 0;
+      conv.curMin = 0;
+      convDrag    = null;
+      state.hours   = 12;
+      state.minutes = 0;
+      const btn = document.getElementById('convConfirmBtn');
+      btn.disabled    = false;
+      btn.textContent = '📍';
+      convEqOpen = false;
+      const eqPanel = document.getElementById('convEqPanel');
+      eqPanel.classList.remove('open');
+      document.getElementById('convEqHandleBtn').textContent = '▲';
+      document.getElementById('convViewDots').classList.remove('visible');
+      convView = 'eq';
+      document.getElementById('convEquation').style.display = '';
+      document.getElementById('convNlBody').style.display   = 'none';
+      document.getElementById('convDotEq').classList.remove('inactive');
+      document.getElementById('convDotNl').classList.add('inactive');
+      renderConvArcs();
+      updateConvDisplay();
+      render();
+    }
+
+    document.getElementById('convConfirmBtn').addEventListener('click', () => {
+      const m = Math.round(conv.curMin);
+      if (m <= 0) return;
+      if (conv.phase === 1) {
+        conv.min1   = m;
+        conv.phase  = 2;
+        conv.curMin = 0;
+        convDrag    = null;
+        state.minutes = conv.min1 % 60;
+      } else if (conv.phase === 2) {
+        conv.min2   = m;
+        conv.phase  = 3;
+        conv.curMin = 0;
+        convDrag    = null;
+        state.minutes = (conv.min1 + conv.min2) % 60;
+        document.getElementById('convConfirmBtn').disabled = true;
+      }
+      renderConvArcs();
+      updateConvDisplay();
+      render();
+    });
+
+    document.getElementById('convResetBtn').addEventListener('click', () => {
+      resetConv();
+      if (convSubMode === 'tiles') tilesMgr.reset();
+    });
+
+    document.getElementById('convEqHandle').addEventListener('click', () => {
+      const panel = document.getElementById('convEqPanel');
+      const btn   = document.getElementById('convEqHandleBtn');
+      convEqOpen  = panel.classList.toggle('open');
+      btn.textContent = convEqOpen ? '▼' : '▲';
+      document.getElementById('convViewDots').classList.toggle('visible', convEqOpen);
+      if (convEqOpen) renderConvNl();
+      setTimeout(scaleContent, 360);
+    });
+
+    // ─── Conv view toggle (式 / 数直線) ──────────────────
+
+    let convView = 'eq'; // 'eq' | 'nl'
+
+    function setConvView(view) {
+      convView = view;
+      document.getElementById('convEquation').style.display = view === 'eq' ? '' : 'none';
+      document.getElementById('convNlBody').style.display   = view === 'nl' ? '' : 'none';
+      document.getElementById('convDotEq').classList.toggle('inactive', view !== 'eq');
+      document.getElementById('convDotNl').classList.toggle('inactive', view !== 'nl');
+      if (view === 'nl') renderConvNl();
+    }
+
+    document.getElementById('convDotEq').addEventListener('click', e => {
+      e.stopPropagation(); setConvView('eq');
+    });
+    document.getElementById('convDotNl').addEventListener('click', e => {
+      e.stopPropagation(); setConvView('nl');
+    });
+
+    // ─── Conv number line rendering ───────────────────────
+
+    const CNL_W = 600, CNL_Y = 14, CNL_PPM = 5; // 5px per minute
+
+    function renderConvNl() {
+      if (convView !== 'nl') return;
+      const ns = 'http://www.w3.org/2000/svg';
+
+      // background bar
+      const bgG = document.getElementById('convNlBg');
+      bgG.innerHTML = '';
+      const bg = document.createElementNS(ns, 'rect');
+      bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+      bg.setAttribute('width', CNL_W); bg.setAttribute('height', CNL_Y);
+      bg.setAttribute('fill', '#f1f5f9'); bg.setAttribute('rx', 6);
+      bgG.appendChild(bg);
+
+      // colored bars
+      const barsG = document.getElementById('convNlBars');
+      barsG.innerHTML = '';
+      const m1 = conv.phase >= 2 ? conv.min1 : Math.round(conv.curMin);
+      const m2 = conv.phase >= 3 ? conv.min2 : (conv.phase === 2 ? Math.round(conv.curMin) : 0);
+      const a1 = conv.phase >= 2 ? 0.7 : 0.4;
+      const a2 = conv.phase >= 3 ? 0.7 : 0.4;
+
+      function addBar(startMin, durMin, fill, alpha) {
+        if (durMin <= 0) return;
+        const r = document.createElementNS(ns, 'rect');
+        r.setAttribute('x', startMin * CNL_PPM);
+        r.setAttribute('y', 0);
+        r.setAttribute('width', durMin * CNL_PPM);
+        r.setAttribute('height', CNL_Y);
+        r.setAttribute('fill', fill);
+        r.setAttribute('opacity', String(alpha));
+        r.setAttribute('rx', 4);
+        barsG.appendChild(r);
+      }
+
+      if (m1 > 0) addBar(0, m1, '#ef4444', a1);
+      if (m2 > 0) addBar(m1, m2, '#3b82f6', a2);
+
+      // ticks and labels
+      const tickG = document.getElementById('convNlTicks');
+      tickG.innerHTML = '';
+
+      for (let i = 0; i <= 24; i++) {
+        const min = i * 5;
+        const x   = min * CNL_PPM;
+        const isMajor = min % 60 === 0;
+        const isTen   = min % 10 === 0;
+
+        const ln = document.createElementNS(ns, 'line');
+        ln.setAttribute('x1', x); ln.setAttribute('x2', x);
+        ln.setAttribute('y1', CNL_Y);
+        ln.setAttribute('y2', CNL_Y + (isMajor ? 7 : isTen ? 5 : 2));
+        ln.setAttribute('stroke', '#9ca3af');
+        ln.setAttribute('stroke-width', isMajor ? 2.5 : isTen ? 1.5 : 1);
+        tickG.appendChild(ln);
+
+        if (isMajor) {
+          const t = document.createElementNS(ns, 'text');
+          t.setAttribute('x', x);
+          t.setAttribute('y', CNL_Y + 18);
+          t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('font-size', '11');
+          t.setAttribute('font-weight', '700');
+          t.setAttribute('fill', '#374151');
+          t.setAttribute('font-family', 'Noto Sans JP, Arial, sans-serif');
+          t.textContent = min === 0 ? '0' : min === 60 ? '1時間' : '2時間';
+          tickG.appendChild(t);
+        }
+      }
+    }
+
+    // ─── Conv sub-mode (arc / tiles) ─────────────────────
+
+    function setConvSubMode(sub) {
+      convSubMode = sub;
+      updateModeBtns();
+
+      const arcMode   = sub === 'arc';
+      const clockArea = document.getElementById('clockArea');
+      const tilesP    = document.getElementById('tilesPanel');
+      const convEqP   = document.getElementById('convEqPanel');
+
+      clockArea.style.display  = arcMode ? '' : 'none';
+      tilesP.style.display     = arcMode ? 'none' : '';
+      convEqP.style.display    = arcMode ? 'block' : 'none';
+      document.querySelector('.conv-btn-row').style.display = arcMode ? '' : 'none';
+      if (!arcMode) {
+        tilesMgr.reset();
+        initTileDrawCanvases();
+      }
+      setTimeout(scaleContent, 50);
+    }
+
+    // ─── Tiles mode manager ───────────────────────────────
+
+    const TILE_SVG_SIZE = 72; // px per tile card SVG
+    const TILE_CX = 210, TILE_CY = 210, TILE_R = 190;
+    const TILE_ARC_R_OUT = 158, TILE_ARC_W = 13;
+
+    const tilesMgr = {
+      // minTiles: array, always at least 1 entry; values 0–60
+      // hourTiles: array of values 0–60 (each represents one 60-min period)
+      minTiles:  [0],
+      hourTiles: [],
+      editingTile: null, // { col:'min'|'hour', idx:number }
+
+      totalTiles() { return this.minTiles.length + this.hourTiles.length; },
+
+      reset() {
+        this.minTiles    = [0];
+        this.hourTiles   = [];
+        this.editingTile = null;
+        document.getElementById('tileEditPanel').style.display = 'none';
+        this.render();
+      },
+
+      render() {
+        this._renderMinCol();
+        this._renderHourCol();
+        this._renderEditClock();
+      },
+
+      _renderMinCol() {
+        const body = document.getElementById('minColBody');
+        body.innerHTML = '';
+        this.minTiles.forEach((mins, i) => {
+          const card = makeTileCard(mins, () => this._openEdit('min', i));
+          if (mins === 60) this._makeDraggable(card, 'min', i);
+          const wrap = document.createElement('div');
+          wrap.className = 'tile-card-wrap';
+          wrap.appendChild(card);
+          const lbl = document.createElement('div');
+          lbl.className = 'tile-card-mins';
+          lbl.textContent = mins;
+          wrap.appendChild(lbl);
+          body.appendChild(wrap);
+        });
+        // Show + if last tile is full and total < 5
+        const lastMin = this.minTiles[this.minTiles.length - 1];
+        if (lastMin === 60 && this.totalTiles() < 5) {
+          const addBtn = document.createElement('button');
+          addBtn.className = 'tile-add-btn';
+          addBtn.textContent = '＋';
+          addBtn.addEventListener('click', () => {
+            if (this.totalTiles() < 5) {
+              this.minTiles.push(0);
+              this.render();
+            }
+          });
+          body.appendChild(addBtn);
+        }
+      },
+
+      _renderHourCol() {
+        const body = document.getElementById('hourColBody');
+        body.innerHTML = '';
+        this.hourTiles.forEach((mins, i) => {
+          const card = makeTileCard(mins, () => this._openEdit('hour', i));
+          this._makeDraggable(card, 'hour', i);
+          const wrap = document.createElement('div');
+          wrap.className = 'tile-card-wrap';
+          wrap.appendChild(card);
+          const lbl = document.createElement('div');
+          lbl.className = 'tile-card-mins';
+          lbl.textContent = 1;
+          wrap.appendChild(lbl);
+          body.appendChild(wrap);
+        });
+      },
+
+      _openEdit(col, idx) {
+        this.editingTile = { col, idx };
+        const mins = col === 'min' ? this.minTiles[idx] : this.hourTiles[idx];
+        document.getElementById('tileEditPanel').style.display = '';
+        document.getElementById('tileEditLabel').textContent = mins + ' 分';
+        this._renderEditClock(mins);
+        setTimeout(scaleContent, 50);
+      },
+
+      _closeEdit() {
+        this.editingTile = null;
+        document.getElementById('tileEditPanel').style.display = 'none';
+        setTimeout(scaleContent, 50);
+      },
+
+      _setEditMinutes(mins) {
+        if (!this.editingTile) return;
+        const { col, idx } = this.editingTile;
+        if (col === 'min') this.minTiles[idx]  = mins;
+        else               this.hourTiles[idx] = mins;
+        document.getElementById('tileEditLabel').textContent = mins + ' 分';
+        this._renderEditClock(mins);
+        // render() はドラッグ終了時のみ呼ぶ（pointerup で呼び出される）
+      },
+
+      _renderEditClock(mins) {
+        if (mins === undefined) {
+          if (!this.editingTile) return;
+          const { col, idx } = this.editingTile;
+          mins = col === 'min' ? this.minTiles[idx] : this.hourTiles[idx];
+        }
+        renderTileEditClock(mins);
+      },
+
+      _makeDraggable(card, col, idx) {
+        let ghost = null;
+
+        const onMove = (cx, cy) => {
+          if (!ghost) return;
+          ghost.style.left = (cx - 36) + 'px';
+          ghost.style.top  = (cy - 36) + 'px';
+          highlightDropTarget(cx, cy);
+        };
+
+        const onEnd = (cx, cy) => {
+          if (!ghost) return;
+          ghost.remove(); ghost = null;
+          clearDropHighlights();
+          const target = getColumnAtPoint(cx, cy);
+          const srcMins = col === 'min' ? this.minTiles[idx] : this.hourTiles[idx];
+          if (target === 'hour' && col === 'min') {
+            if (this.hourTiles.length < 5) {
+              this.hourTiles.push(srcMins);
+              this.minTiles.splice(idx, 1);
+              if (this.minTiles.length === 0) this.minTiles.push(0);
+              if (this.editingTile && this.editingTile.col === col && this.editingTile.idx === idx) this._closeEdit();
+              this.render();
+            }
+          } else if (target === 'min' && col === 'hour') {
+            // 末尾が空タイル(0分)なら上書き、そうでなければ追加
+            const last = this.minTiles.length - 1;
+            if (this.minTiles[last] === 0) {
+              this.minTiles[last] = srcMins;
+            } else {
+              this.minTiles.push(srcMins);
+            }
+            this.hourTiles.splice(idx, 1);
+            if (this.editingTile && this.editingTile.col === col && this.editingTile.idx === idx) this._closeEdit();
+            this.render();
+          }
+        };
+
+        card.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          card.setPointerCapture(e.pointerId); // 指がカード外に出てもイベントを受け取り続ける
+          const startX = e.clientX, startY = e.clientY;
+          let moved = false;
+
+          const cleanup = () => {
+            card.removeEventListener('pointermove',   tmpMove);
+            card.removeEventListener('pointerup',     tmpUp);
+            card.removeEventListener('pointercancel', tmpCancel);
+          };
+          const tmpMove = ev => {
+            if (!moved && (Math.abs(ev.clientX - startX) > 8 || Math.abs(ev.clientY - startY) > 8)) {
+              moved = true;
+              ghost = document.createElement('div');
+              ghost.className = 'tile-drag-ghost';
+              ghost.style.width  = '148px';
+              ghost.style.height = '148px';
+              ghost.style.left   = (ev.clientX - 56) + 'px';
+              ghost.style.top    = (ev.clientY - 56) + 'px';
+              const svgNS = 'http://www.w3.org/2000/svg';
+              const s = document.createElementNS(svgNS, 'svg');
+              s.setAttribute('viewBox', '-28 -28 476 476');
+              s.setAttribute('width', '148');
+              s.setAttribute('height', '148');
+              const srcMins = col === 'min' ? tilesMgr.minTiles[idx] : tilesMgr.hourTiles[idx];
+              s.innerHTML = tileSmallClockSvg(srcMins);
+              ghost.appendChild(s);
+              document.body.appendChild(ghost);
+            }
+            if (moved) onMove(ev.clientX, ev.clientY);
+          };
+          const tmpUp = ev => {
+            cleanup();
+            if (moved) onEnd(ev.clientX, ev.clientY);
+          };
+          const tmpCancel = () => {
+            cleanup();
+            // キャンセル時はゴーストを消すだけ、データは変更しない
+            if (ghost) { ghost.remove(); ghost = null; }
+            clearDropHighlights();
+          };
+          card.addEventListener('pointermove',   tmpMove);
+          card.addEventListener('pointerup',     tmpUp);
+          card.addEventListener('pointercancel', tmpCancel);
+        });
+      },
+    };
+
+    // 目盛り＋0/(60)ラベルのSVG文字列（初回のみ生成してキャッシュ）
+    let _tileClockFaceStr = null;
+    function tileClockFaceStr() {
+      if (_tileClockFaceStr) return _tileClockFaceStr;
+      let s = '';
+      for (let i = 0; i < 60; i++) {
+        const ang     = i / 60 * 360;
+        const isHour  = i % 5  === 0;
+        const isQuart = i % 15 === 0;
+        const len   = isQuart ? 30 : isHour ? 22 : 10;
+        const width = isQuart ? 7  : isHour ? 5  : 2;
+        const color = isQuart ? '#1e40af' : isHour ? '#374151' : '#94a3b8';
+        const p1 = clockPtAbs(ang, TILE_R - len, TILE_CX, TILE_CY);
+        const p2 = clockPtAbs(ang, TILE_R - 2,   TILE_CX, TILE_CY);
+        s += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${color}" stroke-width="${width}" stroke-linecap="round"/>`;
+      }
+      const numR = TILE_R - 50;
+      const pos  = clockPtAbs(0, numR, TILE_CX, TILE_CY);
+      const attr = `text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="900" fill="#f87171" font-family="Noto Sans JP, Arial, sans-serif"`;
+      s += `<text x="${pos.x}" y="${pos.y - 13}" ${attr}>0</text>`;
+      s += `<text x="${pos.x}" y="${pos.y + 13}" ${attr}>(60)</text>`;
+      _tileClockFaceStr = s;
+      return s;
+    }
+
+    function tileSmallClockSvg(mins) {
+      const tip = clockPtAbs(mins / 60 * 360, 148, TILE_CX, TILE_CY);
+      const fan = tileArcPath(mins);
+      return `
+        <circle cx="${TILE_CX}" cy="${TILE_CY}" r="205" fill="#1e40af"/>
+        <circle cx="${TILE_CX}" cy="${TILE_CY}" r="198" fill="#3b82f6"/>
+        <circle cx="${TILE_CX}" cy="${TILE_CY}" r="190" fill="#fef9e7"/>
+        ${fan}
+        ${tileClockFaceStr()}
+        <line stroke="#3b82f6" stroke-width="7" stroke-linecap="round"
+              x1="${TILE_CX}" y1="${TILE_CY}" x2="${tip.x}" y2="${tip.y}"/>
+        <circle cx="${TILE_CX}" cy="${TILE_CY}" r="14" fill="#1e40af"/>
+        <circle cx="${TILE_CX}" cy="${TILE_CY}" r="8"  fill="#fff"/>
+        <circle cx="${TILE_CX}" cy="${TILE_CY}" r="4"  fill="#f87171"/>
+      `;
+    }
+
+    // 扇型（中心から外縁への塗りつぶし）
+    function tileArcPath(mins) {
+      if (mins <= 0) return '';
+      if (mins >= 60) {
+        // 完全な円（2つの半円で表現）
+        const top = clockPtAbs(0,   TILE_R, TILE_CX, TILE_CY);
+        const bot = clockPtAbs(180, TILE_R, TILE_CX, TILE_CY);
+        return `<path d="M ${top.x} ${top.y} A ${TILE_R} ${TILE_R} 0 1 1 ${bot.x} ${bot.y} A ${TILE_R} ${TILE_R} 0 1 1 ${top.x} ${top.y} Z" fill="#fb923c" opacity="0.35"/>`;
+      }
+      const dur   = Math.min(mins, 59.99);
+      const large = dur > 30 ? 1 : 0;
+      const p1 = clockPtAbs(0,               TILE_R, TILE_CX, TILE_CY);
+      const p2 = clockPtAbs(dur / 60 * 360,  TILE_R, TILE_CX, TILE_CY);
+      return `<path d="M ${TILE_CX} ${TILE_CY} L ${p1.x} ${p1.y} A ${TILE_R} ${TILE_R} 0 ${large} 1 ${p2.x} ${p2.y} Z" fill="#fb923c" opacity="0.35"/>`;
+    }
+
+    function clockPtAbs(angleDeg, radius, cx, cy) {
+      const rad = (angleDeg - 90) * Math.PI / 180;
+      return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
+    }
+
+    function makeTileCard(mins, onTap) {
+      const isFull = mins === 60;
+      const div = document.createElement('div');
+      div.className = 'tile-card' + (isFull ? ' full' : '');
+      div.style.width = div.style.height = '148px';
+      div.style.overflow = 'hidden';
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const s = document.createElementNS(svgNS, 'svg');
+      s.setAttribute('viewBox', '-28 -28 476 476');
+      s.setAttribute('width', '148');
+      s.setAttribute('height', '148');
+      s.innerHTML = tileSmallClockSvg(mins);
+      div.appendChild(s);
+      div.addEventListener('pointerup', e => {
+        if (Math.abs(e.clientX - (div._pdX||e.clientX)) < 5 && Math.abs(e.clientY - (div._pdY||e.clientY)) < 5) {
+          onTap();
+        }
+      });
+      div.addEventListener('pointerdown', e => { div._pdX = e.clientX; div._pdY = e.clientY; });
+      return div;
+    }
+
+    // ─── Tile edit clock ──────────────────────────────────
+
+    let tileEditDrag = null;
+
+    function renderTileEditClock(mins) {
+      const ns = 'http://www.w3.org/2000/svg';
+      const svg = document.getElementById('tileEditSvg');
+
+      // Ticks — same style as main clock
+      const tickG = document.getElementById('tileEditTicksGroup');
+      if (!tickG._rendered) {
+        tickG.innerHTML = '';
+        for (let i = 0; i < 60; i++) {
+          const ang     = i / 60 * 360;
+          const isHour  = i % 5 === 0;
+          const isQuart = i % 15 === 0;
+          const len   = isQuart ? 30 : isHour ? 22 : 10;
+          const width = isQuart ? 7  : isHour ? 5  : 2;
+          const color = isQuart ? '#1e40af' : isHour ? '#374151' : '#94a3b8';
+          const p1 = clockPtAbs(ang, TILE_R - len, TILE_CX, TILE_CY);
+          const p2 = clockPtAbs(ang, TILE_R - 2,   TILE_CX, TILE_CY);
+          const ln = document.createElementNS(ns, 'line');
+          ln.setAttribute('x1', p1.x); ln.setAttribute('y1', p1.y);
+          ln.setAttribute('x2', p2.x); ln.setAttribute('y2', p2.y);
+          ln.setAttribute('stroke', color);
+          ln.setAttribute('stroke-width', width);
+          ln.setAttribute('stroke-linecap', 'round');
+          tickG.appendChild(ln);
+        }
+        tickG._rendered = true;
+      }
+
+      // Numbers — conv style: only 0 and (60) at 12 o'clock in soft red
+      const numG = document.getElementById('tileEditNumbersGroup');
+      if (!numG._rendered) {
+        numG.innerHTML = '';
+        const numR = TILE_R - 50;
+        const pos  = clockPtAbs(0, numR, TILE_CX, TILE_CY);
+        function addConvLabel(x, y, text) {
+          const t = document.createElementNS(ns, 'text');
+          t.setAttribute('x', x); t.setAttribute('y', y);
+          t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('dominant-baseline', 'central');
+          t.setAttribute('font-size', '24');
+          t.setAttribute('font-weight', '900');
+          t.setAttribute('fill', '#f87171');
+          t.setAttribute('font-family', 'Noto Sans JP, Arial, sans-serif');
+          t.textContent = text;
+          numG.appendChild(t);
+        }
+        addConvLabel(pos.x, pos.y - 13, '0');
+        addConvLabel(pos.x, pos.y + 13, '(60)');
+        numG._rendered = true;
+      }
+
+      // Arc
+      const arcG = document.getElementById('tileEditArcGroup');
+      arcG.innerHTML = mins > 0 ? tileArcPath(mins) : '';
+
+      // Hand
+      const hand = document.getElementById('tileEditHand');
+      const tip  = clockPtAbs(mins / 60 * 360, 148, TILE_CX, TILE_CY);
+      hand.setAttribute('x2', tip.x);
+      hand.setAttribute('y2', tip.y);
+
+      // Drag (bind once)
+      if (!tileEditDrag) {
+        tileEditDrag = { active: false, prevAngle: null, floatMins: 0 };
+        svg.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          svg.setPointerCapture(e.pointerId);
+          tileEditDrag.active = true;
+          tileEditDrag.prevAngle = null;
+          // 整数に丸めた値ではなく、現在の値をそのまま浮動小数として保持
+          if (tilesMgr.editingTile) {
+            const { col, idx } = tilesMgr.editingTile;
+            tileEditDrag.floatMins = col === 'min' ? tilesMgr.minTiles[idx] : tilesMgr.hourTiles[idx];
+          }
+        });
+        svg.addEventListener('pointermove', e => {
+          if (!tileEditDrag.active || !tilesMgr.editingTile) return;
+          const rect = svg.getBoundingClientRect();
+          const svgScale = 420 / rect.width;
+          const lx = (e.clientX - rect.left) * svgScale;
+          const ly = (e.clientY - rect.top)  * svgScale;
+          const angle = Math.atan2(lx - TILE_CX, -(ly - TILE_CY)) * 180 / Math.PI;
+          const normAngle = (angle + 360) % 360;
+          if (tileEditDrag.prevAngle === null) {
+            tileEditDrag.prevAngle = normAngle;
+            return;
+          }
+          let delta = normAngle - tileEditDrag.prevAngle;
+          if (delta > 180)  delta -= 360;
+          if (delta < -180) delta += 360;
+          tileEditDrag.prevAngle = normAngle;
+          // floatMins で連続的に累積（丸め誤差なし）
+          tileEditDrag.floatMins = Math.max(0, Math.min(60, tileEditDrag.floatMins + delta / 360 * 60));
+          // 表示は丸めた値で更新するが、minTiles への書き戻しはしない
+          const displayMins = Math.round(tileEditDrag.floatMins);
+          document.getElementById('tileEditLabel').textContent = displayMins + ' 分';
+          updateTileEditClockDisplay(displayMins);
+        });
+        const commitDrag = () => {
+          if (!tileEditDrag.active) return;
+          tileEditDrag.active = false;
+          if (tilesMgr.editingTile) {
+            const { col, idx } = tilesMgr.editingTile;
+            const finalMins = Math.round(tileEditDrag.floatMins);
+            if (col === 'min') tilesMgr.minTiles[idx]  = finalMins;
+            else               tilesMgr.hourTiles[idx] = finalMins;
+          }
+          tilesMgr.render(); // 確定後に一度だけタイル再描画
+        };
+        svg.addEventListener('pointerup',     commitDrag);
+        svg.addEventListener('pointercancel', commitDrag);
+      }
+    }
+
+    // ドラッグ中の軽量更新（弧と針の属性のみ、DOM再生成なし）
+    function updateTileEditClockDisplay(mins) {
+      // 弧: innerHTML でパス文字列を差し替えるだけ（軽量）
+      document.getElementById('tileEditArcGroup').innerHTML = mins > 0 ? tileArcPath(mins) : '';
+      // 針: 属性書き換えのみ
+      const tip  = clockPtAbs(mins / 60 * 360, 148, TILE_CX, TILE_CY);
+      const hand = document.getElementById('tileEditHand');
+      hand.setAttribute('x2', tip.x);
+      hand.setAttribute('y2', tip.y);
+    }
+
+    // Close tile edit when tapping outside
+    document.addEventListener('pointerdown', e => {
+      if (convSubMode !== 'tiles') return;
+      const ep = document.getElementById('tileEditPanel');
+      if (ep.style.display === 'none') return;
+      if (!ep.contains(e.target)) {
+        tilesMgr._closeEdit();
+      }
+    });
+
+    // ─── Drag-drop helpers ────────────────────────────────
+
+    function getColumnAtPoint(cx, cy) {
+      const hb = document.getElementById('hourColBody');
+      const mb = document.getElementById('minColBody');
+      const hr = hb.getBoundingClientRect();
+      const mr = mb.getBoundingClientRect();
+      if (cx >= hr.left && cx <= hr.right && cy >= hr.top - 20 && cy <= hr.bottom + 20) return 'hour';
+      if (cx >= mr.left && cx <= mr.right && cy >= mr.top - 20 && cy <= mr.bottom + 20) return 'min';
+      return null;
+    }
+
+    function highlightDropTarget(cx, cy) {
+      const target = getColumnAtPoint(cx, cy);
+      document.getElementById('hourColBody').classList.toggle('drag-over', target === 'hour');
+      document.getElementById('minColBody').classList.toggle('drag-over', target === 'min');
+    }
+
+    function clearDropHighlights() {
+      document.getElementById('hourColBody').classList.remove('drag-over');
+      document.getElementById('minColBody').classList.remove('drag-over');
+    }
+
+    // ─── タイルモード 手書きキャンバス（2列） ────────────
+
+    const tileDrawInited = new Set();
+
+    function attachDrawCanvas(canvasId, clearBtnId) {
+      if (tileDrawInited.has(canvasId)) return;
+      tileDrawInited.add(canvasId);
+
+      const canvas = document.getElementById(canvasId);
+      const dpr    = window.devicePixelRatio || 1;
+
+      // 解像度をCSS表示サイズに合わせる
+      const rect = canvas.getBoundingClientRect();
+      canvas.width  = rect.width  * dpr;
+      canvas.height = rect.height * dpr;
+
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      ctx.strokeStyle = '#1f2933';
+      ctx.lineWidth   = 4;
+      ctx.lineCap     = 'round';
+      ctx.lineJoin    = 'round';
+      let drawing = false;
+
+      function canvasPos(e) {
+        const r = canvas.getBoundingClientRect();
+        return [e.clientX - r.left, e.clientY - r.top];
+      }
+
+      canvas.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        canvas.setPointerCapture(e.pointerId);
+        drawing = true;
+        ctx.beginPath();
+        ctx.moveTo(...canvasPos(e));
+      });
+      canvas.addEventListener('pointermove', e => {
+        if (!drawing) return;
+        e.preventDefault();
+        ctx.lineTo(...canvasPos(e));
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(...canvasPos(e));
+      });
+      canvas.addEventListener('pointerup',     () => { drawing = false; });
+      canvas.addEventListener('pointercancel', () => { drawing = false; });
+
+      document.getElementById(clearBtnId).addEventListener('click', () => {
+        const r = canvas.getBoundingClientRect();
+        ctx.clearRect(0, 0, r.width * dpr, r.height * dpr);
+      });
+    }
+
+    function initTileDrawCanvases() {
+      // requestAnimationFrame でレイアウト確定後に初期化
+      requestAnimationFrame(() => {
+        attachDrawCanvas('hourDrawCanvas', 'hourDrawClear');
+        attachDrawCanvas('minDrawCanvas',  'minDrawClear');
+      });
+    }
 
     // ─── Init ────────────────────────────────────────────
     renderTicks();
