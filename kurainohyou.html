@@ -202,6 +202,14 @@
       flex-direction: column;
       overflow: hidden;
     }
+    .zone-place-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+    .zone-place-header .zone-title { margin-bottom: 0; }
     .zone-title {
       font-size: 12px;
       font-weight: 800;
@@ -459,7 +467,29 @@
 
     /* remove モード */
     .remove-mode .tile-area .tile { cursor: pointer; }
-    .remove-mode .tile-area .tile:hover { filter: brightness(1.4); transform: scale(1.1); }
+    .remove-mode .tile-area .tile:not(.removed):hover { filter: brightness(1.4); transform: scale(1.1); }
+    .remove-mode .tile-area .tile.removed:hover { opacity: 0.45; transform: scale(1.05); }
+
+    /* 消したタイル */
+    .tile.removed {
+      opacity: 0.28;
+      cursor: pointer;
+      position: relative;
+      overflow: visible;
+    }
+    .tile.removed::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      background: linear-gradient(
+        to bottom right,
+        transparent calc(50% - 1.5px),
+        #1f2933 calc(50% - 1.5px),
+        #1f2933 calc(50% + 1.5px),
+        transparent calc(50% + 1.5px)
+      );
+      pointer-events: none;
+    }
 
     /* 予約済みタイル（くりあがり元） */
     .tile.reserved {
@@ -855,7 +885,10 @@
   <div class="app-layout" id="appLayout">
     <div class="left-pane" id="leftPane">
       <section class="zone-place">
-        <div class="zone-title">くらいのひょう</div>
+        <div class="zone-place-header">
+          <div class="zone-title">くらいのひょう</div>
+          <button id="removeModeBtn" class="toolbar-btn" style="display:none">ひく</button>
+        </div>
         <div class="place-table-wrap" id="placeTableWrap">
           <div class="place-table" id="placeTable"></div>
         </div>
@@ -923,10 +956,11 @@ const state = {
   gutiMode:    true,
   hissanMode:  false,
   showWriteRow: false,
+  removeMode:  false,
   topPlace:    10,
   botPlace:    1,
   nextId:      0,
-  tiles:       [],      // { id, placeValue, row, reserved? }
+  tiles:       [],      // { id, placeValue, row, reserved?, removed? }
   carryZone:   [],      // { id, placeValue, row?, sourceId?, result? }
   animNewTiles:     new Set(),
   animNewTileOrder: [],
@@ -939,6 +973,7 @@ const subBtn        = $('subBtn');
 const hissanBtn     = $('hissanBtn');
 const resetBtn      = $('resetBtn');
 const writeRowBtn   = $('writeRowBtn');
+const removeModeBtn = $('removeModeBtn');
 const tilePalette   = $('tilePalette');
 const gutiPane      = $('gutiPane');
 const appLayout     = $('appLayout');
@@ -1260,18 +1295,27 @@ function renderPlaceTable() {
 function makeTileEl(tile, placeDef) {
   const el = document.createElement('div');
   const isNew = state.animNewTiles.has(tile.id);
-  // 複数タイルが同時に生成された場合はstagger、単体は通常pop
   const orderIdx = state.animNewTileOrder.indexOf(tile.id);
   const useStagger = isNew && orderIdx >= 0 && state.animNewTileOrder.length > 1;
   el.className = 'tile ' + placeDef.cls
     + (isNew && !useStagger ? ' tile-new' : '')
     + (useStagger ? ' tile-stagger' : '')
-    + (tile.reserved ? ' reserved' : '');
+    + (tile.reserved ? ' reserved' : '')
+    + (tile.removed  ? ' removed'  : '');
   if (useStagger) el.style.animationDelay = (orderIdx * 55) + 'ms';
   el.dataset.tileId = tile.id;
   el.textContent = placeLabelShort(placeDef.value);
 
-  if (!tile.reserved) attachTileDrag(el, tile);
+  if (state.removeMode && !tile.reserved) {
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      tile.removed = !tile.removed;
+      renderAll();
+    });
+  } else if (!tile.reserved && !tile.removed) {
+    attachTileDrag(el, tile);
+  }
   return el;
 }
 
@@ -1752,6 +1796,20 @@ function renderAll() {
     if (inputA.value !== strA) inputA.value = strA;
     if (inputB.value !== strB) inputB.value = strB;
   }
+  // ひきざんモード：全タイル=ひかれる数、斜線タイル=ひくかず
+  if (state.opMode === 'sub' && !syncingFromInput) {
+    let valA = 0, valB = 0;
+    realPlaces().forEach(p => {
+      const all     = state.tiles.filter(t => t.placeValue === p.value && !t.ghost);
+      const removed = all.filter(t => t.removed);
+      valA += all.length     * p.value;
+      valB += removed.length * p.value;
+    });
+    const strA = valA > 0 ? String(Math.round(valA * 100000) / 100000) : '';
+    const strB = valB > 0 ? String(Math.round(valB * 100000) / 100000) : '';
+    if (inputA.value !== strA) inputA.value = strA;
+    if (inputB.value !== strB) inputB.value = strB;
+  }
 }
 
 // ── input → タイル同期 ────────────────────────────────
@@ -1786,8 +1844,11 @@ function applyUIState() {
   subBtn.classList.toggle('on',        state.opMode === 'sub');
   hissanBtn.classList.toggle('on',     state.hissanMode);
   writeRowBtn.classList.toggle('on',   state.showWriteRow);
+  removeModeBtn.classList.toggle('on', state.removeMode);
+  removeModeBtn.style.display = state.opMode === 'sub' ? '' : 'none';
   appLayout.classList.toggle('hissan-active', state.hissanMode);
   appLayout.classList.toggle('guti-active',   state.gutiMode);
+  appLayout.classList.toggle('remove-mode',   state.removeMode);
 
   opDisplay.textContent = state.opMode === 'add' ? '＋' : '－';
   labelA.textContent    = state.opMode === 'add' ? 'たされるかず' : 'ひかれるかず';
@@ -1796,7 +1857,9 @@ function applyUIState() {
 
 // ── イベント ─────────────────────────────────────────
 addBtn.addEventListener('click', () => {
-  state.opMode = 'add'; applyUIState(); renderAll();
+  state.opMode = 'add'; state.removeMode = false;
+  state.tiles.forEach(t => { t.removed = false; });
+  applyUIState(); renderAll();
 });
 subBtn.addEventListener('click', () => {
   state.opMode = 'sub'; applyUIState(); renderAll();
@@ -1807,10 +1870,14 @@ hissanBtn.addEventListener('click', () => {
 writeRowBtn.addEventListener('click', () => {
   state.showWriteRow = !state.showWriteRow; applyUIState(); renderAll();
 });
+removeModeBtn.addEventListener('click', () => {
+  state.removeMode = !state.removeMode; applyUIState(); renderAll();
+});
 resetBtn.addEventListener('click', () => {
   state.tiles = [];
   state.carryZone = [];
   state.nextId = 0;
+  state.removeMode = false;
   state.animNewTiles.clear();
   state.animNewTileOrder = [];
   inputA.value = ''; inputB.value = '';
