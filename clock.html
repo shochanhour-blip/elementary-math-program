@@ -89,6 +89,15 @@
       dominant-baseline: central;
       pointer-events: none;
     }
+    .num-min-outer {
+      font-family: "Noto Sans JP", Arial, sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      fill: #3b82f6;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
     .num-conv {
       font-family: "Noto Sans JP", Arial, sans-serif;
       font-size: 24px;
@@ -252,7 +261,7 @@
     .tiles-col-hd { text-align:center; font-size:1.5rem; font-weight:900; padding:12px 20px; background:#f8fafc; border-bottom:2px solid #e5e7eb; }
     .tiles-col-hd.hour-hd { color:#f97316; }
     .tiles-col-hd.min-hd  { color:#3b82f6; }
-    .tiles-col-body { padding:12px; display:flex; flex-direction:column; align-items:center; gap:10px; min-height:350px; min-width:172px; transition:background .15s; }
+    .tiles-col-body { flex:1; padding:12px; display:flex; flex-direction:column; align-items:center; gap:10px; min-height:200px; min-width:172px; overflow-y:auto; transition:background .15s; }
     .tiles-col-body.drag-over { background:#fef9c3; }
     .tile-card { cursor:pointer; border-radius:14px; border:2px solid #e5e7eb; background:#fff; transition:border-color .15s,background .15s; touch-action:none; user-select:none; -webkit-user-select:none; }
     .tile-card:hover    { border-color:#93c5fd; background:#eff6ff; }
@@ -267,7 +276,12 @@
     .tile-card-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
     .tile-card-mins { font-size:1.1rem; font-weight:700; color:#9ca3af; line-height:1; }
     .tile-drag-ghost { pointer-events:none; position:fixed; z-index:1000; opacity:.75; }
-    .tiles-draw-row { position:relative; border-top:2px solid #e5e7eb; flex:1; }
+    .tiles-draw-row { position:relative; border-top:2px solid #e5e7eb; flex-shrink:0; }
+    .tile-total-cell { font-size:1.5rem; font-weight:900; padding:8px 20px; border-radius:14px; text-align:center; flex-shrink:0; }
+    .tile-total-min  { color:#3b82f6; background:#eff6ff; }
+    .tile-total-hour { color:#f97316; background:#fff7ed; }
+    .tiles-toggle-btn { font-size:0.85rem; font-weight:700; padding:5px 16px; border:2px solid #d1d5db; border-radius:20px; background:#fff; color:#9ca3af; cursor:pointer; transition:background .15s, color .15s, border-color .15s; }
+    .tiles-toggle-btn.on { background:#eff6ff; color:#3b82f6; border-color:#93c5fd; }
     .tile-col-canvas { display:block; width:100%; height:180px; touch-action:none; cursor:crosshair; background:#fafafa; }
     .tile-draw-clear { position:absolute; bottom:6px; right:6px; background:#f1f5f9; border:1px solid #d1d5db; border-radius:8px; padding:3px 10px; font-size:0.8rem; cursor:pointer; color:#6b7280; line-height:1.4; }
     .tile-draw-clear:hover { background:#e2e8f0; }
@@ -492,6 +506,7 @@
 
     <!-- Tiles panel (conv sub-mode) -->
     <div id="tilesPanel" style="display:none" class="tiles-panel">
+      <button id="toggleHourTotalBtn" class="tiles-toggle-btn">じかんをひょうじ</button>
       <div class="tiles-layout">
         <div class="tiles-table">
           <div class="tiles-col" id="hourColDiv">
@@ -667,16 +682,28 @@
         return;
       }
 
-      if (!state.showMinuteMarks) {
+      if (state.showMinuteMarks === false) {
         for (let i = 1; i <= 12; i++) {
           const pos = clockPt(i / 12 * 360, numR);
           addText(g, pos, i, 'num-hour');
         }
-      } else {
+      } else if (state.showMinuteMarks === true) {
         for (let i = 0; i < 12; i++) {
           const m = i * 5;
           const pos = clockPt(m / 60 * 360, numR);
           addText(g, pos, m, 'num-min');
+        }
+      } else {
+        // 'both': hour numbers inside, minute numbers outside
+        const numROuter = R - 16;
+        for (let i = 1; i <= 12; i++) {
+          const pos = clockPt(i / 12 * 360, numR);
+          addText(g, pos, i, 'num-hour');
+        }
+        for (let i = 0; i < 12; i++) {
+          const m = i * 5;
+          const pos = clockPt(m / 60 * 360, numROuter);
+          addText(g, pos, m, 'num-min-outer');
         }
       }
     }
@@ -820,7 +847,9 @@
       }
       if (!drag) return;
       if (!drag.moved) {
-        state.showMinuteMarks = !state.showMinuteMarks;
+        if (state.showMinuteMarks === false) state.showMinuteMarks = true;
+        else if (state.showMinuteMarks === true) state.showMinuteMarks = 'both';
+        else state.showMinuteMarks = false;
         render();
       }
       drag = null;
@@ -1356,12 +1385,27 @@
         }
         resetConv();
         setConvSubMode('arc');
+        // 式パネルをデフォルトで開く
+        convEqOpen = true;
+        const eqP = document.getElementById('convEqPanel');
+        eqP.classList.add('open');
+        document.getElementById('convEqHandleBtn').textContent = '▼';
+        document.getElementById('convViewDots').classList.add('visible');
       } else {
         state.showMinuteMarks = false;
         document.getElementById('convArcs').innerHTML = '';
         document.getElementById('clockArea').style.display  = '';
         document.getElementById('tilesPanel').style.display = 'none';
         render();
+        // 数直線パネルをデフォルトで開く
+        numlineVisible = true;
+        document.getElementById('numlinePanel').classList.add('open');
+        document.getElementById('numlineHandleBtn').textContent = '▼';
+        document.getElementById('numlineModeSelect').style.display = '';
+        document.getElementById('drawModeBtn').style.display  = '';
+        document.getElementById('drawClearBtn').style.display = '';
+        document.getElementById('nlMemBtn').style.display     = '';
+        renderNumline();
       }
       setTimeout(scaleContent, 50);
     }
@@ -1646,6 +1690,14 @@
       setTimeout(scaleContent, 50);
     }
 
+    document.getElementById('toggleHourTotalBtn').addEventListener('click', () => {
+      tilesMgr.showHourTotal = !tilesMgr.showHourTotal;
+      const btn = document.getElementById('toggleHourTotalBtn');
+      btn.classList.toggle('on', tilesMgr.showHourTotal);
+      btn.textContent = tilesMgr.showHourTotal ? 'じかんをかくす' : 'じかんをひょうじ';
+      tilesMgr.render();
+    });
+
     // ─── Tiles mode manager ───────────────────────────────
 
     const TILE_SVG_SIZE = 72; // px per tile card SVG
@@ -1655,16 +1707,20 @@
     const tilesMgr = {
       // minTiles: array, always at least 1 entry; values 0–60
       // hourTiles: array of values 0–60 (each represents one 60-min period)
-      minTiles:  [0],
-      hourTiles: [],
+      minTiles:   [0],
+      hourTiles:  [],
       editingTile: null, // { col:'min'|'hour', idx:number }
+      showHourTotal:  false,
 
       totalTiles() { return this.minTiles.length + this.hourTiles.length; },
 
       reset() {
-        this.minTiles    = [0];
-        this.hourTiles   = [];
-        this.editingTile = null;
+        this.minTiles      = [0];
+        this.hourTiles     = [];
+        this.editingTile   = null;
+        this.showHourTotal = false;
+        const hBtn = document.getElementById('toggleHourTotalBtn');
+        if (hBtn) { hBtn.classList.remove('on'); hBtn.textContent = 'じかんをひょうじ'; }
         document.getElementById('tileEditPanel').style.display = 'none';
         this.render();
       },
@@ -1678,6 +1734,13 @@
       _renderMinCol() {
         const body = document.getElementById('minColBody');
         body.innerHTML = '';
+        if (this.showHourTotal) {
+          const minTotal = this.minTiles.reduce((s, m) => s + m, 0);
+          const minTotalCell = document.createElement('div');
+          minTotalCell.className = 'tile-total-cell tile-total-min';
+          minTotalCell.textContent = minTotal + '分';
+          body.appendChild(minTotalCell);
+        }
         this.minTiles.forEach((mins, i) => {
           const card = makeTileCard(mins, () => this._openEdit('min', i));
           if (mins === 60) this._makeDraggable(card, 'min', i);
@@ -1709,6 +1772,13 @@
       _renderHourCol() {
         const body = document.getElementById('hourColBody');
         body.innerHTML = '';
+        if (this.showHourTotal) {
+          const hourTotal = this.hourTiles.length;
+          const hourTotalCell = document.createElement('div');
+          hourTotalCell.className = 'tile-total-cell tile-total-hour';
+          hourTotalCell.textContent = hourTotal + '時間';
+          body.appendChild(hourTotalCell);
+        }
         this.hourTiles.forEach((mins, i) => {
           const card = makeTileCard(mins, () => this._openEdit('hour', i));
           this._makeDraggable(card, 'hour', i);
@@ -1778,19 +1848,28 @@
               this.hourTiles.push(srcMins);
               this.minTiles.splice(idx, 1);
               if (this.minTiles.length === 0) this.minTiles.push(0);
-              if (this.editingTile && this.editingTile.col === col && this.editingTile.idx === idx) this._closeEdit();
+              if (this.editingTile && this.editingTile.col === 'min') {
+                if (this.editingTile.idx === idx) this._closeEdit();
+                else if (this.editingTile.idx > idx) this.editingTile.idx -= 1;
+              }
               this.render();
             }
           } else if (target === 'min' && col === 'hour') {
-            // 末尾が空タイル(0分)なら上書き、そうでなければ追加
             const last = this.minTiles.length - 1;
             if (this.minTiles[last] === 0) {
               this.minTiles[last] = srcMins;
             } else {
-              this.minTiles.push(srcMins);
+              // 先頭に挿入：末尾が端数タイルのままなので＋ボタンが誤表示されない
+              this.minTiles.unshift(srcMins);
+              if (this.editingTile && this.editingTile.col === 'min') {
+                this.editingTile.idx += 1;
+              }
             }
             this.hourTiles.splice(idx, 1);
-            if (this.editingTile && this.editingTile.col === col && this.editingTile.idx === idx) this._closeEdit();
+            if (this.editingTile && this.editingTile.col === 'hour') {
+              if (this.editingTile.idx === idx) this._closeEdit();
+              else if (this.editingTile.idx > idx) this.editingTile.idx -= 1;
+            }
             this.render();
           }
         };
@@ -2156,6 +2235,17 @@
     // ─── Init ────────────────────────────────────────────
     renderTicks();
     render();
+
+    // 数直線パネルをデフォルトで開く
+    numlineVisible = true;
+    document.getElementById('numlinePanel').classList.add('open');
+    document.getElementById('numlineHandleBtn').textContent = '▼';
+    document.getElementById('numlineModeSelect').style.display = '';
+    document.getElementById('drawModeBtn').style.display  = '';
+    document.getElementById('drawClearBtn').style.display = '';
+    document.getElementById('nlMemBtn').style.display     = '';
+    renderNumline();
+    setTimeout(scaleContent, 50);
   </script>
 </body>
 </html>
