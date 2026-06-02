@@ -70,7 +70,7 @@
     #addBtn.on    { background: var(--c-add);   color: #fff; border-color: var(--c-add); }
     #subBtn.on    { background: var(--c-sub);   color: #fff; border-color: var(--c-sub); }
     #gutiBtn.on   { background: #16a34a;        color: #fff; border-color: #16a34a; }
-    #hissanBtn.on { background: #0ea5e9;        color: #fff; border-color: #0ea5e9; }
+    #hissanBtn.on { background: rgba(14,165,233,0.18); color: #0ea5e9; border-color: transparent; }
     .divider { width: 1px; height: 28px; background: #e5e7eb; flex-shrink: 0; }
     .reset-btn {
       padding: 9px 18px;
@@ -174,6 +174,50 @@
       gap: 10px;
     }
 
+    /* ── 式フィールド ── */
+    .zone-shiki {
+      background: var(--panel);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 10px 14px;
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .zone-shiki-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+    }
+    .zone-shiki-eq {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+    }
+    .zone-shiki .num-chip {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 8px 12px;
+      border-radius: 14px;
+      gap: 4px;
+    }
+    .zone-shiki .num-chip label {
+      font-size: 12px;
+    }
+    .zone-shiki .num-chip input {
+      width: 160px;
+      text-align: center;
+    }
+    .zone-shiki .op-display {
+      font-size: 36px;
+      padding: 0;
+    }
+
     .right-pane {
       flex: 0 0 0px;
       overflow: hidden;
@@ -188,6 +232,61 @@
       opacity: 1;
       display: flex;
       flex-direction: column;
+    }
+
+    /* ── 筆算タブ（右端固定） ── */
+    .hissan-tab {
+      position: fixed;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 26px;
+      height: 56px;
+      background: rgba(0,0,0,0.07);
+      border: none;
+      border-radius: 8px 0 0 8px;
+      font-size: 14px;
+      color: rgba(0,0,0,0.25);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 0;
+      transition: background .15s, color .15s;
+    }
+    .hissan-tab:hover {
+      background: rgba(0,0,0,0.15);
+      color: rgba(0,0,0,0.5);
+    }
+    .hissan-tab.on {
+      background: rgba(14,165,233,0.18);
+      color: #0ea5e9;
+    }
+
+    /* ── 位の表ヘッダー内ボタン群 ── */
+    .zone-place-mode-btns {
+      flex: 1;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .zone-place-mode-btns .mode-btn {
+      padding: 7px 14px;
+      font-size: 13px;
+    }
+    .zone-place-center-btns {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .zone-place-right-btns {
+      flex: 1;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
     }
 
     /* ── 位の表ゾーン ── */
@@ -395,6 +494,14 @@
       touch-action: none;
       cursor: crosshair;
     }
+    /* かずをかく出現時：タイルエリアを縮小・キャンバスを拡大 */
+    .place-table.has-write .place-body {
+      flex-shrink: 4;
+      min-height: 36px;
+    }
+    .place-table.has-write .write-canvas {
+      height: 182px;
+    }
     .write-clear {
       position: absolute;
       top: 3px;
@@ -470,6 +577,14 @@
     .remove-mode .tile-area .tile:not(.removed):hover { filter: brightness(1.4); transform: scale(1.1); }
     .remove-mode .tile-area .tile.removed:hover { opacity: 0.45; transform: scale(1.05); }
 
+    /* りょうがえ済みゴーストタイル */
+    .tile.exchanged {
+      opacity: 0.18;
+      cursor: default;
+      pointer-events: none;
+      filter: grayscale(0.4);
+    }
+
     /* 消したタイル */
     .tile.removed {
       opacity: 0.28;
@@ -532,6 +647,36 @@
       align-self: flex-start;
     }
     .carry-group:hover { background: rgba(249,115,22,0.18); }
+
+    /* りょうがえバンドル（ひきざんモード） */
+    .exchange-bundle-group {
+      display: flex;
+      flex-direction: row;
+      gap: 6px;
+      padding: 8px;
+      border: 3px solid #3b82f6;
+      border-radius: 12px;
+      background: rgba(59,130,246,0.08);
+      cursor: grab;
+      touch-action: none;
+      align-self: flex-start;
+      transition: background .15s;
+    }
+    .exchange-bundle-group:hover { background: rgba(59,130,246,0.18); }
+    .exchange-bundle-group.dragging { opacity: 0.3; }
+
+    /* 位の表内に置かれたりょうがえグループ枠 */
+    .exchange-group-frame {
+      display: flex;
+      flex-direction: row;
+      gap: 4px;
+      padding: 5px;
+      border: 3px solid #3b82f6;
+      border-radius: 10px;
+      background: rgba(59,130,246,0.08);
+      flex-shrink: 0;
+      align-self: flex-start;
+    }
 
     /* タイルパレット */
     .tile-palette {
@@ -599,7 +744,17 @@
       transition: background .12s, color .12s, border-color .12s;
     }
     .toolbar-btn.on { background: var(--c-place); color: #fff; border-color: var(--c-place); }
-    #removeModeBtn.on { background: #dc2626; color: #fff; border-color: #dc2626; }
+    #removeModeBtn {
+      font-size: 20px;
+      font-weight: 900;
+      padding: 5px 56px;
+      background: #f0fdf4;
+      color: #16a34a;
+      border-color: #86efac;
+      border-radius: 10px;
+      line-height: 1;
+    }
+    #removeModeBtn.on { background: #22c55e; color: #fff; border-color: #16a34a; }
 
     /* りょうがえ確認モーダル */
     .confirm-overlay {
@@ -861,33 +1016,20 @@
 <body>
 <div id="pageWrap">
 
-  <header class="controls">
-    <div class="controls-row">
-      <button id="addBtn"    class="mode-btn on">たしざん</button>
-      <button id="subBtn"    class="mode-btn">ひきざん</button>
-      <div class="divider"></div>
-      <div class="num-chip chip-a" id="numberInputRow">
-        <label id="labelA">たされるかず</label>
-        <input id="inputA" type="number" min="0" placeholder="0">
-      </div>
-      <span id="opDisplay" class="op-display">＋</span>
-      <div class="num-chip chip-b">
-        <label id="labelB">たすかず</label>
-        <input id="inputB" type="number" min="0" placeholder="0">
-      </div>
-      <div class="divider"></div>
-      <button id="hissanBtn" class="mode-btn">ひっさん</button>
-      <div class="divider"></div>
-      <button id="resetBtn" class="reset-btn">リセット</button>
-    </div>
-  </header>
-
   <div class="app-layout" id="appLayout">
     <div class="left-pane" id="leftPane">
       <section class="zone-place">
         <div class="zone-place-header">
-          <div class="zone-title">くらいのひょう</div>
-          <button id="removeModeBtn" class="toolbar-btn" style="display:none">ひく</button>
+          <div class="zone-place-mode-btns">
+            <button id="addBtn" class="mode-btn on">たしざん</button>
+            <button id="subBtn" class="mode-btn">ひきざん</button>
+          </div>
+          <div class="zone-place-center-btns">
+            <button id="removeModeBtn" class="toolbar-btn" style="display:none">ひく</button>
+          </div>
+          <div class="zone-place-right-btns">
+            <button id="resetBtn" class="reset-btn">リセット</button>
+          </div>
         </div>
         <div class="place-table-wrap" id="placeTableWrap">
           <div class="place-table" id="placeTable"></div>
@@ -902,12 +1044,25 @@
 
     <!-- 具体物ペイン（gutiMode時にスライドイン） -->
     <div class="guti-pane" id="gutiPane">
+      <section class="zone-shiki">
+        <div class="zone-shiki-eq">
+          <div class="num-chip chip-a">
+            <label id="labelA">たされるかず</label>
+            <input id="inputA" type="number" min="0" placeholder="0">
+          </div>
+          <span id="opDisplay" class="op-display">＋</span>
+          <div class="num-chip chip-b">
+            <label id="labelB">たすかず</label>
+            <input id="inputB" type="number" min="0" placeholder="0">
+          </div>
+        </div>
+      </section>
       <section class="zone-palette">
         <div class="zone-title">タイル</div>
         <div id="tilePalette" class="tile-palette"></div>
       </section>
       <section class="zone-carry">
-        <div class="zone-title">くりあがりゾーン</div>
+        <div class="zone-title" id="carryZoneTitle">くりあがりゾーン</div>
         <div id="carryZone" class="carry-zone-area">
           <div class="carry-zone-empty">ここにタイルをおくる</div>
         </div>
@@ -935,6 +1090,7 @@
     </div>
   </div>
 
+  <button id="hissanBtn" class="hissan-tab">◀</button>
 </div>
 
 <script>
@@ -962,6 +1118,7 @@ const state = {
   nextId:      0,
   tiles:       [],      // { id, placeValue, row, reserved?, removed? }
   carryZone:   [],      // { id, placeValue, row?, sourceId?, result? }
+  exchangeZone: [],    // { id, lowerPV, upperPV } — りょうがえバンドル（ひきざん用）
   animNewTiles:     new Set(),
   animNewTileOrder: [],
 };
@@ -983,7 +1140,8 @@ const confirmModal  = $('confirmModal');
 const confirmYesBtn = $('confirmYes');
 const confirmNoBtn  = $('confirmNo');
 const confirmMsg    = $('confirmMsg');
-const carryZoneEl   = $('carryZone');
+const carryZoneEl    = $('carryZone');
+const carryZoneTitle = $('carryZoneTitle');
 let pendingAction = null;
 const inputA        = $('inputA');
 const inputB        = $('inputB');
@@ -1104,6 +1262,30 @@ function getLowerPlace(pv) {
   return (idx >= 0 && idx < PLACE_DEFS.length - 1) ? PLACE_DEFS[idx + 1].value : null;
 }
 
+// ── りょうがえゾーンにタイルを送る（ひきざんモード）────────────
+function addToExchangeZone(sourceTileId) {
+  const src = state.tiles.find(t => t.id === sourceTileId);
+  if (!src || src.reserved || src.exchanged) return;
+  const lowerPV = getLowerPlace(src.placeValue);
+  if (lowerPV === null) return;
+  src.exchanged = true;
+  state.exchangeZone.push({ id: state.nextId++, lowerPV, upperPV: src.placeValue, sourceId: sourceTileId });
+}
+
+// ── りょうがえバンドルを位の表に配置 ─────────────────────────
+function placeExchangeBundle(bundleId, targetPV, targetRow) {
+  const bundle = state.exchangeZone.find(b => b.id === bundleId);
+  if (!bundle || bundle.lowerPV !== targetPV) return;
+  state.exchangeZone = state.exchangeZone.filter(b => b.id !== bundleId);
+  const groupId = state.nextId++;
+  for (let i = 0; i < 10; i++) {
+    const nid = state.nextId++;
+    state.tiles.push({ id: nid, placeValue: targetPV, row: targetRow || null, groupId });
+    state.animNewTiles.add(nid);
+    state.animNewTileOrder.push(nid);
+  }
+}
+
 // ── 位の表レンダリング ───────────────────────────────
 function renderPlaceTable() {
   const table      = $('placeTable');
@@ -1217,15 +1399,39 @@ function renderPlaceTable() {
       if (rowKey) tileArea.dataset.row = rowKey;
 
       const allCellTiles  = state.tiles.filter(t => t.placeValue === p.value && rowFilter(t));
-      const normalTiles   = allCellTiles.filter(t => !t.reserved);
-      const reservedTiles = allCellTiles.filter(t => t.reserved);
+      const normalTiles    = allCellTiles.filter(t => !t.reserved && !t.exchanged);
+      const exchangedTiles = allCellTiles.filter(t => t.exchanged);
+      const reservedTiles  = allCellTiles.filter(t => t.reserved);
 
-      normalTiles.forEach(tile => tileArea.appendChild(makeTileEl(tile, p)));
+      // グループなしタイルを個別描画、groupIdありはまとめて枠で囲む
+      const groupMap = {};
+      normalTiles.forEach(tile => {
+        if (tile.groupId !== undefined) {
+          if (!groupMap[tile.groupId]) groupMap[tile.groupId] = [];
+          groupMap[tile.groupId].push(tile);
+        } else {
+          tileArea.appendChild(makeTileEl(tile, p));
+        }
+      });
+      Object.values(groupMap).forEach(tiles => {
+        if (tiles.length === 0) return;
+        const frame = document.createElement('div');
+        frame.className = 'exchange-group-frame';
+        const colCount = Math.max(1, Math.ceil(tiles.length / 5));
+        for (let c = 0; c < colCount; c++) {
+          const col = document.createElement('div');
+          col.className = 'carry-col';
+          tiles.slice(c * 5, (c + 1) * 5).forEach(tile => col.appendChild(makeTileEl(tile, p)));
+          frame.appendChild(col);
+        }
+        tileArea.appendChild(frame);
+      });
+      exchangedTiles.forEach(tile => tileArea.appendChild(makeTileEl(tile, p)));
       reservedTiles.forEach(tile => tileArea.appendChild(makeTileEl(tile, p)));
 
       const realCount  = allCellTiles.length;
       const totalCount = isSplit ? state.tiles.filter(t => t.placeValue === p.value).length : realCount;
-      if (realCount >= 10 || totalCount >= 10) cell.classList.add('over-limit');
+      if (state.opMode !== 'sub' && (realCount >= 10 || totalCount >= 10)) cell.classList.add('over-limit');
 
       cell.appendChild(tileArea);
       body.appendChild(cell);
@@ -1300,13 +1506,16 @@ function makeTileEl(tile, placeDef) {
   el.className = 'tile ' + placeDef.cls
     + (isNew && !useStagger ? ' tile-new' : '')
     + (useStagger ? ' tile-stagger' : '')
-    + (tile.reserved ? ' reserved' : '')
-    + (tile.removed  ? ' removed'  : '');
+    + (tile.reserved  ? ' reserved'  : '')
+    + (tile.removed   ? ' removed'   : '')
+    + (tile.exchanged ? ' exchanged' : '');
   if (useStagger) el.style.animationDelay = (orderIdx * 55) + 'ms';
   el.dataset.tileId = tile.id;
   el.textContent = placeLabelShort(placeDef.value);
 
-  if (state.removeMode && !tile.reserved) {
+  if (tile.exchanged) {
+    // ゴーストは操作不可
+  } else if (state.removeMode && !tile.reserved) {
     el.addEventListener('pointerdown', e => {
       e.preventDefault();
       e.stopPropagation();
@@ -1374,9 +1583,45 @@ function attachWriteCanvas(canvas) {
   canvas.addEventListener('pointercancel', () => { drawing = false; });
 }
 
-// ── くりあがりゾーン描画 ─────────────────────────────
+// ── くりあがり/りょうがえゾーン描画 ──────────────────────────
 function renderCarryZone() {
   carryZoneEl.innerHTML = '';
+
+  // ── りょうがえゾーン（ひきざんモード）──
+  if (state.opMode === 'sub') {
+    if (state.exchangeZone.length === 0) {
+      carryZoneEl.innerHTML = '<div class="carry-zone-empty">ここにタイルをおくる</div>';
+      return;
+    }
+    state.exchangeZone.forEach(bundle => {
+      const lowerPD = PLACE_DEFS.find(d => d.value === bundle.lowerPV);
+      if (!lowerPD) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'exchange-bundle-group';
+      for (let c = 0; c < 2; c++) {
+        const col = document.createElement('div');
+        col.className = 'carry-col';
+        col.style.pointerEvents = 'none';
+        for (let r = 0; r < 5; r++) {
+          const tEl = document.createElement('div');
+          tEl.className = `tile ${lowerPD.cls}`;
+          tEl.textContent = placeLabelShort(lowerPD.value);
+          tEl.style.pointerEvents = 'none';
+          col.appendChild(tEl);
+        }
+        wrap.appendChild(col);
+      }
+      wrap.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        startDrag(e, wrap, { type: 'exchange-bundle', bundleId: bundle.id, placeValue: bundle.lowerPV });
+      });
+      carryZoneEl.appendChild(wrap);
+    });
+    return;
+  }
+
+  // ── くりあがりゾーン（たしざんモード）──
   const ghosts  = state.carryZone.filter(t => !t.result);
   const results = state.carryZone.filter(t =>  t.result);
 
@@ -1542,11 +1787,26 @@ function startDrag(e, el, payload) {
       return;
     }
 
-    // 通常タイル → くりあがりゾーンにドロップ
+    // 通常タイル → くりあがり/りょうがえゾーンにドロップ
     const onCarryZone = under?.closest('#carryZone');
     if (onCarryZone && payload.type === 'tile') {
-      addToCarryZone(payload.tileId);
+      if (state.opMode === 'sub') {
+        addToExchangeZone(payload.tileId);
+      } else {
+        addToCarryZone(payload.tileId);
+      }
       renderAll();
+      return;
+    }
+
+    // りょうがえバンドル → 位の表に配置
+    if (payload.type === 'exchange-bundle') {
+      if (targetPV !== null && targetPV === payload.placeValue) {
+        const tileArea = under?.closest('.tile-area');
+        const targetRow = tileArea?.dataset.row || cell?.dataset.row || null;
+        placeExchangeBundle(payload.bundleId, targetPV, targetRow);
+        renderAll();
+      }
       return;
     }
 
@@ -1632,6 +1892,7 @@ function isValidDrop(payload, targetPV) {
     const lower = getLowerPlace(payload.placeValue);
     return lower !== null && targetPV === lower;
   }
+  if (payload.type === 'exchange-bundle') return targetPV === payload.placeValue;
   return false;
 }
 
@@ -1760,7 +2021,7 @@ function autoScaleTileAreas() {
       const pad = 16;
       const czW = czArea.clientWidth  - pad;
       const czH = czArea.clientHeight - pad;
-      const groups = czArea.querySelectorAll('.carry-group, .carry-zone-group');
+      const groups = czArea.querySelectorAll('.carry-group, .carry-zone-group, .exchange-bundle-group');
       // 複数グループがある場合は高さを均等配分
       const perH = groups.length > 0 ? Math.floor((czH - (groups.length - 1) * 8) / groups.length) : czH;
       groups.forEach(g => {
@@ -1815,6 +2076,44 @@ function renderAll() {
 // ── input → タイル同期 ────────────────────────────────
 let syncingFromInput = false;
 
+function syncTilesFromInputSub(rawValue) {
+  syncingFromInput = true;
+  state.tiles = [];
+  state.carryZone = [];
+  state.exchangeZone = [];
+  state.animNewTiles.clear();
+  state.animNewTileOrder = [];
+
+  const value = parseFloat(rawValue);
+  if (value > 0) {
+    // 必要な位まで列を自動拡張
+    const allDefs = PLACE_DEFS.filter(d => !d.isDot);
+    for (const pd of allDefs) {
+      if (value >= pd.value) {
+        const curIdx = allDefs.findIndex(d => d.value === state.topPlace);
+        const newIdx = allDefs.findIndex(d => d.value === pd.value);
+        if (newIdx < curIdx) state.topPlace = pd.value;
+        break;
+      }
+    }
+
+    let remaining = Math.round(value * 100000) / 100000;
+    realPlaces().forEach(p => {
+      const count = Math.floor(Math.round(remaining / p.value * 1000000) / 1000000);
+      for (let i = 0; i < count; i++) {
+        const id = state.nextId++;
+        state.tiles.push({ id, placeValue: p.value, row: 'a' });
+        state.animNewTiles.add(id);
+        state.animNewTileOrder.push(id);
+      }
+      remaining = Math.round((remaining - count * p.value) * 100000) / 100000;
+    });
+  }
+
+  renderAll();
+  syncingFromInput = false;
+}
+
 function syncTilesFromInput(row, rawValue) {
   syncingFromInput = true;
   // このrowの予約済みタイルに対応するcarryZoneゴーストも削除
@@ -1843,9 +2142,13 @@ function applyUIState() {
   addBtn.classList.toggle('on',        state.opMode === 'add');
   subBtn.classList.toggle('on',        state.opMode === 'sub');
   hissanBtn.classList.toggle('on',     state.hissanMode);
+  hissanBtn.textContent = state.hissanMode ? '▶' : '◀';
   writeRowBtn.classList.toggle('on',   state.showWriteRow);
   removeModeBtn.classList.toggle('on', state.removeMode);
   removeModeBtn.style.display = state.opMode === 'sub' ? '' : 'none';
+  if (carryZoneTitle) {
+    carryZoneTitle.textContent = state.opMode === 'sub' ? 'りょうがえゾーン' : 'くりあがりゾーン';
+  }
   appLayout.classList.toggle('hissan-active', state.hissanMode);
   appLayout.classList.toggle('guti-active',   state.gutiMode);
   appLayout.classList.toggle('remove-mode',   state.removeMode);
@@ -1858,6 +2161,8 @@ function applyUIState() {
 // ── イベント ─────────────────────────────────────────
 addBtn.addEventListener('click', () => {
   state.opMode = 'add'; state.removeMode = false;
+  state.exchangeZone = [];
+  state.tiles = state.tiles.filter(t => !t.exchanged);
   state.tiles.forEach(t => { t.removed = false; });
   applyUIState(); renderAll();
 });
@@ -1876,6 +2181,7 @@ removeModeBtn.addEventListener('click', () => {
 resetBtn.addEventListener('click', () => {
   state.tiles = [];
   state.carryZone = [];
+  state.exchangeZone = [];
   state.nextId = 0;
   state.removeMode = false;
   state.animNewTiles.clear();
@@ -1885,7 +2191,7 @@ resetBtn.addEventListener('click', () => {
 });
 inputA.addEventListener('input', () => {
   if (state.opMode === 'add') syncTilesFromInput('a', inputA.value);
-  else renderAll();
+  else syncTilesFromInputSub(inputA.value);
 });
 inputB.addEventListener('input', () => {
   if (state.opMode === 'add') syncTilesFromInput('b', inputB.value);
