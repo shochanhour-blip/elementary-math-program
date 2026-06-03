@@ -1371,10 +1371,18 @@
       document.getElementById('numlinePanel').style.display  = mode === 'clock' ? '' : 'none';
       document.getElementById('convPanel').style.display     = mode === 'conv'  ? '' : 'none';
       document.getElementById('convEqPanel').style.display   = mode === 'conv'  ? 'block' : 'none';
-      document.getElementById('hourHand').style.display      = mode === 'conv'  ? 'none' : '';
-      document.getElementById('hourHandGhost').style.display = 'none';
+      document.getElementById('hourHand').style.display        = mode === 'conv' ? 'none' : '';
+      document.getElementById('hourHandGhost').style.display   = 'none';
+      document.getElementById('minuteHandGhost').style.display = 'none';
 
       if (mode === 'conv') {
+        // メモリ状態をリセット（透過針がモード2に持ち越されないよう）
+        memory.active  = false;
+        memory.hours   = null;
+        memory.minutes = null;
+        memory.ampm    = null;
+        document.getElementById('memBtn').classList.remove('recording');
+        document.getElementById('nlMemBtn').classList.remove('recording');
         state.showMinuteMarks = true;
         state.hours   = 12;
         state.minutes = 0;

@@ -108,6 +108,10 @@
     .num-chip input:focus { outline: none; box-shadow: 0 0 0 3px rgba(0,0,0,.12); }
     .chip-a { background: #fef2f2; color: var(--c-add); }
     .chip-b { background: #eff6ff; color: var(--c-sub); }
+    #chipB.sub-correct input { border-color: #ef4444 !important; }
+    .input-wrap { position: relative; }
+    #subCorrectMark { position: absolute; top: -10px; right: -10px; font-size: 1.1rem; display: none; line-height: 1; z-index: 10; }
+    #subCorrectMark.visible { display: block; }
     .op-display { font-size: 32px; font-weight: 900; color: #6b7280; padding: 0 4px; }
 
     /* ── メインレイアウト ── */
@@ -1025,7 +1029,6 @@
             <button id="subBtn" class="mode-btn">ひきざん</button>
           </div>
           <div class="zone-place-center-btns">
-            <button id="removeModeBtn" class="toolbar-btn" style="display:none">ひく</button>
           </div>
           <div class="zone-place-right-btns">
             <button id="resetBtn" class="reset-btn">リセット</button>
@@ -1051,9 +1054,12 @@
             <input id="inputA" type="number" min="0" placeholder="0">
           </div>
           <span id="opDisplay" class="op-display">＋</span>
-          <div class="num-chip chip-b">
+          <div class="num-chip chip-b" id="chipB">
             <label id="labelB">たすかず</label>
-            <input id="inputB" type="number" min="0" placeholder="0">
+            <div class="input-wrap">
+              <input id="inputB" type="number" min="0" placeholder="0">
+              <span id="subCorrectMark">⭕️</span>
+            </div>
           </div>
         </div>
       </section>
@@ -1515,12 +1521,39 @@ function makeTileEl(tile, placeDef) {
 
   if (tile.exchanged) {
     // ゴーストは操作不可
-  } else if (state.removeMode && !tile.reserved) {
+  } else if (state.opMode === 'sub' && !tile.reserved) {
     el.addEventListener('pointerdown', e => {
       e.preventDefault();
       e.stopPropagation();
-      tile.removed = !tile.removed;
-      renderAll();
+      const startX = e.clientX, startY = e.clientY;
+      const origEvent = e;
+      let dragging = false;
+      el.setPointerCapture(e.pointerId);
+      const onMove = ev => {
+        if (dragging) return;
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 8) {
+          dragging = true;
+          el.removeEventListener('pointermove', onMove);
+          el.removeEventListener('pointerup',   onUp);
+          el.removeEventListener('pointercancel', onCancel);
+          el.releasePointerCapture(origEvent.pointerId);
+          startDrag(origEvent, el, { type: 'tile', tileId: tile.id, placeValue: tile.placeValue, row: tile.row || 'a' });
+        }
+      };
+      const onUp = () => {
+        el.removeEventListener('pointermove', onMove);
+        el.removeEventListener('pointerup',   onUp);
+        el.removeEventListener('pointercancel', onCancel);
+        if (!dragging) { tile.removed = !tile.removed; renderAll(); }
+      };
+      const onCancel = () => {
+        el.removeEventListener('pointermove', onMove);
+        el.removeEventListener('pointerup',   onUp);
+        el.removeEventListener('pointercancel', onCancel);
+      };
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup',   onUp);
+      el.addEventListener('pointercancel', onCancel);
     });
   } else if (!tile.reserved && !tile.removed) {
     attachTileDrag(el, tile);
@@ -2057,19 +2090,32 @@ function renderAll() {
     if (inputA.value !== strA) inputA.value = strA;
     if (inputB.value !== strB) inputB.value = strB;
   }
-  // ひきざんモード：全タイル=ひかれる数、斜線タイル=ひくかず
+  // ひきざんモード：全タイル=ひかれる数、斜線タイル=実際にひいた量
   if (state.opMode === 'sub' && !syncingFromInput) {
     let valA = 0, valB = 0;
+    // バンドルがまだ exchangeZone にある（作業中）sourceId のセット
+    const pendingSourceIds = new Set(state.exchangeZone.map(b => b.sourceId));
     realPlaces().forEach(p => {
-      const all     = state.tiles.filter(t => t.placeValue === p.value && !t.ghost);
+      // exchanged タイルはバンドル配置済みのもの（pendingでない）のみ除外
+      const all     = state.tiles.filter(t =>
+        t.placeValue === p.value && !t.ghost &&
+        (!t.exchanged || pendingSourceIds.has(t.id))
+      );
       const removed = all.filter(t => t.removed);
       valA += all.length     * p.value;
       valB += removed.length * p.value;
     });
     const strA = valA > 0 ? String(Math.round(valA * 100000) / 100000) : '';
-    const strB = valB > 0 ? String(Math.round(valB * 100000) / 100000) : '';
     if (inputA.value !== strA) inputA.value = strA;
-    if (inputB.value !== strB) inputB.value = strB;
+    // inputB はユーザーが直接入力する目標値なので上書きしない
+    const targetB = parseFloat(inputB.value);
+    const removedRounded = Math.round(valB * 100000) / 100000;
+    const isCorrect = !isNaN(targetB) && targetB > 0 && removedRounded === targetB;
+    $('chipB').classList.toggle('sub-correct', isCorrect);
+    $('subCorrectMark').classList.toggle('visible', isCorrect);
+  } else {
+    $('chipB').classList.remove('sub-correct');
+    $('subCorrectMark').classList.remove('visible');
   }
 }
 
@@ -2144,14 +2190,12 @@ function applyUIState() {
   hissanBtn.classList.toggle('on',     state.hissanMode);
   hissanBtn.textContent = state.hissanMode ? '▶' : '◀';
   writeRowBtn.classList.toggle('on',   state.showWriteRow);
-  removeModeBtn.classList.toggle('on', state.removeMode);
-  removeModeBtn.style.display = state.opMode === 'sub' ? '' : 'none';
   if (carryZoneTitle) {
     carryZoneTitle.textContent = state.opMode === 'sub' ? 'りょうがえゾーン' : 'くりあがりゾーン';
   }
   appLayout.classList.toggle('hissan-active', state.hissanMode);
   appLayout.classList.toggle('guti-active',   state.gutiMode);
-  appLayout.classList.toggle('remove-mode',   state.removeMode);
+  appLayout.classList.toggle('remove-mode',   state.opMode === 'sub');
 
   opDisplay.textContent = state.opMode === 'add' ? '＋' : '－';
   labelA.textContent    = state.opMode === 'add' ? 'たされるかず' : 'ひかれるかず';
@@ -2175,9 +2219,7 @@ hissanBtn.addEventListener('click', () => {
 writeRowBtn.addEventListener('click', () => {
   state.showWriteRow = !state.showWriteRow; applyUIState(); renderAll();
 });
-removeModeBtn.addEventListener('click', () => {
-  state.removeMode = !state.removeMode; applyUIState(); renderAll();
-});
+
 resetBtn.addEventListener('click', () => {
   state.tiles = [];
   state.carryZone = [];
