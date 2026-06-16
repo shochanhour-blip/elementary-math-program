@@ -610,6 +610,12 @@
       pointer-events: none;
     }
 
+    /* くりあがり結果タイル（位の表に置かれた後） */
+    .tile.carry-placed {
+      outline: 2.5px solid #f97316;
+      outline-offset: -2px;
+    }
+
     /* 予約済みタイル（くりあがり元） */
     .tile.reserved {
       opacity: 0.35;
@@ -1254,7 +1260,7 @@ function placeCarryResult(carryId, targetPV, targetRow) {
   if (!result || result.placeValue !== targetPV) return;
   state.carryZone = state.carryZone.filter(t => t.id !== carryId);
   const newId = state.nextId++;
-  state.tiles.push({ id: newId, placeValue: targetPV, row: targetRow });
+  state.tiles.push({ id: newId, placeValue: targetPV, row: targetRow, carryResult: true });
   state.animNewTiles.add(newId);
   state.animNewTileOrder.push(newId);
 }
@@ -1512,9 +1518,10 @@ function makeTileEl(tile, placeDef) {
   el.className = 'tile ' + placeDef.cls
     + (isNew && !useStagger ? ' tile-new' : '')
     + (useStagger ? ' tile-stagger' : '')
-    + (tile.reserved  ? ' reserved'  : '')
-    + (tile.removed   ? ' removed'   : '')
-    + (tile.exchanged ? ' exchanged' : '');
+    + (tile.reserved    ? ' reserved'     : '')
+    + (tile.removed     ? ' removed'      : '')
+    + (tile.exchanged   ? ' exchanged'    : '')
+    + (tile.carryResult ? ' carry-placed' : '');
   if (useStagger) el.style.animationDelay = (orderIdx * 55) + 'ms';
   el.dataset.tileId = tile.id;
   el.textContent = placeLabelShort(placeDef.value);
