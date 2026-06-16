@@ -1128,6 +1128,7 @@ const state = {
   topPlace:    10,
   botPlace:    1,
   nextId:      0,
+  carryEverDone: false, // くりあがりが一度でも確定されたらtrueにし、リセットまでinputをロック
   tiles:       [],      // { id, placeValue, row, reserved?, removed? }
   carryZone:   [],      // { id, placeValue, row?, sourceId?, result? }
   exchangeZone: [],    // { id, lowerPV, upperPV } — りょうがえバンドル（ひきざん用）
@@ -1252,6 +1253,7 @@ function confirmCarryZone(placeValue) {
   const upper = getUpperPlace(placeValue);
   if (upper === null) return;
   state.carryZone.push({ id: state.nextId++, placeValue: upper, result: true });
+  state.carryEverDone = true;
 }
 
 // ── くりあがり結果タイルを位の表に配置 ──────────────
@@ -2087,7 +2089,7 @@ function renderAll() {
   autoScaleTileAreas();
   // タイルからinput値を更新（たし算モード・input側からの更新中は除く）
   if (state.opMode === 'add' && !syncingFromInput) {
-    const carryActive = state.carryZone.length > 0 || state.tiles.some(t => t.reserved || t.carryResult);
+    const carryActive = state.carryEverDone || state.carryZone.length > 0 || state.tiles.some(t => t.reserved);
     if (!carryActive) {
       let valA = 0, valB = 0;
       realPlaces().forEach(p => {
@@ -2172,6 +2174,7 @@ function syncTilesFromInputSub(rawValue) {
 
 function syncTilesFromInput(row, rawValue) {
   syncingFromInput = true;
+  state.carryEverDone = false;
   // このrowの予約済みタイルに対応するcarryZoneゴーストも削除
   const reservedIds = new Set(state.tiles.filter(t => t.row === row && t.reserved).map(t => t.id));
   state.carryZone = state.carryZone.filter(t => t.result || !reservedIds.has(t.sourceId));
@@ -2236,6 +2239,7 @@ resetBtn.addEventListener('click', () => {
   state.exchangeZone = [];
   state.nextId = 0;
   state.removeMode = false;
+  state.carryEverDone = false;
   state.animNewTiles.clear();
   state.animNewTileOrder = [];
   inputA.value = ''; inputB.value = '';
