@@ -2087,7 +2087,7 @@ function renderAll() {
   autoScaleTileAreas();
   // タイルからinput値を更新（たし算モード・input側からの更新中は除く）
   if (state.opMode === 'add' && !syncingFromInput) {
-    const carryActive = state.carryZone.length > 0 || state.tiles.some(t => t.reserved);
+    const carryActive = state.carryZone.length > 0 || state.tiles.some(t => t.reserved || t.carryResult);
     if (!carryActive) {
       let valA = 0, valB = 0;
       realPlaces().forEach(p => {
