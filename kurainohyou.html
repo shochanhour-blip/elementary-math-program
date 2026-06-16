@@ -2080,15 +2080,18 @@ function renderAll() {
   autoScaleTileAreas();
   // タイルからinput値を更新（たし算モード・input側からの更新中は除く）
   if (state.opMode === 'add' && !syncingFromInput) {
-    let valA = 0, valB = 0;
-    realPlaces().forEach(p => {
-      valA += state.tiles.filter(t => t.placeValue === p.value && t.row === 'a' && !t.ghost).length * p.value;
-      valB += state.tiles.filter(t => t.placeValue === p.value && t.row === 'b' && !t.ghost).length * p.value;
-    });
-    const strA = valA > 0 ? String(Math.round(valA * 100000) / 100000) : '';
-    const strB = valB > 0 ? String(Math.round(valB * 100000) / 100000) : '';
-    if (inputA.value !== strA) inputA.value = strA;
-    if (inputB.value !== strB) inputB.value = strB;
+    const carryActive = state.carryZone.length > 0 || state.tiles.some(t => t.reserved);
+    if (!carryActive) {
+      let valA = 0, valB = 0;
+      realPlaces().forEach(p => {
+        valA += state.tiles.filter(t => t.placeValue === p.value && t.row === 'a' && !t.ghost).length * p.value;
+        valB += state.tiles.filter(t => t.placeValue === p.value && t.row === 'b' && !t.ghost).length * p.value;
+      });
+      const strA = valA > 0 ? String(Math.round(valA * 100000) / 100000) : '';
+      const strB = valB > 0 ? String(Math.round(valB * 100000) / 100000) : '';
+      if (inputA.value !== strA) inputA.value = strA;
+      if (inputB.value !== strB) inputB.value = strB;
+    }
   }
   // ひきざんモード：全タイル=ひかれる数、斜線タイル=実際にひいた量
   if (state.opMode === 'sub' && !syncingFromInput) {
