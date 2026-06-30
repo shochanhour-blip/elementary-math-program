@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>かくどのがくしゅう</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f0f7ff;
+  font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', sans-serif;
+  padding: 14px 8px;
+  gap: 12px;
+}
+
+/* ─── 上部タブ（clock.htmlと統一） ─── */
+.mode-tabs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+.mode-tab {
+  width: 80px;
+  height: 18px;
+  border: none;
+  border-radius: 5px;
+  background: #bfdbfe;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+}
+.mode-tab.active {
+  background: #f97316;
+}
+
+#display-box {
+  background: white;
+  border-radius: 20px;
+  padding: 10px 44px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+#angle-num {
+  font-size: 4.2rem;
+  font-weight: 900;
+  color: #1565c0;
+  line-height: 1;
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  font-size: 2rem;
+  color: #475569;
+  font-weight: 700;
+}
+.unit rt {
+  font-size: 0.55em;
+  font-weight: 400;
+}
+
+#mode-btns {
+  display: flex;
+  gap: 8px;
+}
+.mode-btn {
+  padding: 6px 18px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 2px solid #90caf9;
+  border-radius: 16px;
+  background: white;
+  color: #1565c0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.mode-btn.active {
+  background: #1565c0;
+  color: white;
+  border-color: #1565c0;
+}
+
+#svg-wrap {
+  width: 100%;
+  max-width: 620px;
+  overflow: visible;
+}
+#svg-wrap.hakaru-canvas {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+  overflow: hidden;
+  /* 正方形、画面に収まる最大サイズ */
+  width: min(calc(100vw - 16px), calc(100vh - 160px));
+  max-width: min(calc(100vw - 16px), calc(100vh - 160px));
+  aspect-ratio: 1 / 1;
+}
+
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: visible;
+}
+
+#panel-proto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+#panel-hak {
+  display: none;
+}
+
+#hakaru-controls {
+  display: none;
+  gap: 12px;
+  align-items: center;
+}
+#action-btn {
+  padding: 10px 28px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 20px;
+  background: #1565c0;
+  color: white;
+  cursor: pointer;
+  font-family: inherit;
+}
+#action-btn:disabled { background: #90caf9; cursor: default; }
+#reset-h-btn {
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 2px solid #90caf9;
+  border-radius: 20px;
+  background: white;
+  color: #1565c0;
+  cursor: pointer;
+  font-family: inherit;
+}
+#guide90-btn {
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 2px solid #d8b4fe;
+  border-radius: 20px;
+  background: white;
+  color: #7e22ce;
+  cursor: pointer;
+  font-family: inherit;
+}
+#guide90-btn.active {
+  background: #7e22ce;
+  color: white;
+  border-color: #7e22ce;
+}
+#show-prot-btn {
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 2px solid #a7f3d0;
+  border-radius: 20px;
+  background: white;
+  color: #065f46;
+  cursor: pointer;
+  font-family: inherit;
+}
+#show-prot-btn.active {
+  background: #065f46;
+  color: white;
+  border-color: #065f46;
+}
+
+/* ヘルプボタン */
+.help-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #90caf9;
+  background: white;
+  color: #1565c0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+  padding: 0;
+  z-index: 50;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+/* ヘルプモーダル */
+#help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+#help-modal {
+  background: white;
+  border-radius: 20px;
+  padding: 32px 28px 28px;
+  max-width: 340px;
+  width: calc(100vw - 48px);
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+#help-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+}
+#help-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #1565c0;
+  margin: 0 0 14px;
+}
+#help-body {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: #374151;
+  margin: 0;
+}
+#help-body .section-head {
+  display: block;
+  font-weight: 900;
+  color: #1565c0;
+  margin-top: 14px;
+  margin-bottom: 2px;
+}
+#help-body .section-head:first-child {
+  margin-top: 0;
+}
+</style>
+</head>
+<body>
+
+<!-- 上部モードタブ -->
+<div class="mode-tabs">
+  <button class="mode-tab active" id="tab-proto"></button>
+  <button class="mode-tab"        id="tab-hak"></button>
+</div>
+<button class="help-btn" id="help-btn">?</button>
+
+<!-- かくどモード UI -->
+<div id="panel-proto">
+  <div id="display-box">
+    <span id="angle-num">0</span>
+    <ruby class="unit">度<rt>ど</rt></ruby>
+  </div>
+  <div id="mode-btns">
+    <button id="btn-180" class="mode-btn active">180°</button>
+    <button id="btn-360" class="mode-btn">360°</button>
+  </div>
+</div>
+
+<!-- はかるモード UI -->
+<div id="panel-hak" style="display:none"></div>
+
+<!-- ヘルプモーダル -->
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
+  </div>
+</div>
+
+<div id="svg-wrap">
+  <svg id="svg" viewBox="0 0 600 382" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+
+    <!-- 角の扇型 -->
+    <path id="sector" fill="rgba(251,191,36,0.45)" stroke="none"/>
+
+    <!-- 分度器の帯（外弧〜内弧）の白塗り -->
+    <path id="band-bg" fill="white" stroke="none"/>
+
+    <!-- 目盛り（帯の中） -->
+    <g id="ticks"></g>
+
+    <!-- 外弧 -->
+    <path id="arc-outer" fill="none" stroke="#1976d2" stroke-width="2"/>
+
+    <!-- 内弧 -->
+    <path id="arc-inner" fill="none" stroke="#1976d2" stroke-width="1.5"/>
+
+    <!-- 放射線（10°ごと、内弧から中心へ） -->
+    <g id="spokes"></g>
+
+    <!-- 底辺の長方形枠（数字より先に描画） -->
+    <rect id="base-rect" fill="white" stroke="#1976d2" stroke-width="1.5"/>
+
+    <!-- 外スケール数字（base-rectの上に描画） -->
+    <g id="nums-outer"></g>
+
+    <!-- 内スケール数字（base-rectの上に描画） -->
+    <g id="nums-inner"></g>
+
+    <!-- 基線の左延長（点線） -->
+    <line id="base-ext"
+      stroke="#90b8e0" stroke-width="1.5" stroke-dasharray="5,4"
+      stroke-linecap="round"/>
+
+    <!-- 固定線（0°） -->
+    <line id="fixed-line"
+      stroke="#0d47a1" stroke-width="3.5" stroke-linecap="round"/>
+
+    <!-- 中心の半円（基線に合わせた上向き半円） -->
+    <path id="center-inner" fill="white" stroke="#1976d2" stroke-width="1.5"/>
+
+    <!-- 90°ライン（中心まで貫通） -->
+    <line id="line-90" stroke="#1976d2" stroke-width="1.2"/>
+
+    <!-- 動かせる線（center-innerより後に描画して中心まで見える） -->
+    <line id="movable-line"
+      stroke="#f97316" stroke-width="3.5" stroke-linecap="round"
+      style="display:none"/>
+
+    <circle id="center-dot" fill="#0d47a1"/>
+
+    <!-- 透明ドラッグ領域 -->
+    <circle id="drag-handle" fill="transparent" stroke="none"/>
+
+    <!-- 始点選択ドット -->
+    <circle id="dot-right" r="10" stroke="white" stroke-width="2" style="cursor:pointer"/>
+    <circle id="dot-left"  r="10" stroke="white" stroke-width="2" style="cursor:pointer"/>
+
+    <!-- ─── はかるモード用要素 ─── -->
+    <g id="h-draw" display="none">
+      <rect x="0" y="0" width="500" height="500" fill="white"/>
+      <g id="h-grid" stroke="#e8f0fb" stroke-width="1"></g>
+      <path   id="h-sector"  fill="rgba(251,191,36,0.38)"/>
+      <line   id="h-ray1"    stroke="#1565c0" stroke-width="2.5" stroke-linecap="round"/>
+      <line   id="h-ray2"    stroke="#1565c0" stroke-width="2.5" stroke-linecap="round" display="none"/>
+      <circle id="h-vdot"    r="6" fill="#0d47a1"/>
+      <line   id="h-preview" stroke="#90caf9" stroke-width="2.5"
+              stroke-dasharray="8,5" stroke-linecap="round" display="none"/>
+      <line   id="h-guide90" stroke="rgba(167,139,250,0.55)" stroke-width="1.8"
+              stroke-dasharray="8,5" stroke-linecap="round" display="none"/>
+      <text   id="h-alabel"  text-anchor="middle" dominant-baseline="middle"
+              font-size="24" font-weight="900" fill="#e53935" display="none"/>
+    </g>
+
+    <!-- はかるモード用分度器（ローカル座標グループ） -->
+    <g id="h-prot" display="none">
+      <path id="hp-band"     fill="none" stroke="none"/>
+      <g    id="hp-ticks"></g>
+      <path id="hp-arc-out"  fill="none" stroke="#1976d2" stroke-width="1.8"/>
+      <path id="hp-arc-in"   fill="none" stroke="#1976d2" stroke-width="1.2"/>
+      <g    id="hp-spokes"></g>
+      <rect id="hp-base-rect" fill="none" stroke="#1976d2" stroke-width="1.2"/>
+      <g    id="hp-nums-out"></g>
+      <g    id="hp-nums-in"></g>
+      <path id="hp-ctr"      fill="none" stroke="#1976d2" stroke-width="1.2"/>
+      <line id="hp-line90"  stroke="#1976d2" stroke-width="1.0"/>
+    </g>
+
+  </svg>
+</div>
+
+<div id="hakaru-controls">
+  <button id="reset-h-btn">やりなおし</button>
+  <button id="action-btn" disabled>かくてい</button>
+  <button id="guide90-btn">90°ガイド</button>
+  <button id="show-prot-btn">分度器を表示</button>
+</div>
+
+<script>
+let SVG_W = 600;
+const CX = 300;
+const BLUE_DARK = '#0d47a1';
+const BLUE_MID  = '#1976d2';
+const COLOR_RED = '#e53935';
+const COLOR_BLK = '#212121';
+const DOT_GAP   = 48;
+
+// モード別パラメータ
+const PARAMS = {
+  '180': { CY: 356, R_OUT: 256, R_IN: 208, R_NUMS_OUT: 191, R_NUMS_IN: 170, R_CTR: 38, SVG_H: 382 },
+  '360': { CY: 245, R_OUT: 215, R_IN: 175, R_NUMS_OUT: 202, R_NUMS_IN: 181, R_CTR: 28, SVG_H: 490 },
+};
+
+let protractorMode = '180';
+let CY, R_OUT, R_IN, R_NUMS_OUT, R_NUMS_IN, R_CTR, SVG_H_CUR, LINE_LEN;
+let angleDeg  = 0;
+let startSide = 'right';
+let dragging  = false;
+
+// ── はかるモード状態 ──────────────────────────────────
+const H_SVG_W = 500, H_SVG_H = 500;
+const H_CX = 250, H_CY = 250;
+// はかる分度器パラメータ（ローカル座標）
+const HP_R    = 178, HP_R2 = 145, HP_NO = 128, HP_NI = 106, HP_CTR = 29, HP_LL = 195;
+
+let hPhase    = 'draw1';
+let hVertex   = null;
+let hRay1Deg  = 0;
+let hRay2Deg  = 90;
+let hRayLen   = 200;
+let hOpenAngle = 0;
+let hFigRot   = 0;
+let hPPos     = { x: H_CX, y: H_CY };
+let hPRot     = 0;
+let hDragMode = null;
+let hDragStartSVG = null;
+let hDragStartAng = 0;
+let hDragStartRot = 0;
+let hDragging = false;
+
+function applyParams() {
+  const p = PARAMS[protractorMode];
+  CY = p.CY; R_OUT = p.R_OUT; R_IN = p.R_IN;
+  R_NUMS_OUT = p.R_NUMS_OUT; R_NUMS_IN = p.R_NUMS_IN;
+  R_CTR = p.R_CTR; SVG_H_CUR = p.SVG_H;
+  LINE_LEN = R_OUT + 20;
+}
+
+const svgEl      = document.getElementById('svg');
+const sectorEl   = document.getElementById('sector');
+const baseRectEl = document.getElementById('base-rect');
+const bandBgEl   = document.getElementById('band-bg');
+const arcOutEl   = document.getElementById('arc-outer');
+const arcInEl    = document.getElementById('arc-inner');
+const ticksEl    = document.getElementById('ticks');
+const spokesEl   = document.getElementById('spokes');
+const numsOutEl  = document.getElementById('nums-outer');
+const numsInEl   = document.getElementById('nums-inner');
+const fixedEl    = document.getElementById('fixed-line');
+const movableEl  = document.getElementById('movable-line');
+const baseExtEl  = document.getElementById('base-ext');
+const ctrInner   = document.getElementById('center-inner');
+const ctrDot     = document.getElementById('center-dot');
+const handleEl   = document.getElementById('drag-handle');
+const line90El   = document.getElementById('line-90');
+const angleNumEl = document.getElementById('angle-num');
+const dotRight   = document.getElementById('dot-right');
+const dotLeft    = document.getElementById('dot-left');
+
+// はかるモードDOM
+const hDrawEl    = document.getElementById('h-draw');
+const hProtEl    = document.getElementById('h-prot');
+const hRay1El    = document.getElementById('h-ray1');
+const hRay2El    = document.getElementById('h-ray2');
+const hVdotEl    = document.getElementById('h-vdot');
+const hSectorEl  = document.getElementById('h-sector');
+const hPreviewEl = document.getElementById('h-preview');
+const hAlabelEl  = document.getElementById('h-alabel');
+const hakaruCtrls  = document.getElementById('hakaru-controls');
+const actionBtn    = document.getElementById('action-btn');
+const resetHBtn    = document.getElementById('reset-h-btn');
+const guide90Btn   = document.getElementById('guide90-btn');
+const hGuide90El   = document.getElementById('h-guide90');
+const showProtBtn  = document.getElementById('show-prot-btn');
+const panelProto   = document.getElementById('panel-proto');
+const panelHak     = document.getElementById('panel-hak');
+
+let hProtVisible = false;
+let hGuide90 = false;
+
+// ── 座標ヘルパー ──────────────────────────────────────
+function toRad(deg) { return deg * Math.PI / 180; }
+
+function pt(deg, r) {
+  const rad = toRad(deg);
+  return [CX + r * Math.cos(rad), CY - r * Math.sin(rad)];
+}
+
+function semiArc(r) {
+  const [sx, sy] = pt(0,   r);
+  const [ex, ey] = pt(180, r);
+  return `M${sx},${sy}A${r},${r},0,0,0,${ex},${ey}`;
+}
+
+function fullCirclePath(r) {
+  return `M${CX+r},${CY}A${r},${r},0,1,0,${CX-r},${CY}A${r},${r},0,1,0,${CX+r},${CY}Z`;
+}
+
+function bandPath180() {
+  const [ox0, oy0] = pt(0,   R_OUT);
+  const [ox1, oy1] = pt(180, R_OUT);
+  const [ix0, iy0] = pt(0,   R_IN);
+  const [ix1, iy1] = pt(180, R_IN);
+  return `M${ox0},${oy0}A${R_OUT},${R_OUT},0,0,0,${ox1},${oy1}L${ix1},${iy1}A${R_IN},${R_IN},0,0,1,${ix0},${iy0}Z`;
+}
+
+function sectorPath(fromDeg, toDeg) {
+  const span = toDeg - fromDeg;
+  if (span <= 0) return '';
+  if (span >= 360) return fullCirclePath(R_IN);
+  const [sx, sy] = pt(fromDeg, R_IN);
+  const [ex, ey] = pt(toDeg,   R_IN);
+  const large = span > 180 ? 1 : 0;
+  return `M${CX},${CY}L${sx},${sy}A${R_IN},${R_IN},0,${large},0,${ex},${ey}Z`;
+}
+
+// ── SVG要素生成ヘルパー ───────────────────────────────
+const NS = 'http://www.w3.org/2000/svg';
+
+function mkLine(x1,y1,x2,y2,stroke,sw) {
+  const l = document.createElementNS(NS,'line');
+  l.setAttribute('x1',x1); l.setAttribute('y1',y1);
+  l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+  l.setAttribute('stroke',stroke);
+  l.setAttribute('stroke-width',sw);
+  return l;
+}
+
+function mkText(str, x, y, fill, fs, fw, rot) {
+  const t = document.createElementNS(NS,'text');
+  t.setAttribute('x', x); t.setAttribute('y', y);
+  t.setAttribute('text-anchor','middle');
+  t.setAttribute('dominant-baseline','middle');
+  t.setAttribute('fill', fill);
+  t.setAttribute('font-size', fs);
+  t.setAttribute('font-weight', fw);
+  t.setAttribute('font-family','sans-serif');
+  if (rot !== 0) t.setAttribute('transform', `rotate(${rot},${x},${y})`);
+  t.textContent = str;
+  return t;
+}
+
+// ── 目盛り・数字・放射線を生成 ─────────────────────────
+function build() {
+  ticksEl.innerHTML = '';
+  spokesEl.innerHTML = '';
+  numsOutEl.innerHTML = '';
+  numsInEl.innerHTML = '';
+
+  const tickFrag   = document.createDocumentFragment();
+  const spokeFrag  = document.createDocumentFragment();
+  const numOutFrag = document.createDocumentFragment();
+  const numInFrag  = document.createDocumentFragment();
+
+  const maxDeg = protractorMode === '180' ? 180 : 359;
+
+  for (let d = 0; d <= maxDeg; d++) {
+    const major = d % 10 === 0;
+    const minor = d % 5  === 0 && !major;
+
+    const [ox, oy] = pt(d, R_OUT);
+    const innerR = major ? R_IN : minor ? R_OUT - 20 : R_OUT - 11;
+    const [ix, iy] = pt(d, innerR);
+    const sw = major ? 1.8 : minor ? 1.4 : 0.9;
+    tickFrag.appendChild(mkLine(ox, oy, ix, iy, BLUE_MID, sw));
+
+    if (major) {
+      const [px, py] = pt(d, R_IN);
+      spokeFrag.appendChild(mkLine(CX, CY, px, py, BLUE_MID, 1.2));
+
+      const rot = 90 - d;
+
+      if (protractorMode === '180') {
+        const [lox, loy] = pt(d, R_NUMS_OUT);
+        numOutFrag.appendChild(mkText(String(180 - d), lox, loy, COLOR_BLK, d===90?'14':'12', '700', rot));
+        const [lix, liy] = pt(d, R_NUMS_IN);
+        numInFrag.appendChild(mkText(String(d), lix, liy, COLOR_RED, d===90?'13':'11', '600', rot));
+      } else {
+        const [lox, loy] = pt(d, R_NUMS_OUT);
+        numOutFrag.appendChild(mkText(String(d), lox, loy, COLOR_BLK, d===90||d===270?'13':'11', '700', rot));
+        if (d === 0) {
+          const [lix, liy] = pt(d, R_NUMS_IN);
+          numInFrag.appendChild(mkText('360', lix, liy, COLOR_RED, '11', '600', rot));
+        }
+      }
+    }
+  }
+
+  ticksEl.appendChild(tickFrag);
+  spokesEl.appendChild(spokeFrag);
+  numsOutEl.appendChild(numOutFrag);
+  numsInEl.appendChild(numInFrag);
+}
+
+// ── 描画 ─────────────────────────────────────────────
+function render() {
+  angleNumEl.textContent = String(angleDeg);
+
+  if (protractorMode === '180') {
+    const fixedDeg   = startSide === 'right' ? 0   : 180;
+    const movableDeg = startSide === 'right' ? angleDeg : 180 - angleDeg;
+
+    if (startSide === 'right') {
+      sectorEl.setAttribute('d', sectorPath(0, angleDeg));
+    } else {
+      sectorEl.setAttribute('d', sectorPath(180 - angleDeg, 180));
+    }
+
+    const [fx, fy] = pt(fixedDeg, LINE_LEN);
+    fixedEl.setAttribute('x1', CX); fixedEl.setAttribute('y1', CY);
+    fixedEl.setAttribute('x2', fx); fixedEl.setAttribute('y2', fy);
+
+    const extDeg = startSide === 'right' ? 180 : 0;
+    const [bx, by] = pt(extDeg, LINE_LEN);
+    baseExtEl.setAttribute('x1', CX); baseExtEl.setAttribute('y1', CY);
+    baseExtEl.setAttribute('x2', bx); baseExtEl.setAttribute('y2', by);
+
+    const [lx, ly] = pt(movableDeg, LINE_LEN);
+    const [hx, hy] = pt(movableDeg, R_OUT);
+    movableEl.setAttribute('x1', CX); movableEl.setAttribute('y1', CY);
+    movableEl.setAttribute('x2', lx); movableEl.setAttribute('y2', ly);
+    handleEl.setAttribute('cx', hx);  handleEl.setAttribute('cy', hy);
+
+    movableEl.style.display = angleDeg === 0 ? 'none' : '';
+  } else {
+    sectorEl.setAttribute('d', sectorPath(0, angleDeg));
+
+    const [fx, fy] = pt(0, LINE_LEN);
+    fixedEl.setAttribute('x1', CX); fixedEl.setAttribute('y1', CY);
+    fixedEl.setAttribute('x2', fx); fixedEl.setAttribute('y2', fy);
+
+    const [lx, ly] = pt(angleDeg, LINE_LEN);
+    const [hx, hy] = pt(angleDeg, R_OUT);
+    movableEl.setAttribute('x1', CX); movableEl.setAttribute('y1', CY);
+    movableEl.setAttribute('x2', lx); movableEl.setAttribute('y2', ly);
+    handleEl.setAttribute('cx', hx);  handleEl.setAttribute('cy', hy);
+
+    movableEl.style.display = angleDeg === 0 ? 'none' : '';
+  }
+}
+
+// ── ポインタ操作 ───────────────────────────────────────
+function svgCoords(e) {
+  const rect = svgEl.getBoundingClientRect();
+  const w = protractorMode === 'hakaru' ? H_SVG_W : SVG_W;
+  const h = protractorMode === 'hakaru' ? H_SVG_H : SVG_H_CUR;
+  return [
+    (e.clientX - rect.left) * w / rect.width,
+    (e.clientY - rect.top)  * h / rect.height,
+  ];
+}
+
+function angleFromEvent(e) {
+  const [px, py] = svgCoords(e);
+  const dx =   px - CX;
+  const dy = -(py - CY);
+  let theta = Math.atan2(dy, dx) * 180 / Math.PI;
+
+  if (protractorMode === '180') {
+    if (theta < 0) theta = dx < 0 ? 180 : 0;
+    theta = Math.round(Math.min(180, Math.max(0, theta)));
+    return startSide === 'right' ? theta : 180 - theta;
+  } else {
+    if (theta < 0) theta += 360;
+    return Math.round(theta);
+  }
+}
+
+svgEl.addEventListener('pointerdown', e => {
+  if (protractorMode === 'hakaru') { hPointerDown(e); return; }
+  const [, py] = svgCoords(e);
+  if (protractorMode === '180' && py > CY + 10) return;
+  svgEl.setPointerCapture(e.pointerId);
+  e.preventDefault();
+  dragging = true;
+  angleDeg = angleFromEvent(e);
+  render();
+});
+svgEl.addEventListener('pointermove', e => {
+  if (protractorMode === 'hakaru') { hPointerMove(e); return; }
+  if (!dragging) return;
+  e.preventDefault();
+  angleDeg = angleFromEvent(e);
+  render();
+});
+svgEl.addEventListener('pointerup', e => {
+  if (protractorMode === 'hakaru') { hPointerUp(e); return; }
+  dragging = false;
+});
+svgEl.addEventListener('pointercancel', () => {
+  if (protractorMode === 'hakaru') { hDragging = false; hDragMode = null; hPreviewEl.setAttribute('display','none'); return; }
+  dragging = false;
+});
+
+// ── 始点ドット ────────────────────────────────────────
+function updateDots() {
+  dotRight.setAttribute('cx', CX + R_OUT + DOT_GAP);
+  dotRight.setAttribute('cy', CY);
+  dotLeft.setAttribute('cx',  CX - R_OUT - DOT_GAP);
+  dotLeft.setAttribute('cy',  CY);
+  dotRight.setAttribute('fill', startSide === 'right' ? BLUE_DARK : '#90caf9');
+  dotLeft.setAttribute('fill',  startSide === 'left'  ? BLUE_DARK : '#90caf9');
+}
+
+dotRight.addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  startSide = 'right'; angleDeg = 0;
+  updateDots(); render();
+});
+dotLeft.addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  startSide = 'left'; angleDeg = 0;
+  updateDots(); render();
+});
+
+// ── モード切り替えボタン ──────────────────────────────
+document.getElementById('btn-180').addEventListener('click', () => setMode('180'));
+document.getElementById('btn-360').addEventListener('click', () => setMode('360'));
+
+// ── 静的パスの再構築 ──────────────────────────────────
+function rebuild() {
+  svgEl.setAttribute('viewBox', `0 0 600 ${SVG_H_CUR}`);
+
+  if (protractorMode === '180') {
+    arcOutEl.setAttribute('d', semiArc(R_OUT));
+    arcInEl.setAttribute('d',  semiArc(R_IN));
+    bandBgEl.setAttribute('d', bandPath180());
+    bandBgEl.removeAttribute('fill-rule');
+
+    baseRectEl.setAttribute('x',      CX - R_OUT);
+    baseRectEl.setAttribute('y',      CY);
+    baseRectEl.setAttribute('width',  R_OUT * 2);
+    baseRectEl.setAttribute('height', 16);
+
+    ctrInner.setAttribute('d',
+      `M${CX+R_CTR},${CY}A${R_CTR},${R_CTR},0,0,0,${CX-R_CTR},${CY}Z`);
+
+    const [p90x, p90y] = pt(90, R_IN);
+    line90El.setAttribute('x1', p90x); line90El.setAttribute('y1', p90y);
+    line90El.setAttribute('x2', CX);   line90El.setAttribute('y2', CY);
+
+    [baseRectEl, baseExtEl, dotRight, dotLeft, line90El].forEach(el => el.style.display = '');
+    numsInEl.style.display = '';
+  } else {
+    arcOutEl.setAttribute('d', fullCirclePath(R_OUT));
+    arcInEl.setAttribute('d',  fullCirclePath(R_IN));
+    bandBgEl.setAttribute('d', fullCirclePath(R_OUT) + fullCirclePath(R_IN));
+    bandBgEl.setAttribute('fill-rule', 'evenodd');
+
+    ctrInner.setAttribute('d', fullCirclePath(R_CTR));
+
+    [baseRectEl, baseExtEl, dotRight, dotLeft, line90El].forEach(el => el.style.display = 'none');
+    numsInEl.style.display = '';
+  }
+
+  ctrDot.setAttribute('cx', CX); ctrDot.setAttribute('cy', CY); ctrDot.setAttribute('r', 5);
+  handleEl.setAttribute('r', 24);
+
+  build();
+  if (protractorMode === '180') updateDots();
+  render();
+}
+
+function setMode(mode) {
+  protractorMode = mode;
+  angleDeg = 0;
+  document.getElementById('btn-180').classList.toggle('active', mode === '180');
+  document.getElementById('btn-360').classList.toggle('active', mode === '360');
+  document.getElementById('tab-proto').classList.toggle('active', mode !== 'hakaru');
+  document.getElementById('tab-hak').classList.toggle('active',  mode === 'hakaru');
+
+  const isHakaru = mode === 'hakaru';
+  document.getElementById('svg-wrap').classList.toggle('hakaru-canvas', isHakaru);
+  svgEl.style.overflow = isHakaru ? 'hidden' : 'visible';
+  panelProto.style.display    = isHakaru ? 'none' : 'flex';
+  panelHak.style.display      = isHakaru ? 'block' : 'none';
+  hakaruCtrls.style.display   = isHakaru ? 'flex' : 'none';
+
+  // 既存分度器要素の表示切り替え
+  const protoEls = [sectorEl, bandBgEl, ticksEl, arcOutEl, arcInEl, spokesEl,
+    baseRectEl, numsOutEl, numsInEl, baseExtEl, fixedEl, ctrInner,
+    line90El, movableEl, ctrDot, handleEl, dotRight, dotLeft];
+  protoEls.forEach(el => el.style.display = isHakaru ? 'none' : '');
+
+  if (isHakaru) {
+    svgEl.setAttribute('viewBox', `0 0 ${H_SVG_W} ${H_SVG_H}`);
+    hDrawEl.removeAttribute('display');
+    hProtEl.removeAttribute('display');
+    hResetAll();
+  } else {
+    hDrawEl.setAttribute('display', 'none');
+    hProtEl.setAttribute('display', 'none');
+    applyParams();
+    rebuild();
+  }
+}
+
+// ── はかるモード：ヘルパー ───────────────────────────
+function hToLocal(sx, sy) {
+  const dx = sx - hPPos.x, dy = sy - hPPos.y;
+  const r = toRad(hPRot);
+  return [dx * Math.cos(r) + dy * Math.sin(r), -dx * Math.sin(r) + dy * Math.cos(r)];
+}
+function hRayPt(vx, vy, deg, len) {
+  const r = toRad(deg);
+  return { x: vx + Math.cos(r) * len, y: vy - Math.sin(r) * len };
+}
+function hDirAngle(vx, vy, px, py) {
+  return Math.atan2(-(py - vy), px - vx) * 180 / Math.PI;
+}
+function hMinAngle(a1, a2) {
+  let d = ((a2 - a1) % 360 + 360) % 360;
+  return Math.round(d > 180 ? 360 - d : d);
+}
+function hSetRay(el, vx, vy, deg, fwd, bwd) {
+  const p1 = hRayPt(vx, vy, deg, fwd);
+  const p2 = hRayPt(vx, vy, deg + 180, bwd);
+  el.setAttribute('x1', p2.x); el.setAttribute('y1', p2.y);
+  el.setAttribute('x2', p1.x); el.setAttribute('y2', p1.y);
+}
+function hSectorPath(vx, vy, fromD, toD, r) {
+  const span = toD - fromD;
+  if (span <= 0 || span >= 360) return '';
+  const fx = vx + Math.cos(toRad(fromD)) * r;
+  const fy = vy - Math.sin(toRad(fromD)) * r;
+  const tx = vx + Math.cos(toRad(toD)) * r;
+  const ty = vy - Math.sin(toRad(toD)) * r;
+  return `M${vx},${vy}L${fx},${fy}A${r},${r},0,${span>180?1:0},0,${tx},${ty}Z`;
+}
+
+// はかる：図形レンダリング
+function hRenderFig() {
+  if (!hVertex) return;
+  const r1 = hRay1Deg + hFigRot;
+  const r2 = hRay2Deg + hFigRot;
+
+  hSetRay(hRay1El, hVertex.x, hVertex.y, r1, hRayLen, 0);
+  hRay1El.removeAttribute('display');
+
+  if (hPhase !== 'draw1') {
+    hSetRay(hRay2El, hVertex.x, hVertex.y, r2, hRayLen, 0);
+    hRay2El.removeAttribute('display');
+
+    let lo = r1, hi = r2;
+    if (((hi - lo + 360) % 360) > 180) [lo, hi] = [hi, lo];
+    const span = ((hi - lo) + 360) % 360;
+    hSectorEl.setAttribute('d', hSectorPath(hVertex.x, hVertex.y, lo, lo + span, 80));
+    hSectorEl.removeAttribute('display');
+  } else {
+    hRay2El.setAttribute('display','none');
+    hSectorEl.setAttribute('d', '');
+  }
+
+  // 90°ガイド
+  if (hGuide90 && hPhase !== 'draw1') {
+    const gp = hRayPt(hVertex.x, hVertex.y, r1 + 90, hRayLen);
+    hGuide90El.setAttribute('x1', hVertex.x); hGuide90El.setAttribute('y1', hVertex.y);
+    hGuide90El.setAttribute('x2', gp.x);      hGuide90El.setAttribute('y2', gp.y);
+    hGuide90El.removeAttribute('display');
+  } else {
+    hGuide90El.setAttribute('display', 'none');
+  }
+}
+
+function hRenderProt() {
+  hProtEl.setAttribute('transform', `translate(${hPPos.x},${hPPos.y}) rotate(${hPRot})`);
+}
+
+function hShowLabel(show) {
+  if (!show || !hVertex) { hAlabelEl.setAttribute('display','none'); return; }
+  hAlabelEl.setAttribute('x', hVertex.x + 30);
+  hAlabelEl.setAttribute('y', hVertex.y - 36);
+  hAlabelEl.textContent = `${hOpenAngle}°`;
+  hAlabelEl.removeAttribute('display');
+}
+
+// はかる：フェーズ
+function hSetPhase(p) {
+  hPhase = p;
+  actionBtn.style.display = (p === 'draw2') ? '' : 'none';
+  actionBtn.disabled = false;
+  hShowLabel(p === 'draw2');
+}
+
+function hSetProtVisible(v) {
+  hProtVisible = v;
+  hProtEl.style.display = v ? '' : 'none';
+  showProtBtn.textContent = v ? '分度器をかくす' : '分度器を表示';
+  showProtBtn.classList.toggle('active', v);
+  if (v) hRenderProt();
+}
+
+function hResetAll() {
+  hVertex = null; hRay1Deg = 0; hRay2Deg = 90;
+  hRayLen = 200; hOpenAngle = 0; hFigRot = 0;
+  hPPos = { x: H_CX, y: H_CY }; hPRot = 0;
+  hDragging = false; hDragMode = null;
+  [hRay1El, hRay2El, hSectorEl, hVdotEl, hPreviewEl, hAlabelEl, hGuide90El]
+    .forEach(el => el.setAttribute('display','none'));
+  hGuide90 = false;
+  guide90Btn.classList.remove('active');
+  hSetProtVisible(false);
+  hSetPhase('draw1');
+}
+
+// はかる：ポインタ
+function hPointerDown(e) {
+  const [sx, sy] = svgCoords(e);
+  svgEl.setPointerCapture(e.pointerId);
+  hDragging = true;
+
+  if (hPhase === 'draw1') {
+    hVertex = { x: sx, y: sy };
+    hDragMode = 'draw1';
+    hPreviewEl.setAttribute('x1', sx); hPreviewEl.setAttribute('y1', sy);
+    hPreviewEl.setAttribute('x2', sx); hPreviewEl.setAttribute('y2', sy);
+    hPreviewEl.removeAttribute('display');
+  } else if (hPhase === 'draw2') {
+    // タップで角を確定
+    if (hOpenAngle > 0) {
+      hShowLabel(false);
+      hSetPhase('rotate');
+    }
+    hDragging = false;
+    return;
+  } else if (hPhase === 'rotate') {
+    if (hProtVisible) {
+      const [lx, ly] = hToLocal(sx, sy);
+      const ld = Math.sqrt(lx*lx + ly*ly);
+      if (ld <= HP_R + 24) {
+        // 分度器ヒット
+        if (ld < HP_CTR + 22) {
+          hDragMode = 'p-move';
+          hDragStartSVG = { x: sx - hPPos.x, y: sy - hPPos.y };
+        } else if (ld > HP_R2 - 20 && ly <= 8) {
+          hDragMode = 'p-rot';
+          hDragStartAng = Math.atan2(sy - hPPos.y, sx - hPPos.x) * 180 / Math.PI;
+          hDragStartRot = hPRot;
+        } else {
+          hDragMode = 'p-move';
+          hDragStartSVG = { x: sx - hPPos.x, y: sy - hPPos.y };
+        }
+        return;
+      }
+    }
+    // 分度器の外 → 角を回転
+    hDragMode = 'fig-rot';
+    hDragStartAng = hDirAngle(hVertex.x, hVertex.y, sx, sy);
+    hDragStartRot = hFigRot;
+  }
+}
+
+function hPointerMove(e) {
+  const [sx, sy] = svgCoords(e);
+
+  // draw2：ドラッグ不要、ポインタ追跡で角をリアルタイム更新
+  if (hPhase === 'draw2' && hVertex) {
+    hRay2Deg = hDirAngle(hVertex.x, hVertex.y, sx, sy);
+    hOpenAngle = hMinAngle(hRay1Deg, hRay2Deg);
+    hRenderFig();
+    hShowLabel(true);
+    return;
+  }
+
+  if (!hDragging) return;
+
+  if (hDragMode === 'draw1') {
+    hPreviewEl.setAttribute('x2', sx); hPreviewEl.setAttribute('y2', sy);
+    hRay1Deg = hDirAngle(hVertex.x, hVertex.y, sx, sy);
+    const ddx = sx - hVertex.x, ddy = sy - hVertex.y;
+    hRayLen = Math.max(Math.sqrt(ddx*ddx + ddy*ddy), 40);
+  } else if (hDragMode === 'draw2') {
+    hRay2Deg = hDirAngle(hVertex.x, hVertex.y, sx, sy);
+    hOpenAngle = hMinAngle(hRay1Deg, hRay2Deg);
+    hRenderFig(); hShowLabel(true);
+    if (hOpenAngle > 0) actionBtn.disabled = false;
+  } else if (hDragMode === 'fig-rot') {
+    const ang = hDirAngle(hVertex.x, hVertex.y, sx, sy);
+    hFigRot = hDragStartRot + (ang - hDragStartAng);
+    hRenderFig();
+  } else if (hDragMode === 'p-move') {
+    hPPos = { x: sx - hDragStartSVG.x, y: sy - hDragStartSVG.y };
+    hRenderProt();
+  } else if (hDragMode === 'p-rot') {
+    const ang = Math.atan2(sy - hPPos.y, sx - hPPos.x) * 180 / Math.PI;
+    hPRot = hDragStartRot + (ang - hDragStartAng);
+    hRenderProt();
+  }
+}
+
+function hPointerUp(e) {
+  if (!hDragging) return;
+  const [sx, sy] = svgCoords(e);
+  if (hDragMode === 'draw1') {
+    hPreviewEl.setAttribute('display','none');
+    const dx = sx - hVertex.x, dy = sy - hVertex.y;
+    hRay1Deg = Math.sqrt(dx*dx+dy*dy) < 8 ? 10 : hDirAngle(hVertex.x, hVertex.y, sx, sy);
+    hRenderFig();
+    hSetPhase('draw2');
+  }
+  hDragging = false; hDragMode = null;
+}
+
+// はかる：ボタン
+actionBtn.addEventListener('click', () => {
+  if (hPhase === 'draw2') {
+    hShowLabel(false);
+    hSetPhase('rotate');
+  }
+});
+guide90Btn.addEventListener('click', () => {
+  hGuide90 = !hGuide90;
+  guide90Btn.classList.toggle('active', hGuide90);
+  hRenderFig();
+});
+showProtBtn.addEventListener('click', () => hSetProtVisible(!hProtVisible));
+resetHBtn.addEventListener('click', hResetAll);
+
+// はかる：分度器構築（ローカル座標）
+function buildHakaruProtractor() {
+  function hpPt(deg, r) {
+    const rad = toRad(deg);
+    return [r * Math.cos(rad), -r * Math.sin(rad)];
+  }
+  function hpSemiArc(r) {
+    const [sx,sy] = hpPt(0,r), [ex,ey] = hpPt(180,r);
+    return `M${sx},${sy}A${r},${r},0,0,0,${ex},${ey}`;
+  }
+  function hpBand() {
+    const [ox0,oy0]=hpPt(0,HP_R), [ox1,oy1]=hpPt(180,HP_R);
+    const [ix0,iy0]=hpPt(0,HP_R2),[ix1,iy1]=hpPt(180,HP_R2);
+    return `M${ox0},${oy0}A${HP_R},${HP_R},0,0,0,${ox1},${oy1}L${ix1},${iy1}A${HP_R2},${HP_R2},0,0,1,${ix0},${iy0}Z`;
+  }
+  function mkL(x1,y1,x2,y2,stroke,sw) {
+    const l = document.createElementNS(NS,'line');
+    Object.entries({x1,y1,x2,y2,stroke,'stroke-width':sw}).forEach(([k,v])=>l.setAttribute(k,v));
+    return l;
+  }
+  function mkT(str,x,y,fill,fs,fw,rot) {
+    const t = document.createElementNS(NS,'text');
+    t.setAttribute('x',x); t.setAttribute('y',y);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','middle');
+    t.setAttribute('fill',fill); t.setAttribute('font-size',fs);
+    t.setAttribute('font-weight',fw); t.setAttribute('font-family','sans-serif');
+    if (rot!==0) t.setAttribute('transform',`rotate(${rot},${x},${y})`);
+    t.textContent = str; return t;
+  }
+
+  document.getElementById('hp-band').setAttribute('d', hpBand());
+  document.getElementById('hp-arc-out').setAttribute('d', hpSemiArc(HP_R));
+  document.getElementById('hp-arc-in').setAttribute('d',  hpSemiArc(HP_R2));
+
+  const br = document.getElementById('hp-base-rect');
+  br.setAttribute('x',-HP_R); br.setAttribute('y',0);
+  br.setAttribute('width',HP_R*2); br.setAttribute('height',14);
+
+  document.getElementById('hp-ctr').setAttribute('d',`M${HP_CTR},0A${HP_CTR},${HP_CTR},0,0,0,${-HP_CTR},0Z`);
+  const l90 = document.getElementById('hp-line90');
+  l90.setAttribute('x1',0); l90.setAttribute('y1',0);
+  l90.setAttribute('x2',0); l90.setAttribute('y2',-HP_R2);
+
+  const tF=document.createDocumentFragment(), sF=document.createDocumentFragment();
+  const noF=document.createDocumentFragment(), niF=document.createDocumentFragment();
+  for (let d=0; d<=180; d++) {
+    const major=d%10===0, minor=d%5===0&&!major;
+    const [ox,oy]=hpPt(d,HP_R);
+    const ir = major?HP_R2:minor?HP_R-17:HP_R-9;
+    const [ix,iy]=hpPt(d,ir);
+    tF.appendChild(mkL(ox,oy,ix,iy,BLUE_MID,major?1.5:minor?1.1:0.7));
+    if (major) {
+      const [px,py]=hpPt(d,HP_R2);
+      const [qx,qy]=hpPt(d,HP_CTR);
+      sF.appendChild(mkL(qx,qy,px,py,BLUE_MID,1.0));
+      const rot=90-d;
+      const [lox,loy]=hpPt(d,HP_NO);
+      noF.appendChild(mkT(String(180-d),lox,loy,COLOR_BLK,d===90?'10':'8.5','700',rot));
+      const [lix,liy]=hpPt(d,HP_NI);
+      niF.appendChild(mkT(String(d),lix,liy,COLOR_RED,d===90?'9':'8','600',rot));
+    }
+  }
+  document.getElementById('hp-ticks').appendChild(tF);
+  document.getElementById('hp-spokes').appendChild(sF);
+  document.getElementById('hp-nums-out').appendChild(noF);
+  document.getElementById('hp-nums-in').appendChild(niF);
+
+  // グリッド
+  const grid = document.getElementById('h-grid');
+  for (let x=0; x<=H_SVG_W; x+=40) {
+    const l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',x);l.setAttribute('y1',0);l.setAttribute('x2',x);l.setAttribute('y2',H_SVG_H);
+    grid.appendChild(l);
+  }
+  for (let y=0; y<=H_SVG_H; y+=40) {
+    const l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',0);l.setAttribute('y1',y);l.setAttribute('x2',H_SVG_W);l.setAttribute('y2',y);
+    grid.appendChild(l);
+  }
+}
+
+// ── モード切り替え ────────────────────────────────────
+document.getElementById('btn-180').addEventListener('click', () => setMode('180'));
+document.getElementById('btn-360').addEventListener('click', () => setMode('360'));
+document.getElementById('tab-proto').addEventListener('click', () => {
+  const last = (protractorMode === '180' || protractorMode === '360') ? protractorMode : '180';
+  setMode(last);
+});
+document.getElementById('tab-hak').addEventListener('click',  () => setMode('hakaru'));
+
+// ── ヘルプ ───────────────────────────────────────────
+const HELP = {
+  proto: {
+    title: '<ruby>分度器<rt>ぶんどき</rt></ruby>の<ruby>読<rt>よ</rt></ruby>みかた',
+    body:
+      'すきな<ruby>角<rt>かく</rt></ruby>をつくって、<ruby>角度<rt>かくど</rt></ruby>を<ruby>読<rt>よ</rt></ruby>んでみよう。<br><br>' +
+      '・180°モード：<ruby>半円<rt>はんえん</rt></ruby>の<ruby>分度器<rt>ぶんどき</rt></ruby><br>' +
+      '・360°モード：まるい<ruby>分度器<rt>ぶんどき</rt></ruby><br><br>' +
+      '●をおすと、<ruby>角<rt>かく</rt></ruby>の<ruby>始<rt>はじ</rt></ruby>まりを' +
+      '<ruby>右<rt>みぎ</rt></ruby>・<ruby>左<rt>ひだり</rt></ruby>で<ruby>選<rt>えら</rt></ruby>べます。',
+  },
+  hak: {
+    title: '<ruby>分度器<rt>ぶんどき</rt></ruby>で<ruby>角度<rt>かくど</rt></ruby>をはかろう',
+    body:
+      '<span class="section-head">【<ruby>角<rt>かく</rt></ruby>のかきかた】</span>' +
+      '① <ruby>指<rt>ゆび</rt></ruby>やマウスでひっぱって<ruby>一本目<rt>いっぽんめ</rt></ruby>の<ruby>線<rt>せん</rt></ruby>を<ruby>引<rt>ひ</rt></ruby>く<br>' +
+      '② <ruby>指<rt>ゆび</rt></ruby>やマウスをうごかして<ruby>角<rt>かく</rt></ruby>を<ruby>開<rt>ひら</rt></ruby>く。クリック・タップで<ruby>固定<rt>こてい</rt></ruby>。<br>' +
+      '③ <ruby>角<rt>かく</rt></ruby>をひっぱって<ruby>向<rt>む</rt></ruby>きを<ruby>変<rt>か</rt></ruby>えられます<br>' +
+      '（「90°ガイド」をオンにすると<ruby>一本目<rt>いっぽんめ</rt></ruby>の<ruby>線<rt>せん</rt></ruby>から90°の<ruby>方向<rt>ほうこう</rt></ruby>に<ruby>補助線<rt>ほじょせん</rt></ruby>が<ruby>出<rt>で</rt></ruby>ます）' +
+      '<span class="section-head">【<ruby>分度器<rt>ぶんどき</rt></ruby>でのはかりかた】</span>' +
+      '「<ruby>分度器<rt>ぶんどき</rt></ruby>を<ruby>表示<rt>ひょうじ</rt></ruby>」をおすと<ruby>分度器<rt>ぶんどき</rt></ruby>が<ruby>出<rt>で</rt></ruby>てきます。<br>' +
+      '<ruby>分度器<rt>ぶんどき</rt></ruby>の<ruby>移動<rt>いどう</rt></ruby>：<ruby>分度器<rt>ぶんどき</rt></ruby>の<ruby>内側<rt>うちがわ</rt></ruby>をドラッグ<br>' +
+      '<ruby>分度器<rt>ぶんどき</rt></ruby>の<ruby>回転<rt>かいてん</rt></ruby>：<ruby>目盛<rt>めもり</rt></ruby>りの<ruby>部分<rt>ぶぶん</rt></ruby>をドラッグ<br>' +
+      '<ruby>角<rt>かく</rt></ruby>の<ruby>回転<rt>かいてん</rt></ruby>：<ruby>分度器<rt>ぶんどき</rt></ruby>の<ruby>外<rt>そと</rt></ruby>をドラッグ',
+  },
+};
+
+const helpOverlay = document.getElementById('help-overlay');
+const helpTitle   = document.getElementById('help-title');
+const helpBody    = document.getElementById('help-body');
+
+function showHelp(key) {
+  helpTitle.innerHTML = HELP[key].title;
+  helpBody.innerHTML  = HELP[key].body;
+  helpOverlay.style.display = 'flex';
+}
+
+document.getElementById('help-btn').addEventListener('click', () =>
+  showHelp(protractorMode === 'hakaru' ? 'hak' : 'proto'));
+document.getElementById('help-close').addEventListener('click', () => helpOverlay.style.display = 'none');
+helpOverlay.addEventListener('click', e => { if (e.target === helpOverlay) helpOverlay.style.display = 'none'; });
+
+// ── 初期化 ───────────────────────────────────────────
+buildHakaruProtractor();
+setMode('180');
+</script>
+</body>
+</html>
