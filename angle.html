@@ -169,6 +169,38 @@ svg {
   color: white;
   border-color: #7e22ce;
 }
+#guide180-btn {
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 2px solid #fed7aa;
+  border-radius: 20px;
+  background: white;
+  color: #c2410c;
+  cursor: pointer;
+  font-family: inherit;
+}
+#guide180-btn.active {
+  background: #c2410c;
+  color: white;
+  border-color: #c2410c;
+}
+#guide360-btn {
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 2px solid #fecaca;
+  border-radius: 20px;
+  background: white;
+  color: #dc2626;
+  cursor: pointer;
+  font-family: inherit;
+}
+#guide360-btn.active {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+}
 #show-prot-btn {
   padding: 10px 20px;
   font-size: 1rem;
@@ -355,13 +387,20 @@ svg {
     <g id="h-draw" display="none">
       <rect x="0" y="0" width="500" height="500" fill="white"/>
       <g id="h-grid" stroke="#e8f0fb" stroke-width="1"></g>
+      <path   id="h-sector-blue" fill="rgba(59,130,246,0.22)" display="none"/>
       <path   id="h-sector"  fill="rgba(251,191,36,0.38)"/>
+      <path   id="h-sector2" fill="rgba(167,139,250,0.35)" display="none"/>
+      <circle id="h-circle360" r="85" fill="none" stroke="rgba(239,68,68,0.5)" stroke-width="9" display="none"/>
       <line   id="h-ray1"    stroke="#1565c0" stroke-width="2.5" stroke-linecap="round"/>
       <line   id="h-ray2"    stroke="#1565c0" stroke-width="2.5" stroke-linecap="round" display="none"/>
-      <circle id="h-vdot"    r="6" fill="#0d47a1"/>
+      <circle id="h-vdot"      r="6" fill="#0d47a1"/>
+      <circle id="h-move-handle" r="14" fill="rgba(100,150,255,0.18)"
+              stroke="#6495ed" stroke-width="1.5" style="cursor:grab;display:none"/>
       <line   id="h-preview" stroke="#90caf9" stroke-width="2.5"
               stroke-dasharray="8,5" stroke-linecap="round" display="none"/>
-      <line   id="h-guide90" stroke="rgba(167,139,250,0.55)" stroke-width="1.8"
+      <line   id="h-guide90"  stroke="rgba(167,139,250,0.55)" stroke-width="1.8"
+              stroke-dasharray="8,5" stroke-linecap="round" display="none"/>
+      <line   id="h-guide180" stroke="rgba(251,146,60,0.55)"  stroke-width="1.8"
               stroke-dasharray="8,5" stroke-linecap="round" display="none"/>
       <text   id="h-alabel"  text-anchor="middle" dominant-baseline="middle"
               font-size="24" font-weight="900" fill="#e53935" display="none"/>
@@ -388,6 +427,8 @@ svg {
   <button id="reset-h-btn">やりなおし</button>
   <button id="action-btn" disabled>かくてい</button>
   <button id="guide90-btn">90°ガイド</button>
+  <button id="guide180-btn">180°ガイド</button>
+  <button id="guide360-btn">360°ガイド</button>
   <button id="show-prot-btn">分度器を表示</button>
 </div>
 
@@ -422,9 +463,11 @@ const HP_R    = 178, HP_R2 = 145, HP_NO = 128, HP_NI = 106, HP_CTR = 29, HP_LL =
 let hPhase    = 'draw1';
 let hVertex   = null;
 let hRay1Deg  = 0;
-let hRay2Deg  = 90;
+let hRay2Deg  = 0;
 let hRayLen   = 200;
 let hOpenAngle = 0;
+let hRay2Offset  = 0;   // 蓄積角度 0〜360
+let hRay2PrevRaw = 0;   // 前フレームのポインタ角度
 let hFigRot   = 0;
 let hPPos     = { x: H_CX, y: H_CY };
 let hPRot     = 0;
@@ -466,23 +509,32 @@ const dotLeft    = document.getElementById('dot-left');
 // はかるモードDOM
 const hDrawEl    = document.getElementById('h-draw');
 const hProtEl    = document.getElementById('h-prot');
+const hMoveHandleEl = document.getElementById('h-move-handle');
 const hRay1El    = document.getElementById('h-ray1');
 const hRay2El    = document.getElementById('h-ray2');
 const hVdotEl    = document.getElementById('h-vdot');
+const hSectorBlueEl = document.getElementById('h-sector-blue');
 const hSectorEl  = document.getElementById('h-sector');
+const hSector2El = document.getElementById('h-sector2');
+const hCircle360El = document.getElementById('h-circle360');
 const hPreviewEl = document.getElementById('h-preview');
 const hAlabelEl  = document.getElementById('h-alabel');
 const hakaruCtrls  = document.getElementById('hakaru-controls');
 const actionBtn    = document.getElementById('action-btn');
 const resetHBtn    = document.getElementById('reset-h-btn');
 const guide90Btn   = document.getElementById('guide90-btn');
+const guide180Btn  = document.getElementById('guide180-btn');
+const guide360Btn  = document.getElementById('guide360-btn');
 const hGuide90El   = document.getElementById('h-guide90');
+const hGuide180El  = document.getElementById('h-guide180');
 const showProtBtn  = document.getElementById('show-prot-btn');
 const panelProto   = document.getElementById('panel-proto');
 const panelHak     = document.getElementById('panel-hak');
 
 let hProtVisible = false;
-let hGuide90 = false;
+let hGuide90  = false;
+let hGuide180 = false;
+let hGuide360 = false;
 
 // ── 座標ヘルパー ──────────────────────────────────────
 function toRad(deg) { return deg * Math.PI / 180; }
@@ -850,26 +902,86 @@ function hRenderFig() {
     hSetRay(hRay2El, hVertex.x, hVertex.y, r2, hRayLen, 0);
     hRay2El.removeAttribute('display');
 
-    let lo = r1, hi = r2;
-    if (((hi - lo + 360) % 360) > 180) [lo, hi] = [hi, lo];
-    const span = ((hi - lo) + 360) % 360;
-    hSectorEl.setAttribute('d', hSectorPath(hVertex.x, hVertex.y, lo, lo + span, 80));
-    hSectorEl.removeAttribute('display');
+    hOpenAngle = Math.round(Math.abs(hRay2Offset));
+    if (hOpenAngle > 0) {
+      if (hGuide180 && hOpenAngle > 180) {
+        if (hRay2Offset > 0) {
+          hSectorEl.setAttribute('d',  hSectorPath(hVertex.x, hVertex.y, r1,       r1 + 180,          80));
+          hSector2El.setAttribute('d', hSectorPath(hVertex.x, hVertex.y, r1 + 180, r1 + hRay2Offset,  80));
+        } else {
+          hSectorEl.setAttribute('d',  hSectorPath(hVertex.x, hVertex.y, r1 - 180, r1,                80));
+          hSector2El.setAttribute('d', hSectorPath(hVertex.x, hVertex.y, r1 + hRay2Offset, r1 - 180,  80));
+        }
+        hSector2El.removeAttribute('display');
+      } else {
+        const sFrom = hRay2Offset >= 0 ? r1 : r1 + hRay2Offset;
+        const sTo   = hRay2Offset >= 0 ? r1 + hRay2Offset : r1;
+        hSectorEl.setAttribute('d', hSectorPath(hVertex.x, hVertex.y, sFrom, sTo, 80));
+        hSector2El.setAttribute('d', '');
+        hSector2El.setAttribute('display', 'none');
+      }
+      hSectorEl.removeAttribute('display');
+
+      // 360° ガイド
+      if (hGuide360 && hOpenAngle < 360) {
+        hCircle360El.setAttribute('cx', hVertex.x);
+        hCircle360El.setAttribute('cy', hVertex.y);
+        hCircle360El.removeAttribute('display');
+        const blueFrom = hRay2Offset >= 0 ? r1 + hRay2Offset : r1;
+        const blueTo   = hRay2Offset >= 0 ? r1 + 360         : r1 + 360 + hRay2Offset;
+        hSectorBlueEl.setAttribute('d', hSectorPath(hVertex.x, hVertex.y, blueFrom, blueTo, 80));
+        hSectorBlueEl.removeAttribute('display');
+      } else {
+        hCircle360El.setAttribute('display', 'none');
+        hSectorBlueEl.setAttribute('d', '');
+        hSectorBlueEl.setAttribute('display', 'none');
+      }
+    } else {
+      hSectorEl.setAttribute('d', '');
+      hSector2El.setAttribute('d', '');
+      hSector2El.setAttribute('display', 'none');
+      hCircle360El.setAttribute('display', 'none');
+      hSectorBlueEl.setAttribute('d', '');
+      hSectorBlueEl.setAttribute('display', 'none');
+    }
   } else {
     hRay2El.setAttribute('display','none');
     hSectorEl.setAttribute('d', '');
+    hSector2El.setAttribute('d', '');
+    hSector2El.setAttribute('display', 'none');
+    hCircle360El.setAttribute('display', 'none');
+    hSectorBlueEl.setAttribute('d', '');
+    hSectorBlueEl.setAttribute('display', 'none');
+  }
+
+  // 移動ハンドル
+  if (hPhase === 'rotate') {
+    hMoveHandleEl.setAttribute('cx', hVertex.x);
+    hMoveHandleEl.setAttribute('cy', hVertex.y);
   }
 
   // 90°ガイド（角の内側方向へ）
   if (hGuide90 && hPhase !== 'draw1') {
-    const ccw = ((r2 - r1) % 360 + 360) % 360;
-    const guideDir = ccw <= 180 ? r1 + 90 : r1 - 90;
+    const purpleSplit = hGuide180 && hOpenAngle > 180;
+    const guideDir = purpleSplit
+      ? (hRay2Offset >= 0 ? r1 + 270 : r1 - 270)
+      : (hRay2Offset >= 0 ? r1 + 90  : r1 - 90);
     const gp = hRayPt(hVertex.x, hVertex.y, guideDir, hRayLen);
     hGuide90El.setAttribute('x1', hVertex.x); hGuide90El.setAttribute('y1', hVertex.y);
     hGuide90El.setAttribute('x2', gp.x);      hGuide90El.setAttribute('y2', gp.y);
     hGuide90El.removeAttribute('display');
   } else {
     hGuide90El.setAttribute('display', 'none');
+  }
+
+  // 180°ガイド（一本目の延長線）
+  if (hGuide180 && hPhase !== 'draw1') {
+    const gp = hRayPt(hVertex.x, hVertex.y, r1 + 180, hRayLen);
+    hGuide180El.setAttribute('x1', hVertex.x); hGuide180El.setAttribute('y1', hVertex.y);
+    hGuide180El.setAttribute('x2', gp.x);       hGuide180El.setAttribute('y2', gp.y);
+    hGuide180El.removeAttribute('display');
+  } else {
+    hGuide180El.setAttribute('display', 'none');
   }
 }
 
@@ -891,6 +1003,7 @@ function hSetPhase(p) {
   actionBtn.style.display = (p === 'draw2') ? '' : 'none';
   actionBtn.disabled = false;
   hShowLabel(p === 'draw2');
+  hMoveHandleEl.style.display = (p === 'rotate') ? '' : 'none';
 }
 
 function hSetProtVisible(v) {
@@ -902,14 +1015,17 @@ function hSetProtVisible(v) {
 }
 
 function hResetAll() {
-  hVertex = null; hRay1Deg = 0; hRay2Deg = 90;
+  hVertex = null; hRay1Deg = 0; hRay2Deg = 0;
   hRayLen = 200; hOpenAngle = 0; hFigRot = 0;
+  hRay2Offset = 0; hRay2PrevRaw = 0;
   hPPos = { x: H_CX, y: H_CY }; hPRot = 0;
   hDragging = false; hDragMode = null;
-  [hRay1El, hRay2El, hSectorEl, hVdotEl, hPreviewEl, hAlabelEl, hGuide90El]
+  [hRay1El, hRay2El, hSectorBlueEl, hSectorEl, hSector2El, hCircle360El,
+   hVdotEl, hPreviewEl, hAlabelEl, hGuide90El, hGuide180El, hMoveHandleEl]
     .forEach(el => el.setAttribute('display','none'));
-  hGuide90 = false;
-  guide90Btn.classList.remove('active');
+  hGuide90 = false;  guide90Btn.classList.remove('active');
+  hGuide180 = false; guide180Btn.classList.remove('active');
+  hGuide360 = false; guide360Btn.classList.remove('active');
   hSetProtVisible(false);
   hSetPhase('draw1');
 }
@@ -954,10 +1070,16 @@ function hPointerDown(e) {
         return;
       }
     }
-    // 分度器の外 → 角を回転
-    hDragMode = 'fig-rot';
-    hDragStartAng = hDirAngle(hVertex.x, hVertex.y, sx, sy);
-    hDragStartRot = hFigRot;
+    // 頂点付近 → 角を移動、それ以外 → 角を回転
+    const dv = Math.sqrt((sx - hVertex.x) ** 2 + (sy - hVertex.y) ** 2);
+    if (dv < 28) {
+      hDragMode = 'fig-move';
+      hDragStartSVG = { x: sx - hVertex.x, y: sy - hVertex.y };
+    } else {
+      hDragMode = 'fig-rot';
+      hDragStartAng = hDirAngle(hVertex.x, hVertex.y, sx, sy);
+      hDragStartRot = hFigRot;
+    }
   }
 }
 
@@ -966,8 +1088,13 @@ function hPointerMove(e) {
 
   // draw2：ドラッグ不要、ポインタ追跡で角をリアルタイム更新
   if (hPhase === 'draw2' && hVertex) {
-    hRay2Deg = hDirAngle(hVertex.x, hVertex.y, sx, sy);
-    hOpenAngle = hMinAngle(hRay1Deg, hRay2Deg);
+    const curRaw = hDirAngle(hVertex.x, hVertex.y, sx, sy);
+    let delta = curRaw - hRay2PrevRaw;
+    if (delta >  180) delta -= 360;
+    if (delta < -180) delta += 360;
+    hRay2Offset  = Math.max(-360, Math.min(360, hRay2Offset + delta));
+    hRay2PrevRaw = curRaw;
+    hRay2Deg     = hRay1Deg + hRay2Offset;
     hRenderFig();
     hShowLabel(true);
     return;
@@ -982,9 +1109,12 @@ function hPointerMove(e) {
     hRayLen = Math.max(Math.sqrt(ddx*ddx + ddy*ddy), 40);
   } else if (hDragMode === 'draw2') {
     hRay2Deg = hDirAngle(hVertex.x, hVertex.y, sx, sy);
-    hOpenAngle = hMinAngle(hRay1Deg, hRay2Deg);
     hRenderFig(); hShowLabel(true);
     if (hOpenAngle > 0) actionBtn.disabled = false;
+  } else if (hDragMode === 'fig-move') {
+    hVertex = { x: sx - hDragStartSVG.x, y: sy - hDragStartSVG.y };
+    hRenderFig();
+    if (hProtVisible) hRenderProt();
   } else if (hDragMode === 'fig-rot') {
     const ang = hDirAngle(hVertex.x, hVertex.y, sx, sy);
     hFigRot = hDragStartRot + (ang - hDragStartAng);
@@ -1006,6 +1136,9 @@ function hPointerUp(e) {
     hPreviewEl.setAttribute('display','none');
     const dx = sx - hVertex.x, dy = sy - hVertex.y;
     hRay1Deg = Math.sqrt(dx*dx+dy*dy) < 8 ? 10 : hDirAngle(hVertex.x, hVertex.y, sx, sy);
+    hRay2Offset  = 0;
+    hRay2PrevRaw = hRay1Deg;
+    hRay2Deg     = hRay1Deg;
     hRenderFig();
     hSetPhase('draw2');
   }
@@ -1022,6 +1155,16 @@ actionBtn.addEventListener('click', () => {
 guide90Btn.addEventListener('click', () => {
   hGuide90 = !hGuide90;
   guide90Btn.classList.toggle('active', hGuide90);
+  hRenderFig();
+});
+guide180Btn.addEventListener('click', () => {
+  hGuide180 = !hGuide180;
+  guide180Btn.classList.toggle('active', hGuide180);
+  hRenderFig();
+});
+guide360Btn.addEventListener('click', () => {
+  hGuide360 = !hGuide360;
+  guide360Btn.classList.toggle('active', hGuide360);
   hRenderFig();
 });
 showProtBtn.addEventListener('click', () => hSetProtVisible(!hProtVisible));
