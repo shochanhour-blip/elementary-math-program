@@ -188,23 +188,20 @@ svg {
 
 /* ヘルプボタン */
 .help-btn {
-  position: fixed;
-  top: 14px;
-  right: 14px;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 2px solid #90caf9;
   background: white;
   color: #1565c0;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
   line-height: 1;
   padding: 0;
-  z-index: 50;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* ヘルプモーダル */
@@ -267,8 +264,8 @@ svg {
 <div class="mode-tabs">
   <button class="mode-tab active" id="tab-proto"></button>
   <button class="mode-tab"        id="tab-hak"></button>
+  <button class="help-btn"        id="help-btn">?</button>
 </div>
-<button class="help-btn" id="help-btn">?</button>
 
 <!-- かくどモード UI -->
 <div id="panel-proto">
@@ -279,6 +276,7 @@ svg {
   <div id="mode-btns">
     <button id="btn-180" class="mode-btn active">180°</button>
     <button id="btn-360" class="mode-btn">360°</button>
+    <button id="btn-hide-proto" class="mode-btn">分度器をかくす</button>
   </div>
 </div>
 
@@ -413,6 +411,7 @@ let CY, R_OUT, R_IN, R_NUMS_OUT, R_NUMS_IN, R_CTR, SVG_H_CUR, LINE_LEN;
 let angleDeg  = 0;
 let startSide = 'right';
 let dragging  = false;
+let protoBodyVisible = true;
 
 // ── はかるモード状態 ──────────────────────────────────
 const H_SVG_W = 500, H_SVG_H = 500;
@@ -771,6 +770,9 @@ function rebuild() {
 function setMode(mode) {
   protractorMode = mode;
   angleDeg = 0;
+  protoBodyVisible = true;
+  const hideBtn = document.getElementById('btn-hide-proto');
+  if (hideBtn) { hideBtn.textContent = '分度器をかくす'; hideBtn.classList.remove('active'); }
   document.getElementById('btn-180').classList.toggle('active', mode === '180');
   document.getElementById('btn-360').classList.toggle('active', mode === '360');
   document.getElementById('tab-proto').classList.toggle('active', mode !== 'hakaru');
@@ -858,9 +860,11 @@ function hRenderFig() {
     hSectorEl.setAttribute('d', '');
   }
 
-  // 90°ガイド
+  // 90°ガイド（角の内側方向へ）
   if (hGuide90 && hPhase !== 'draw1') {
-    const gp = hRayPt(hVertex.x, hVertex.y, r1 + 90, hRayLen);
+    const ccw = ((r2 - r1) % 360 + 360) % 360;
+    const guideDir = ccw <= 180 ? r1 + 90 : r1 - 90;
+    const gp = hRayPt(hVertex.x, hVertex.y, guideDir, hRayLen);
     hGuide90El.setAttribute('x1', hVertex.x); hGuide90El.setAttribute('y1', hVertex.y);
     hGuide90El.setAttribute('x2', gp.x);      hGuide90El.setAttribute('y2', gp.y);
     hGuide90El.removeAttribute('display');
@@ -1112,6 +1116,16 @@ document.getElementById('tab-proto').addEventListener('click', () => {
   setMode(last);
 });
 document.getElementById('tab-hak').addEventListener('click',  () => setMode('hakaru'));
+
+document.getElementById('btn-hide-proto').addEventListener('click', () => {
+  protoBodyVisible = !protoBodyVisible;
+  const btn = document.getElementById('btn-hide-proto');
+  btn.textContent = protoBodyVisible ? '分度器をかくす' : '分度器をみせる';
+  btn.classList.toggle('active', !protoBodyVisible);
+  const protoBody = [bandBgEl, ticksEl, arcOutEl, arcInEl, spokesEl,
+    baseRectEl, numsOutEl, numsInEl, baseExtEl, ctrInner, line90El, dotRight, dotLeft];
+  protoBody.forEach(el => el.style.display = protoBodyVisible ? '' : 'none');
+});
 
 // ── ヘルプ ───────────────────────────────────────────
 const HELP = {
