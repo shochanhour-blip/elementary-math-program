@@ -38,7 +38,12 @@ body {
   background: #f97316;
 }
 
-#display-box {
+#display-area {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+#display-box, #display-box-supp {
   background: white;
   border-radius: 20px;
   padding: 10px 44px;
@@ -46,12 +51,27 @@ body {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  border: 2px solid transparent;
 }
-
+#display-box {
+  border-color: #fcd34d;
+}
+#display-box-supp {
+  border-color: #c4b5fd;
+}
 #angle-num {
   font-size: 4.2rem;
   font-weight: 900;
-  color: #1565c0;
+  color: #b45309;
+  line-height: 1;
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+#supp-num {
+  font-size: 4.2rem;
+  font-weight: 900;
+  color: #6d28d9;
   line-height: 1;
   min-width: 3ch;
   text-align: right;
@@ -88,6 +108,8 @@ body {
   color: white;
   border-color: #1565c0;
 }
+#btn-supp { border-color: #c4b5fd; color: #6d28d9; }
+#btn-supp.active { background: #6d28d9; color: white; border-color: #6d28d9; }
 
 #svg-wrap {
   width: 100%;
@@ -301,13 +323,20 @@ svg {
 
 <!-- かくどモード UI -->
 <div id="panel-proto">
-  <div id="display-box">
-    <span id="angle-num">0</span>
-    <ruby class="unit">度<rt>ど</rt></ruby>
+  <div id="display-area">
+    <div id="display-box-supp" style="display:none">
+      <span id="supp-num">0</span>
+      <ruby class="unit">度<rt>ど</rt></ruby>
+    </div>
+    <div id="display-box">
+      <span id="angle-num">0</span>
+      <ruby class="unit">度<rt>ど</rt></ruby>
+    </div>
   </div>
   <div id="mode-btns">
     <button id="btn-180" class="mode-btn active">180°</button>
     <button id="btn-360" class="mode-btn">360°</button>
+    <button id="btn-supp" class="mode-btn">はんたいがわの角も表示</button>
     <button id="btn-hide-proto" class="mode-btn">分度器をかくす</button>
   </div>
 </div>
@@ -327,6 +356,8 @@ svg {
 <div id="svg-wrap">
   <svg id="svg" viewBox="0 0 600 382" xmlns="http://www.w3.org/2000/svg" overflow="visible">
 
+    <!-- 補角の扇型 -->
+    <path id="sector-supp" fill="rgba(167,139,250,0.38)" stroke="none" display="none"/>
     <!-- 角の扇型 -->
     <path id="sector" fill="rgba(251,191,36,0.45)" stroke="none"/>
 
@@ -373,6 +404,12 @@ svg {
     <line id="movable-line"
       stroke="#f97316" stroke-width="3.5" stroke-linecap="round"
       style="display:none"/>
+
+    <!-- 角度ラベル（分度器より上のレイヤー） -->
+    <text id="main-label" text-anchor="middle" dominant-baseline="middle"
+          font-size="20" font-weight="900" fill="#b45309" display="none"/>
+    <text id="supp-label" text-anchor="middle" dominant-baseline="middle"
+          font-size="20" font-weight="900" fill="#7c3aed" display="none"/>
 
     <circle id="center-dot" fill="#0d47a1"/>
 
@@ -453,6 +490,7 @@ let angleDeg  = 0;
 let startSide = 'right';
 let dragging  = false;
 let protoBodyVisible = true;
+let showSupp  = false;
 
 // ── はかるモード状態 ──────────────────────────────────
 const H_SVG_W = 500, H_SVG_H = 500;
@@ -486,7 +524,11 @@ function applyParams() {
 }
 
 const svgEl      = document.getElementById('svg');
-const sectorEl   = document.getElementById('sector');
+const sectorEl     = document.getElementById('sector');
+const sectorSuppEl = document.getElementById('sector-supp');
+const mainLabelEl  = document.getElementById('main-label');
+const suppLabelEl  = document.getElementById('supp-label');
+const suppBtn      = document.getElementById('btn-supp');
 const baseRectEl = document.getElementById('base-rect');
 const bandBgEl   = document.getElementById('band-bg');
 const arcOutEl   = document.getElementById('arc-outer');
@@ -502,7 +544,9 @@ const ctrInner   = document.getElementById('center-inner');
 const ctrDot     = document.getElementById('center-dot');
 const handleEl   = document.getElementById('drag-handle');
 const line90El   = document.getElementById('line-90');
-const angleNumEl = document.getElementById('angle-num');
+const angleNumEl    = document.getElementById('angle-num');
+const suppNumEl     = document.getElementById('supp-num');
+const dispBoxSupp   = document.getElementById('display-box-supp');
 const dotRight   = document.getElementById('dot-right');
 const dotLeft    = document.getElementById('dot-left');
 
@@ -664,14 +708,19 @@ function render() {
       sectorEl.setAttribute('d', sectorPath(180 - angleDeg, 180));
     }
 
-    const [fx, fy] = pt(fixedDeg, LINE_LEN);
-    fixedEl.setAttribute('x1', CX); fixedEl.setAttribute('y1', CY);
-    fixedEl.setAttribute('x2', fx); fixedEl.setAttribute('y2', fy);
-
     const extDeg = startSide === 'right' ? 180 : 0;
-    const [bx, by] = pt(extDeg, LINE_LEN);
-    baseExtEl.setAttribute('x1', CX); baseExtEl.setAttribute('y1', CY);
-    baseExtEl.setAttribute('x2', bx); baseExtEl.setAttribute('y2', by);
+    const [fx, fy] = pt(fixedDeg, LINE_LEN);
+    const [bx, by] = pt(extDeg,   LINE_LEN);
+    if (showSupp && angleDeg > 0 && 180 - angleDeg > 0) {
+      fixedEl.setAttribute('x1', bx); fixedEl.setAttribute('y1', by);
+      baseExtEl.setAttribute('display', 'none');
+    } else {
+      fixedEl.setAttribute('x1', CX); fixedEl.setAttribute('y1', CY);
+      baseExtEl.setAttribute('x1', CX); baseExtEl.setAttribute('y1', CY);
+      baseExtEl.setAttribute('x2', bx); baseExtEl.setAttribute('y2', by);
+      baseExtEl.removeAttribute('display');
+    }
+    fixedEl.setAttribute('x2', fx); fixedEl.setAttribute('y2', fy);
 
     const [lx, ly] = pt(movableDeg, LINE_LEN);
     const [hx, hy] = pt(movableDeg, R_OUT);
@@ -680,7 +729,47 @@ function render() {
     handleEl.setAttribute('cx', hx);  handleEl.setAttribute('cy', hy);
 
     movableEl.style.display = angleDeg === 0 ? 'none' : '';
+
+    // 補角
+    const suppDeg = 180 - angleDeg;
+    if (showSupp) {
+      suppNumEl.textContent = String(suppDeg);
+      dispBoxSupp.style.display = '';
+
+      if (angleDeg > 0 && suppDeg > 0) {
+        const [mainFrom, mainTo] = startSide === 'right' ? [0, angleDeg] : [180 - angleDeg, 180];
+        const [suppFrom, suppTo] = startSide === 'right' ? [angleDeg, 180] : [0, 180 - angleDeg];
+
+        sectorSuppEl.setAttribute('d', sectorPath(suppFrom, suppTo));
+        sectorSuppEl.removeAttribute('display');
+
+        const mainMid = (mainFrom + mainTo) / 2;
+        const [mlx, mly] = pt(mainMid, R_IN * 0.55);
+        mainLabelEl.setAttribute('x', mlx); mainLabelEl.setAttribute('y', mly);
+        mainLabelEl.textContent = angleDeg + '°';
+        mainLabelEl.removeAttribute('display');
+
+        const suppMid = (suppFrom + suppTo) / 2;
+        const [slx, sly] = pt(suppMid, R_IN * 0.55);
+        suppLabelEl.setAttribute('x', slx); suppLabelEl.setAttribute('y', sly);
+        suppLabelEl.textContent = suppDeg + '°';
+        suppLabelEl.removeAttribute('display');
+      } else {
+        sectorSuppEl.setAttribute('display', 'none');
+        mainLabelEl.setAttribute('display', 'none');
+        suppLabelEl.setAttribute('display', 'none');
+      }
+    } else {
+      sectorSuppEl.setAttribute('display', 'none');
+      mainLabelEl.setAttribute('display', 'none');
+      suppLabelEl.setAttribute('display', 'none');
+      dispBoxSupp.style.display = 'none';
+    }
   } else {
+    sectorSuppEl.setAttribute('display', 'none');
+    mainLabelEl.setAttribute('display', 'none');
+    suppLabelEl.setAttribute('display', 'none');
+    dispBoxSupp.style.display = 'none';
     sectorEl.setAttribute('d', sectorPath(0, angleDeg));
 
     const [fx, fy] = pt(0, LINE_LEN);
@@ -838,9 +927,9 @@ function setMode(mode) {
   hakaruCtrls.style.display   = isHakaru ? 'flex' : 'none';
 
   // 既存分度器要素の表示切り替え
-  const protoEls = [sectorEl, bandBgEl, ticksEl, arcOutEl, arcInEl, spokesEl,
+  const protoEls = [sectorSuppEl, sectorEl, bandBgEl, ticksEl, arcOutEl, arcInEl, spokesEl,
     baseRectEl, numsOutEl, numsInEl, baseExtEl, fixedEl, ctrInner,
-    line90El, movableEl, ctrDot, handleEl, dotRight, dotLeft];
+    line90El, movableEl, mainLabelEl, suppLabelEl, ctrDot, handleEl, dotRight, dotLeft];
   protoEls.forEach(el => el.style.display = isHakaru ? 'none' : '');
 
   if (isHakaru) {
@@ -851,6 +940,15 @@ function setMode(mode) {
   } else {
     hDrawEl.setAttribute('display', 'none');
     hProtEl.setAttribute('display', 'none');
+    // 補角機能は 180° モードのみ
+    suppBtn.style.display = mode === '180' ? '' : 'none';
+    if (mode !== '180') {
+      showSupp = false;
+      suppBtn.classList.remove('active');
+      sectorSuppEl.setAttribute('display', 'none');
+      mainLabelEl.setAttribute('display', 'none');
+      suppLabelEl.setAttribute('display', 'none');
+    }
     applyParams();
     rebuild();
   }
@@ -1259,6 +1357,12 @@ document.getElementById('tab-proto').addEventListener('click', () => {
   setMode(last);
 });
 document.getElementById('tab-hak').addEventListener('click',  () => setMode('hakaru'));
+
+suppBtn.addEventListener('click', () => {
+  showSupp = !showSupp;
+  suppBtn.classList.toggle('active', showSupp);
+  render();
+});
 
 document.getElementById('btn-hide-proto').addEventListener('click', () => {
   protoBodyVisible = !protoBodyVisible;
