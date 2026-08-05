@@ -1302,8 +1302,13 @@
         var availW = el.clientWidth;
         var availH = el.clientHeight;
         if (availW <= 0 || availH <= 0) { el.style.zoom = ''; return; }
+        // overflow:hidden をいったん解除してコンテンツの実寸を正確に測る
+        // (overflow:hidden のまま scrollWidth/scrollHeight を測ると、Chromeなど一部ブラウザで
+        //  clienWidth/clientHeight と同じ値を返しオーバーフローを検知できないことがある)
+        el.style.overflow = 'visible';
         var natW = el.scrollWidth;
         var natH = el.scrollHeight;
+        el.style.overflow = '';
         if (natW <= availW && natH <= availH) { el.style.zoom = ''; return; }
 
         // パス1: 線形式（保守的・オーバーフロー回避保証）— 96% マージンでクロップ防止
@@ -1322,14 +1327,20 @@
           el.style.zoom = String(sSqrt);
         }
 
+        function measureScroll() {
+          el.style.overflow = 'visible';
+          var w = el.scrollWidth, h = el.scrollHeight;
+          el.style.overflow = '';
+          return { w: w, h: h };
+        }
+
         // パス3以降: 縦余白を使って段階的に拡大（最大 2 ラウンド）
-        // flex-wrap コンテナは拡大しても横方向へ折り返しで吸収できるため、
-        // 縦余白だけを基準に試算し、オーバーフロー検証で安全性を担保する。
         function upscaleRound(fallbackZoom, round) {
           requestAnimationFrame(function() {
             requestAnimationFrame(function() {
               var cur = parseFloat(el.style.zoom) || 1;
-              var h   = el.scrollHeight, w = el.scrollWidth;
+              var ms  = measureScroll();
+              var h = ms.h, w = ms.w;
 
               // 直前パスがオーバーフロー（97% 超で判定） → fallback に戻して終了
               if (h > availH * 0.97 || w > availW * 0.97) {
@@ -1354,17 +1365,18 @@
               // 検証: tryZoom がオーバーフローなら safeZoom を試す（97% で判定してマージン確保）
               requestAnimationFrame(function() {
                 requestAnimationFrame(function() {
-                  if (el.scrollHeight > availH * 0.97 || el.scrollWidth > availW * 0.97) {
+                  var ms2 = measureScroll();
+                  if (ms2.h > availH * 0.97 || ms2.w > availW * 0.97) {
                     // tryZoom はオーバーフロー
                     if (safeZoom > cur * 1.02) {
                       el.style.zoom = String(safeZoom);
                       // safeZoom の検証（97% 超過なら cur に戻す）
                       requestAnimationFrame(function() {
                         requestAnimationFrame(function() {
-                          if (el.scrollHeight > availH * 0.97 || el.scrollWidth > availW * 0.97) {
+                          var ms3 = measureScroll();
+                          if (ms3.h > availH * 0.97 || ms3.w > availW * 0.97) {
                             el.style.zoom = String(cur);
                           }
-                          // safeZoom で収まった場合は次ラウンドへ進まない（保守的に止める）
                         });
                       });
                     } else {
@@ -1388,7 +1400,9 @@
   function tightenZoom(el) {
     if (!el) return;
     requestAnimationFrame(function() {
+      el.style.overflow = 'visible';
       var h = el.scrollHeight, w = el.scrollWidth;
+      el.style.overflow = '';
       var aH = el.clientHeight, aW = el.clientWidth;
       if (h > aH || w > aW) {
         var cur = parseFloat(el.style.zoom) || 1;
