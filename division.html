@@ -1490,6 +1490,7 @@
   function onHissanPrev() {
     if (state.hissanStepIdx > 0) {
       stopAutoPlay();
+      cancelPendingAnimations();
       state.hissanStepIdx--;
       var dividend = state.total, divisor = hissanDivisorFromState();
       if (!dividend || !divisor) { renderHissanBracket(); return; }
@@ -2017,6 +2018,18 @@
     });
   }
 
+  function cancelPendingAnimations() {
+    if (pendingExchangeTimer) { clearTimeout(pendingExchangeTimer); pendingExchangeTimer = null; }
+    if (pendingPostHLTimer)   { clearTimeout(pendingPostHLTimer);   pendingPostHLTimer   = null; }
+    pendingDistribTimers.forEach(clearTimeout);
+    pendingDistribTimers = [];
+    isDistributing = false;
+    state.hissanPostHL = null;
+    document.querySelectorAll('.distrib-ghost, .drop-ex-ghost').forEach(function(el) { el.remove(); });
+    // 両替ゾーンに残ったタイルをリセット
+    exchangeArea.innerHTML = '<span class="exchange-hint">10 や 100 をここにドロップ</span>';
+  }
+
   function syncLeftPane() {
     if (!state.hissanMode || state.hissanStepIdx < 0) return;
     if (deriveMode() !== 'equal-share') return;
@@ -2027,10 +2040,8 @@
     if (!frame) return;
     var ds = computeDivisionSteps(dividend, divisor);
 
-    // 進行中のアニメーションをキャンセル
-    if (pendingExchangeTimer) { clearTimeout(pendingExchangeTimer); pendingExchangeTimer = null; }
-    if (pendingPostHLTimer)   { clearTimeout(pendingPostHLTimer);   pendingPostHLTimer   = null; }
-    state.hissanPostHL = null;
+    // 進行中のアニメーションをすべてキャンセルし、両替ゾーンをリセット
+    cancelPendingAnimations();
 
     var prevFrame = state.hissanStepIdx > 0 ? state.hissanFrames[state.hissanStepIdx - 1] : null;
     var prevPreExch = prevFrame ? prevFrame.preExch : 0;
@@ -2042,12 +2053,6 @@
         if (!prevFrame || !prevFrame.qShow[step.col]) newQShowStep = i;
       }
     });
-
-    // 進行中の配布アニメーションをキャンセル
-    pendingDistribTimers.forEach(clearTimeout);
-    pendingDistribTimers = [];
-    isDistributing = false;
-    document.querySelectorAll('.distrib-ghost, .drop-ex-ghost').forEach(function(el) { el.remove(); });
 
     if (frame.preExch > 0 && frame.preExch > prevPreExch) {
       // Phase 1: 元のタイルを表示 → 対象タイルがパルス点滅（0.65s × 2 = 1.3s）
