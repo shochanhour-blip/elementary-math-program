@@ -422,6 +422,18 @@
     .conv-dot-eq { background: #6366f1; }
     .conv-dot-nl { background: #14b8a6; }
     .conv-dot.inactive { opacity: 0.25; }
+
+    /* ── ヘルプ ── */
+    .help-btn { width:28px;height:28px;border-radius:50%;border:2px solid #90caf9;background:#fff;color:#1565c0;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;padding:0;flex-shrink:0;transition:background .15s; }
+    .help-btn:hover { background:#e3f2fd; }
+    #help-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200; }
+    #help-modal { background:#fff;border-radius:20px;padding:32px 28px 28px;max-width:360px;width:calc(100% - 48px);position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18); }
+    #help-close { position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.1rem;color:#6b7280;cursor:pointer;padding:4px; }
+    #help-modal h2 { font-size:1.1rem;font-weight:900;color:#1565c0;margin:0 0 14px; }
+    #help-modal p { font-size:.95rem;line-height:1.8;color:#374151;margin:0; }
+    #help-modal .sh { display:block;font-weight:900;color:#1565c0;margin-top:14px;margin-bottom:2px; }
+    #help-modal .sh:first-child { margin-top:0; }
+    .mode-bar { align-items: center; }
   </style>
 </head>
 <body>
@@ -431,6 +443,7 @@
       <button class="mode-btn active" id="modeClockBtn"></button>
       <button class="mode-btn" id="modeArcBtn"></button>
       <button class="mode-btn" id="modeTilesBtn"></button>
+      <button class="help-btn" id="help-btn" style="margin-left:auto">?</button>
     </div>
 
     <div class="clock-area" id="clockArea">
@@ -2254,6 +2267,37 @@
     document.getElementById('nlMemBtn').style.display     = '';
     renderNumline();
     setTimeout(scaleContent, 50);
+
+    // ── ヘルプ ───────────────────────────────────────────
+    (function(){
+      var ov = document.getElementById('help-overlay');
+      var HELP = {
+        title: 'とけいのつかいかた',
+        body:
+          '<span class="sh">【モード1：とけいよみ】</span>' +
+          '長い針・短い針をドラッグして時刻を設定します。<br>' +
+          '時計の文字盤をタップすると「時のみ」→「分のみ」→「両方」と数字の表示が切り替わります。<br>' +
+          '<span class="sh">【モード2：かんさんARC】</span>' +
+          '弧で分を視覚化します。針をドラッグして、下の数直線パネルとの対応を確認しましょう。<br>' +
+          '<span class="sh">【モード3：かんさんTILES】</span>' +
+          'タイルで時間と分を表現します。タイルをドラッグして時刻を編集できます。',
+      };
+      document.getElementById('help-btn').addEventListener('click', function(){
+        document.getElementById('help-title').innerHTML = HELP.title;
+        document.getElementById('help-body').innerHTML  = HELP.body;
+        ov.style.display = 'flex';
+      });
+      document.getElementById('help-close').addEventListener('click', function(){ ov.style.display = 'none'; });
+      ov.addEventListener('click', function(e){ if (e.target === ov) ov.style.display = 'none'; });
+    })();
   </script>
+
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
+  </div>
+</div>
 </body>
 </html>

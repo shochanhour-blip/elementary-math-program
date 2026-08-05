@@ -249,14 +249,19 @@
     }
     .np-btn.del-btn { color: #f87171; font-size: 20px; }
 
+    @keyframes kf-pop   { 0%{transform:scale(.7);opacity:0} 70%{transform:scale(1.12)} 100%{transform:scale(1);opacity:1} }
+    @keyframes kf-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
     .quiz-feedback {
       font-size: 20px;
       font-weight: 800;
-      min-height: 26px;
+      min-height: 36px;
       letter-spacing: 0.04em;
+      padding: 4px 18px;
+      border-radius: 50px;
+      display: inline-block;
     }
-    .quiz-feedback.correct { color: #22c55e; }
-    .quiz-feedback.wrong   { color: #ef4444; }
+    .quiz-feedback.correct { background: #16a34a; color: #fff; animation: kf-pop .3s cubic-bezier(.17,.67,.46,1.2); }
+    .quiz-feedback.wrong   { background: #dc2626; color: #fff; animation: kf-shake .4s ease; }
   </style>
 </head>
 <body>
@@ -656,6 +661,8 @@
     function showFeedback(type) {
       var el   = document.getElementById('quiz-feedback');
       var disp = document.getElementById('numpad-display');
+      // アニメーションを毎回リセット
+      el.className = 'quiz-feedback'; void el.offsetWidth;
       if (type === true) {
         el.textContent = '⭕　せいかい！'; el.className = 'quiz-feedback correct';
         if (disp) { disp.textContent = String(state.stage * state.activeIdx); disp.className = 'numpad-display correct'; }

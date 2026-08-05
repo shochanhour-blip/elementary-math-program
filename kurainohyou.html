@@ -1021,6 +1021,16 @@
                   transform 0.38s ease,
                   opacity   0.38s ease;
     }
+    /* ── ヘルプ ── */
+    .help-btn { width:28px;height:28px;border-radius:50%;border:2px solid #90caf9;background:#fff;color:#1565c0;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;padding:0;flex-shrink:0;transition:background .15s; }
+    .help-btn:hover { background:#e3f2fd; }
+    #help-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200; }
+    #help-modal { background:#fff;border-radius:20px;padding:32px 28px 28px;max-width:360px;width:calc(100% - 48px);position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18); }
+    #help-close { position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.1rem;color:#6b7280;cursor:pointer;padding:4px; }
+    #help-modal h2 { font-size:1.1rem;font-weight:900;color:#1565c0;margin:0 0 14px; }
+    #help-modal p { font-size:.95rem;line-height:1.8;color:#374151;margin:0; }
+    #help-modal .sh { display:block;font-weight:900;color:#1565c0;margin-top:14px;margin-bottom:2px; }
+    #help-modal .sh:first-child { margin-top:0; }
   </style>
 </head>
 <body>
@@ -1037,6 +1047,7 @@
           <div class="zone-place-center-btns">
           </div>
           <div class="zone-place-right-btns">
+            <button id="help-btn" class="help-btn">?</button>
             <button id="resetBtn" class="reset-btn">リセット</button>
           </div>
         </div>
@@ -2292,6 +2303,38 @@ window.addEventListener('resize', autoScaleTileAreas);
 // ── 初期化 ───────────────────────────────────────────
 applyUIState();
 renderAll();
+
+// ── ヘルプ ───────────────────────────────────────────
+(function(){
+  var ov = document.getElementById('help-overlay');
+  var HELP = {
+    title: 'たしざん・ひきざんのつかいかた',
+    body:
+      '<span class="sh">【たしざん】</span>' +
+      '行Aと行Bにタイルをドラッグして置くと合計が表示されます。<br>' +
+      '<span class="sh">【ひきざん】</span>' +
+      '「ひきざん」をオンにして、タイルをタップすると削除されます。<br>' +
+      '<span class="sh">【りょうがえ】</span>' +
+      '10枚のタイルを「りょうがえ」ゾーンにドロップすると上の位に変換されます。<br>' +
+      '<span class="sh">【ひっさん】</span>' +
+      '「ひっさん」をオンにすると、くり上がり・くり下がりの筆算が右ペインに表示されます。',
+  };
+  document.getElementById('help-btn').addEventListener('click', function(){
+    document.getElementById('help-title').innerHTML = HELP.title;
+    document.getElementById('help-body').innerHTML  = HELP.body;
+    ov.style.display = 'flex';
+  });
+  document.getElementById('help-close').addEventListener('click', function(){ ov.style.display = 'none'; });
+  ov.addEventListener('click', function(e){ if (e.target === ov) ov.style.display = 'none'; });
+})();
 </script>
+
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
+  </div>
+</div>
 </body>
 </html>
