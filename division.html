@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>わり算 — 具体物で考えよう</title>
   <style>
     :root {
@@ -29,7 +29,7 @@
       align-items: center;
       padding: 0;
       min-width: 0;
-      height: 100vh;
+      height: 100svh;
       overflow: hidden;
     }
 
@@ -542,7 +542,7 @@
     /* ── ページ幅ラッパー ── */
     #pageWrap {
       width: 100%;
-      height: 100vh;
+      height: 100svh;
       display: flex;
       flex-direction: column;
       align-items: stretch;
@@ -1583,6 +1583,7 @@
       }
 
       var fq = clone(cur); fq.qShow[step.col] = true; fq.hlDiv = []; fq.hlQ = step.col; fq.stepType = 'tateru'; fq.bdStep = -1;
+      if (i > 0) { for (var sc = steps[i-1].col + 1; sc < step.col; sc++) fq.qShow[sc] = true; }
       var qHL = '<span style="color:#16a34a;background:rgba(22,163,74,0.18);padding:1px 5px;border-radius:5px;font-size:1.05em;">' + step.q + '</span>';
       fq.msg = String(step.partial) + ' ÷ ' + divisor + ' = ' + qHL
         + (step.remainder > 0 ? ' あまり ' + step.remainder : '')
@@ -1660,6 +1661,9 @@
 
     var qArr = new Array(n).fill(null);
     steps.forEach(function(s) { qArr[s.col] = s.q; });
+    for (var qi = 1; qi < steps.length; qi++) {
+      for (var qc = steps[qi-1].col + 1; qc < steps[qi].col; qc++) qArr[qc] = 0;
+    }
     var labelRowHTML = new Array(n).fill(null).map(function(_, col) {
       var lbl = PLACE_NAMES[n - 1 - col] || '';
       return '<div style="width:' + C + 'px;text-align:center;font-size:15px;font-weight:700;color:#94a3b8;' + colBorder(col) + '">' + lbl + '</div>';
@@ -1881,6 +1885,9 @@
 
     const qArr = new Array(n).fill(null);
     steps.forEach(function(s) { qArr[s.col] = s.q; });
+    for (let qi = 1; qi < steps.length; qi++) {
+      for (let qc = steps[qi-1].col + 1; qc < steps[qi].col; qc++) qArr[qc] = 0;
+    }
 
     function colBorderFull(col) {
       return col < n - 1 ? 'border-right:1px dashed rgba(148,163,184,0.4);' : '';

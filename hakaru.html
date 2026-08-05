@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ぶんどきのつかいかた</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f0f7ff;
+  font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP','Yu Gothic',sans-serif;
+  padding: 12px 8px;
+  gap: 10px;
+}
+h1 { font-size: 1.3rem; font-weight: 900; color: #0c4a6e; }
+
+#phase-banner {
+  background: #1565c0;
+  color: white;
+  padding: 7px 24px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+#canvas-wrap {
+  width: 100%;
+  max-width: 640px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+}
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#controls { display: flex; gap: 12px; align-items: center; }
+
+button {
+  padding: 10px 28px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: inherit;
+}
+#action-btn { background: #1565c0; color: white; }
+#action-btn:disabled { background: #90caf9; cursor: default; }
+#reset-btn { background: white; color: #1565c0; border: 2px solid #90caf9; }
+
+#answer-box {
+  display: none;
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: #1565c0;
+  background: white;
+  padding: 8px 36px;
+  border-radius: 16px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+</style>
+</head>
+<body>
+<h1>ぶんどきのつかいかた</h1>
+<div id="phase-banner">ステップ１：せんをかこう（ゆびでひっぱる）</div>
+
+<div id="canvas-wrap">
+<svg id="svg" viewBox="0 0 620 480" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- グリッド -->
+  <g id="grid" stroke="#e8f0fb" stroke-width="1"></g>
+
+  <!-- 図形：扇形・２直線・頂点 -->
+  <path  id="sector-fig" fill="rgba(251,191,36,0.38)" display="none"/>
+  <line  id="ray1" stroke="#1565c0" stroke-width="2.5" stroke-linecap="round" display="none"/>
+  <line  id="ray2" stroke="#1565c0" stroke-width="2.5" stroke-linecap="round" display="none"/>
+  <circle id="vdot" r="6" fill="#0d47a1" display="none"/>
+
+  <!-- ドラッグプレビュー -->
+  <line id="preview" stroke="#90caf9" stroke-width="2.5"
+        stroke-dasharray="8,5" stroke-linecap="round" display="none"/>
+
+  <!-- 角度ラベル（draw2フェーズのみ） -->
+  <text id="angle-label" text-anchor="middle" dominant-baseline="middle"
+        font-size="24" font-weight="900" fill="#e53935" display="none"/>
+
+  <!-- 分度器グループ（measureフェーズで表示） -->
+  <g id="protractor" display="none">
+    <path id="p-band"      fill="white" stroke="none"/>
+    <g    id="p-ticks"></g>
+    <path id="p-arc-out"   fill="none" stroke="#1976d2" stroke-width="1.8"/>
+    <path id="p-arc-in"    fill="none" stroke="#1976d2" stroke-width="1.2"/>
+    <g    id="p-spokes"></g>
+    <rect id="p-base-rect" fill="white" stroke="#1976d2" stroke-width="1.2"/>
+    <g    id="p-nums-out"></g>
+    <g    id="p-nums-in"></g>
+    <line id="p-ext"       stroke="#90b8e0" stroke-width="1.2" stroke-dasharray="5,4"/>
+    <line id="p-base-line" stroke="#0d47a1" stroke-width="2.5" stroke-linecap="round"/>
+    <path id="p-ctr"       fill="white" stroke="#1976d2" stroke-width="1.2"/>
+    <circle id="p-ctr-dot" r="5" fill="#0d47a1"/>
+  </g>
+
+  <!-- ヒント (measure) -->
+  <text id="hint" x="310" y="460" text-anchor="middle" font-size="12"
+        fill="#64748b" display="none">なかの●をひっぱって いどう。弧をひっぱって かいてん</text>
+
+</svg>
+</div>
+
+<div id="controls">
+  <button id="reset-btn">やりなおし</button>
+  <button id="action-btn" disabled>かくてい</button>
+</div>
+<div id="answer-box"></div>
+
+<script>
+// ── 定数 ──────────────────────────────────────────────
+const SVG_W = 620, SVG_H = 480;
+const CX = 310, CY = 240;
+
+// 分度器パラメータ（ローカル座標系、原点=中心点）
+const PR     = 148;  // 外弧
+const PR2    = 120;  // 内弧
+const PR_NO  = 106;  // 外スケール数字
+const PR_NI  = 88;   // 内スケール数字
+const PR_CTR = 24;   // 中心半円
+const PR_LL  = PR + 14; // 線の長さ
+
+const BLUE_MID  = '#1976d2';
+const BLUE_DARK = '#0d47a1';
+const COLOR_RED = '#e53935';
+const COLOR_BLK = '#212121';
+const NS = 'http://www.w3.org/2000/svg';
+
+// ── 状態 ──────────────────────────────────────────────
+let phase      = 'draw1'; // 'draw1'|'draw2'|'rotate'|'measure'
+let vertex     = null;    // {x,y}
+let ray1Deg    = 0;
+let ray2Deg    = 90;
+let openAngle  = 0;
+let figRot     = 0;       // 図形回転（rotateフェーズ）
+
+let pPos = { x: CX, y: CY }; // 分度器中心（world）
+let pRot = 0;                  // 分度器回転（SVG CW度）
+
+let dragging      = false;
+let dragMode      = null;  // 'draw1'|'draw2'|'fig-rot'|'p-move'|'p-rot'
+let dragStartSVG  = null;
+let dragStartAng  = 0;
+let dragStartRot  = 0;
+
+// ── DOM ───────────────────────────────────────────────
+const svgEl        = document.getElementById('svg');
+const ray1El       = document.getElementById('ray1');
+const ray2El       = document.getElementById('ray2');
+const vdotEl       = document.getElementById('vdot');
+const sectorFigEl  = document.getElementById('sector-fig');
+const previewEl    = document.getElementById('preview');
+const angleLabelEl = document.getElementById('angle-label');
+const pGroup       = document.getElementById('protractor');
+const pBandEl      = document.getElementById('p-band');
+const pTicksEl     = document.getElementById('p-ticks');
+const pArcOut      = document.getElementById('p-arc-out');
+const pArcIn       = document.getElementById('p-arc-in');
+const pSpokesEl    = document.getElementById('p-spokes');
+const pBaseRect    = document.getElementById('p-base-rect');
+const pNumsOut     = document.getElementById('p-nums-out');
+const pNumsIn      = document.getElementById('p-nums-in');
+const pExt         = document.getElementById('p-ext');
+const pBaseLineEl  = document.getElementById('p-base-line');
+const pCtrEl       = document.getElementById('p-ctr');
+const pCtrDot      = document.getElementById('p-ctr-dot');
+const actionBtn    = document.getElementById('action-btn');
+const resetBtn     = document.getElementById('reset-btn');
+const phaseBanner  = document.getElementById('phase-banner');
+const answerBox    = document.getElementById('answer-box');
+const hintEl       = document.getElementById('hint');
+
+// ── ユーティリティ ─────────────────────────────────────
+function toRad(d) { return d * Math.PI / 180; }
+
+function svgCoords(e) {
+  const r = svgEl.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * SVG_W / r.width,
+    y: (e.clientY - r.top)  * SVG_H / r.height,
+  };
+}
+
+// world座標 → 分度器ローカル座標
+function worldToLocal(sx, sy) {
+  const dx = sx - pPos.x, dy = sy - pPos.y;
+  const rad = toRad(pRot);
+  return [
+    dx * Math.cos(rad) + dy * Math.sin(rad),
+   -dx * Math.sin(rad) + dy * Math.cos(rad),
+  ];
+}
+
+// SVG数学系角度（CCW, right=0）→ 端点
+function rayPt(vx, vy, deg, len) {
+  const r = toRad(deg);
+  return { x: vx + Math.cos(r) * len, y: vy - Math.sin(r) * len };
+}
+
+// pointer位置から中心への角度（数学系）
+function dirAngle(vx, vy, px, py) {
+  return Math.atan2(-(py - vy), px - vx) * 180 / Math.PI;
+}
+
+// ２方向の間の最小角度（0〜180）
+function minAngle(a1, a2) {
+  let d = ((a2 - a1) % 360 + 360) % 360;
+  if (d > 180) d = 360 - d;
+  return Math.round(d);
+}
+
+// ── 分度器ローカル座標ヘルパー ──────────────────────────
+function pPt(deg, r) {
+  const rad = toRad(deg);
+  return [r * Math.cos(rad), -r * Math.sin(rad)];
+}
+
+function pSemiArc(r) {
+  const [sx, sy] = pPt(0,   r);
+  const [ex, ey] = pPt(180, r);
+  return `M${sx},${sy}A${r},${r},0,0,0,${ex},${ey}`;
+}
+
+function pBandPath() {
+  const [ox0, oy0] = pPt(0,   PR);
+  const [ox1, oy1] = pPt(180, PR);
+  const [ix0, iy0] = pPt(0,   PR2);
+  const [ix1, iy1] = pPt(180, PR2);
+  return `M${ox0},${oy0}A${PR},${PR},0,0,0,${ox1},${oy1}` +
+         `L${ix1},${iy1}A${PR2},${PR2},0,0,1,${ix0},${iy0}Z`;
+}
+
+// ── 分度器構築（１回のみ） ───────────────────────────────
+function buildProtractor() {
+  pBandEl.setAttribute('d', pBandPath());
+  pArcOut.setAttribute('d', pSemiArc(PR));
+  pArcIn.setAttribute('d',  pSemiArc(PR2));
+
+  pBaseRect.setAttribute('x',      -PR);
+  pBaseRect.setAttribute('y',      0);
+  pBaseRect.setAttribute('width',  PR * 2);
+  pBaseRect.setAttribute('height', 14);
+
+  pCtrEl.setAttribute('d', `M${PR_CTR},0A${PR_CTR},${PR_CTR},0,0,0,${-PR_CTR},0Z`);
+  pCtrDot.setAttribute('cx', 0); pCtrDot.setAttribute('cy', 0);
+
+  pBaseLineEl.setAttribute('x1', 0);    pBaseLineEl.setAttribute('y1', 0);
+  pBaseLineEl.setAttribute('x2', PR_LL); pBaseLineEl.setAttribute('y2', 0);
+  pExt.setAttribute('x1', 0);     pExt.setAttribute('y1', 0);
+  pExt.setAttribute('x2', -PR_LL); pExt.setAttribute('y2', 0);
+
+  function mkLine(x1,y1,x2,y2,stroke,sw) {
+    const l = document.createElementNS(NS,'line');
+    Object.entries({x1,y1,x2,y2,stroke,'stroke-width':sw}).forEach(([k,v]) => l.setAttribute(k,v));
+    return l;
+  }
+  function mkText(str,x,y,fill,fs,fw,rot) {
+    const t = document.createElementNS(NS,'text');
+    t.setAttribute('x',x); t.setAttribute('y',y);
+    t.setAttribute('text-anchor','middle');
+    t.setAttribute('dominant-baseline','middle');
+    t.setAttribute('fill',fill); t.setAttribute('font-size',fs);
+    t.setAttribute('font-weight',fw); t.setAttribute('font-family','sans-serif');
+    if (rot !== 0) t.setAttribute('transform',`rotate(${rot},${x},${y})`);
+    t.textContent = str;
+    return t;
+  }
+
+  const tF = document.createDocumentFragment();
+  const sF = document.createDocumentFragment();
+  const noF = document.createDocumentFragment();
+  const niF = document.createDocumentFragment();
+
+  for (let d = 0; d <= 180; d++) {
+    const major = d % 10 === 0;
+    const minor = d % 5 === 0 && !major;
+    const [ox,oy] = pPt(d, PR);
+    const ir = major ? PR2 : minor ? PR - 17 : PR - 9;
+    const [ix,iy] = pPt(d, ir);
+    tF.appendChild(mkLine(ox,oy,ix,iy, BLUE_MID, major ? 1.5 : minor ? 1.1 : 0.7));
+
+    if (major) {
+      const [px,py] = pPt(d, PR2);
+      sF.appendChild(mkLine(0,0,px,py, BLUE_MID, 1.0));
+      const rot = 90 - d;
+      const [lox,loy] = pPt(d, PR_NO);
+      noF.appendChild(mkText(String(180-d), lox,loy, COLOR_BLK, d===90?'12':'10', '700', rot));
+      const [lix,liy] = pPt(d, PR_NI);
+      niF.appendChild(mkText(String(d), lix,liy, COLOR_RED, d===90?'11':'9.5', '600', rot));
+    }
+  }
+
+  pTicksEl.appendChild(tF);
+  pSpokesEl.appendChild(sF);
+  pNumsOut.appendChild(noF);
+  pNumsIn.appendChild(niF);
+}
+
+// ── 図形描画 ──────────────────────────────────────────
+function setRayEl(el, vx, vy, deg, fwd, bwd) {
+  const p1 = rayPt(vx, vy, deg, fwd);
+  const p2 = rayPt(vx, vy, deg + 180, bwd);
+  el.setAttribute('x1', p2.x); el.setAttribute('y1', p2.y);
+  el.setAttribute('x2', p1.x); el.setAttribute('y2', p1.y);
+}
+
+function sectorArcPath(vx, vy, fromD, toD, r) {
+  const span = toD - fromD;
+  if (span <= 0 || span >= 360) return '';
+  const fx = vx + Math.cos(toRad(fromD)) * r;
+  const fy = vy - Math.sin(toRad(fromD)) * r;
+  const tx = vx + Math.cos(toRad(toD)) * r;
+  const ty = vy - Math.sin(toRad(toD)) * r;
+  return `M${vx},${vy}L${fx},${fy}A${r},${r},0,${span>180?1:0},0,${tx},${ty}Z`;
+}
+
+function renderFig() {
+  if (!vertex) return;
+  const r1 = ray1Deg + figRot;
+  const r2 = ray2Deg + figRot;
+
+  setRayEl(ray1El, vertex.x, vertex.y, r1, 280, 50);
+  ray1El.removeAttribute('display');
+
+  if (phase !== 'draw1') {
+    setRayEl(ray2El, vertex.x, vertex.y, r2, 280, 50);
+    ray2El.removeAttribute('display');
+
+    // 小さい方の角の扇形を塗る
+    let lo = r1, hi = r2;
+    if (((hi - lo + 360) % 360) > 180) [lo, hi] = [hi, lo];
+    let span = ((hi - lo) + 360) % 360;
+    sectorFigEl.setAttribute('d', sectorArcPath(vertex.x, vertex.y, lo, lo + span, 80));
+    sectorFigEl.removeAttribute('display');
+  }
+
+  vdotEl.setAttribute('cx', vertex.x); vdotEl.setAttribute('cy', vertex.y);
+  vdotEl.removeAttribute('display');
+}
+
+function renderProtractor() {
+  pGroup.setAttribute('transform',
+    `translate(${pPos.x},${pPos.y}) rotate(${pRot})`);
+}
+
+function showAngleLabel(show, val) {
+  if (!show || !vertex) { angleLabelEl.setAttribute('display','none'); return; }
+  const lx = vertex.x + 30, ly = vertex.y - 36;
+  angleLabelEl.setAttribute('x', lx); angleLabelEl.setAttribute('y', ly);
+  angleLabelEl.textContent = `${val}°`;
+  angleLabelEl.removeAttribute('display');
+}
+
+// ── フェーズ切り替え ──────────────────────────────────
+const BANNERS = {
+  draw1:   'ステップ１：せんをかこう（ゆびでひっぱる）',
+  draw2:   'ステップ２：かくをひらこう（ひっぱる）→ かくてい',
+  rotate:  'ステップ３：まわしてみよう（ひっぱる）→ はかる',
+  measure: 'ステップ４：ぶんどきをあわせてはかろう',
+};
+const ACTION_LABELS = {
+  draw1: 'かくてい', draw2: 'かくてい', rotate: 'はかる', measure: 'こたえをみる',
+};
+
+function setPhase(p) {
+  phase = p;
+  phaseBanner.textContent = BANNERS[p];
+  actionBtn.textContent   = ACTION_LABELS[p];
+  actionBtn.disabled = (p === 'draw1' || p === 'draw2');
+
+  if (p === 'measure') {
+    pGroup.removeAttribute('display');
+    hintEl.removeAttribute('display');
+    renderProtractor();
+  } else {
+    pGroup.setAttribute('display', 'none');
+    hintEl.setAttribute('display', 'none');
+  }
+
+  showAngleLabel(p === 'draw2', openAngle);
+}
+
+// ── ポインタイベント ──────────────────────────────────
+svgEl.addEventListener('pointerdown', e => {
+  const pos = svgCoords(e);
+  svgEl.setPointerCapture(e.pointerId);
+  dragging = true;
+
+  if (phase === 'draw1') {
+    vertex    = { x: pos.x, y: pos.y };
+    dragMode  = 'draw1';
+    ray1Deg   = 0;
+    previewEl.setAttribute('x1', pos.x); previewEl.setAttribute('y1', pos.y);
+    previewEl.setAttribute('x2', pos.x); previewEl.setAttribute('y2', pos.y);
+    previewEl.removeAttribute('display');
+
+  } else if (phase === 'draw2') {
+    dragMode = 'draw2';
+    ray2Deg  = dirAngle(vertex.x, vertex.y, pos.x, pos.y);
+    openAngle = minAngle(ray1Deg, ray2Deg);
+    renderFig();
+    showAngleLabel(true, openAngle);
+
+  } else if (phase === 'rotate') {
+    dragMode     = 'fig-rot';
+    dragStartAng = dirAngle(vertex.x, vertex.y, pos.x, pos.y);
+    dragStartRot = figRot;
+
+  } else if (phase === 'measure') {
+    const [lx, ly] = worldToLocal(pos.x, pos.y);
+    const ld = Math.sqrt(lx*lx + ly*ly);
+
+    if (ld < PR_CTR + 20) {
+      dragMode    = 'p-move';
+      dragStartSVG = { x: pos.x - pPos.x, y: pos.y - pPos.y };
+    } else if (ld > PR2 - 20 && ld < PR + 24 && ly <= 5) {
+      dragMode    = 'p-rot';
+      dragStartAng = Math.atan2(pos.y - pPos.y, pos.x - pPos.x) * 180 / Math.PI;
+      dragStartRot = pRot;
+    }
+  }
+});
+
+svgEl.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const pos = svgCoords(e);
+
+  if (dragMode === 'draw1') {
+    previewEl.setAttribute('x2', pos.x); previewEl.setAttribute('y2', pos.y);
+    ray1Deg = dirAngle(vertex.x, vertex.y, pos.x, pos.y);
+
+  } else if (dragMode === 'draw2') {
+    ray2Deg   = dirAngle(vertex.x, vertex.y, pos.x, pos.y);
+    openAngle = minAngle(ray1Deg, ray2Deg);
+    renderFig();
+    showAngleLabel(true, openAngle);
+    if (openAngle > 0) actionBtn.disabled = false;
+
+  } else if (dragMode === 'fig-rot') {
+    const ang = dirAngle(vertex.x, vertex.y, pos.x, pos.y);
+    figRot = dragStartRot + (ang - dragStartAng);
+    renderFig();
+
+  } else if (dragMode === 'p-move') {
+    pPos = { x: pos.x - dragStartSVG.x, y: pos.y - dragStartSVG.y };
+    renderProtractor();
+
+  } else if (dragMode === 'p-rot') {
+    const ang = Math.atan2(pos.y - pPos.y, pos.x - pPos.x) * 180 / Math.PI;
+    pRot = dragStartRot + (ang - dragStartAng);
+    renderProtractor();
+  }
+});
+
+svgEl.addEventListener('pointerup', e => {
+  if (!dragging) return;
+  const pos = svgCoords(e);
+
+  if (dragMode === 'draw1') {
+    previewEl.setAttribute('display', 'none');
+    const dx = pos.x - vertex.x, dy = pos.y - vertex.y;
+    if (Math.sqrt(dx*dx + dy*dy) < 8) ray1Deg = 10; // タップのみの場合デフォルト
+    else ray1Deg = dirAngle(vertex.x, vertex.y, pos.x, pos.y);
+    renderFig();
+    setPhase('draw2');
+    actionBtn.disabled = true;
+  }
+
+  dragging = false; dragMode = null;
+});
+
+svgEl.addEventListener('pointercancel', () => {
+  dragging = false; dragMode = null;
+  previewEl.setAttribute('display', 'none');
+});
+
+// ── ボタン ────────────────────────────────────────────
+actionBtn.addEventListener('click', () => {
+  if (phase === 'draw2') {
+    showAngleLabel(false);
+    setPhase('rotate');
+    actionBtn.disabled = false;
+
+  } else if (phase === 'rotate') {
+    pPos = { x: CX, y: CY };
+    pRot = 0;
+    setPhase('measure');
+
+  } else if (phase === 'measure') {
+    answerBox.textContent = `${openAngle}°`;
+    answerBox.style.display = 'block';
+  }
+});
+
+resetBtn.addEventListener('click', () => {
+  vertex = null; ray1Deg = 0; ray2Deg = 90;
+  openAngle = 0; figRot = 0;
+  pPos = { x: CX, y: CY }; pRot = 0;
+  dragging = false; dragMode = null;
+
+  [ray1El, ray2El, sectorFigEl, vdotEl, previewEl, angleLabelEl]
+    .forEach(el => el.setAttribute('display','none'));
+  pGroup.setAttribute('display','none');
+  hintEl.setAttribute('display','none');
+  answerBox.style.display = 'none';
+  setPhase('draw1');
+  actionBtn.disabled = true;
+});
+
+// ── グリッド ─────────────────────────────────────────
+(function buildGrid() {
+  const g = document.getElementById('grid');
+  const mk = (x1,y1,x2,y2) => {
+    const l = document.createElementNS(NS,'line');
+    Object.entries({x1,y1,x2,y2}).forEach(([k,v]) => l.setAttribute(k,v));
+    return l;
+  };
+  for (let x = 0; x <= SVG_W; x += 40) g.appendChild(mk(x,0,x,SVG_H));
+  for (let y = 0; y <= SVG_H; y += 40) g.appendChild(mk(0,y,SVG_W,y));
+})();
+
+// ── 初期化 ────────────────────────────────────────────
+buildProtractor();
+setPhase('draw1');
+</script>
+</body>
+</html>
