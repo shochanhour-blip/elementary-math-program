@@ -33,7 +33,8 @@
       flex-direction: column;
       align-items: stretch;
       gap: 10px;
-      padding: 14px 48px;
+      /* 右上のヘルプボタン(44px)と重ならないよう右側を広めに取る */
+      padding: 14px 68px 14px 48px;
       overflow: hidden;
     }
 
@@ -110,6 +111,9 @@
     .chip-b { background: #eff6ff; color: var(--c-sub); }
     #chipB.sub-correct input { border-color: #ef4444 !important; }
     .input-wrap { position: relative; }
+    /* ひく数が ひかれる数より大きいとき */
+    .num-chip.sub-over input { border-color: #ef4444; background: #fef2f2; color: #b91c1c; }
+    .hissan-cannot { font-size: .55em; color: #b91c1c; white-space: nowrap; }
     #subCorrectMark { position: absolute; top: -10px; right: -10px; font-size: 1.1rem; display: none; line-height: 1; z-index: 10; }
     #subCorrectMark.visible { display: block; }
     .op-display { font-size: 32px; font-weight: 900; color: #6b7280; padding: 0 4px; }
@@ -754,17 +758,6 @@
       transition: background .12s, color .12s, border-color .12s;
     }
     .toolbar-btn.on { background: var(--c-place); color: #fff; border-color: var(--c-place); }
-    #removeModeBtn {
-      font-size: 20px;
-      font-weight: 900;
-      padding: 5px 56px;
-      background: #f0fdf4;
-      color: #16a34a;
-      border-color: #86efac;
-      border-radius: 10px;
-      line-height: 1;
-    }
-    #removeModeBtn.on { background: #22c55e; color: #fff; border-color: #16a34a; }
 
     /* りょうがえ確認モーダル */
     .confirm-overlay {
@@ -1022,15 +1015,21 @@
                   opacity   0.38s ease;
     }
     /* ── ヘルプ ── */
-    .help-btn { width:28px;height:28px;border-radius:50%;border:2px solid #90caf9;background:#fff;color:#1565c0;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;padding:0;flex-shrink:0;transition:background .15s; }
-    .help-btn:hover { background:#e3f2fd; }
-    #help-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200; }
-    #help-modal { background:#fff;border-radius:20px;padding:32px 28px 28px;max-width:360px;width:calc(100% - 48px);position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18); }
-    #help-close { position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.1rem;color:#6b7280;cursor:pointer;padding:4px; }
+    /* ── ヘルプボタン（全教材で共通：画面右下に固定） ── */
+    .help-btn { position:fixed;right:16px;top:max(16px, env(safe-area-inset-top));width:44px;height:44px;margin:0;border-radius:50%;border:3px solid #90caf9;background:#fff;color:#1565c0;font-family:inherit;font-size:1.2rem;font-weight:800;line-height:1;padding:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;z-index:190;box-shadow:0 4px 14px rgba(0,0,0,.20);transition:background .15s;-webkit-tap-highlight-color:transparent; }
+    .help-btn:hover  { background:#e3f2fd; }
+    .help-btn:active { transform:translateY(1px); }
+    #help-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch; }
+    #help-modal { background:#fff;border-radius:20px;padding:22px 28px 26px;max-width:480px;width:100%;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18);
+                  max-height:calc(100svh - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain; }
+    /* スクロールしても閉じるボタンが隠れないよう sticky にする */
+    #help-close { position:sticky;top:0;display:block;margin:0 -10px 4px auto;background:#fff;border:none;font-size:1.2rem;color:#6b7280;cursor:pointer;padding:2px 8px;z-index:1; }
     #help-modal h2 { font-size:1.1rem;font-weight:900;color:#1565c0;margin:0 0 14px; }
-    #help-modal p { font-size:.95rem;line-height:1.8;color:#374151;margin:0; }
+    #help-modal p { font-size:.95rem;line-height:2.05;color:#374151;margin:0; }
+    #help-modal rt { font-size:.58em;font-weight:700;color:#6b7280; }
     #help-modal .sh { display:block;font-weight:900;color:#1565c0;margin-top:14px;margin-bottom:2px; }
     #help-modal .sh:first-child { margin-top:0; }
+    #help-modal .sub { display:block;margin-top:10px;font-weight:900;color:#1565c0; }
   </style>
 </head>
 <body>
@@ -1047,7 +1046,6 @@
           <div class="zone-place-center-btns">
           </div>
           <div class="zone-place-right-btns">
-            <button id="help-btn" class="help-btn">?</button>
             <button id="resetBtn" class="reset-btn">リセット</button>
           </div>
         </div>
@@ -1116,6 +1114,15 @@
   <button id="hissanBtn" class="hissan-tab">◀</button>
 </div>
 
+<button id="help-btn" class="help-btn" aria-label="つかいかた">?</button>
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -1135,12 +1142,12 @@ const state = {
   gutiMode:    true,
   hissanMode:  false,
   showWriteRow: false,
-  removeMode:  false,
   topPlace:    10,
   botPlace:    1,
   nextId:      0,
   carryEverDone: false, // くりあがりが一度でも確定されたらtrueにし、リセットまでinputをロック
   tiles:       [],      // { id, placeValue, row, reserved?, removed? }
+  writeInk:    {},      // 手書き行の内容（位ごとの dataURL）。再描画で消えないよう退避する
   carryZone:   [],      // { id, placeValue, row?, sourceId?, result? }
   exchangeZone: [],    // { id, lowerPV, upperPV } — りょうがえバンドル（ひきざん用）
   animNewTiles:     new Set(),
@@ -1154,7 +1161,6 @@ const subBtn        = $('subBtn');
 const hissanBtn     = $('hissanBtn');
 const resetBtn      = $('resetBtn');
 const writeRowBtn   = $('writeRowBtn');
-const removeModeBtn = $('removeModeBtn');
 const tilePalette   = $('tilePalette');
 const gutiPane      = $('gutiPane');
 const appLayout     = $('appLayout');
@@ -1192,6 +1198,48 @@ function getActivePlaces() {
 
 function realPlaces() {
   return getActivePlaces().filter(p => !p.isDot);
+}
+
+// ── 入力の正規化 ─────────────────────────────────────
+// 位の表は せん(1000)〜ひゃくぶんのいち(0.01) までなので、
+// それを超える値や、ひらいていない位の細かさは受け付けない
+const MAX_INPUT = 9999;
+
+function sanitizeInput(el) {
+  const raw = el.value;
+  if (raw === '') return NaN;
+  let v = parseFloat(raw);
+  if (isNaN(v)) { el.value = ''; return NaN; }
+  if (v < 0) v = 0;
+  if (v > MAX_INPUT) v = MAX_INPUT;
+  // いま出ている いちばん小さい位で表せる細かさに切りそろえる
+  const q = state.botPlace;
+  v = Math.round(Math.floor(v / q + 1e-9) * q * 100000) / 100000;
+  const str = String(v);
+  if (raw !== str) el.value = str;   // 直した結果が見えるように書き戻す
+  return v;
+}
+
+// 入力した数が入りきるまで 位の列を左へひろげる（せまくはしない）
+function expandTopPlaceFor(value) {
+  if (!(value > 0)) return;
+  const allDefs = PLACE_DEFS.filter(d => !d.isDot);
+  for (const pd of allDefs) {
+    if (value >= pd.value) {
+      const curIdx = allDefs.findIndex(d => d.value === state.topPlace);
+      const newIdx = allDefs.findIndex(d => d.value === pd.value);
+      if (newIdx < curIdx) state.topPlace = pd.value;
+      break;
+    }
+  }
+}
+
+// 入力欄の max / step を いまの位の表に合わせる
+function syncInputAttrs() {
+  [inputA, inputB].forEach(el => {
+    el.max  = String(MAX_INPUT);
+    el.step = String(state.botPlace);
+  });
 }
 
 // ── タイル追加 ───────────────────────────────────────
@@ -1257,12 +1305,14 @@ function confirmCarryZone(placeValue) {
   const ghosts = state.carryZone.filter(t => !t.result && t.placeValue === placeValue);
   const group = ghosts.slice(0, 10);
   if (group.length < 10) return;
+  // 上の位の列が無いときは くりあがりできない。
+  // ここで先に判定しないと、タイルだけ消えて何も残らない
+  const upper = getUpperPlace(placeValue);
+  if (upper === null) return;
   const srcIdSet  = new Set(group.map(g => g.sourceId));
   const carryIdSet = new Set(group.map(g => g.id));
   state.carryZone = state.carryZone.filter(t => !carryIdSet.has(t.id));
   state.tiles = state.tiles.filter(t => !srcIdSet.has(t.id));
-  const upper = getUpperPlace(placeValue);
-  if (upper === null) return;
   state.carryZone.push({ id: state.nextId++, placeValue: upper, result: true });
   state.carryEverDone = true;
 }
@@ -1278,13 +1328,24 @@ function placeCarryResult(carryId, targetPV, targetRow) {
   state.animNewTileOrder.push(newId);
 }
 
+// 位の表に出ている列かどうか
+function isPlaceActive(pv) {
+  return state.topPlace >= pv && pv >= state.botPlace;
+}
+
+// 上下の位は「いま表に出ている列」に限る。
+// 表にない位へ両替すると、行き場のないタイルができてしまう
 function getUpperPlace(pv) {
   const idx = PLACE_DEFS.findIndex(d => d.value === pv);
-  return (idx > 0) ? PLACE_DEFS[idx - 1].value : null;
+  if (idx <= 0) return null;
+  const upper = PLACE_DEFS[idx - 1].value;
+  return isPlaceActive(upper) ? upper : null;
 }
 function getLowerPlace(pv) {
   const idx = PLACE_DEFS.findIndex(d => d.value === pv);
-  return (idx >= 0 && idx < PLACE_DEFS.length - 1) ? PLACE_DEFS[idx + 1].value : null;
+  if (idx < 0 || idx >= PLACE_DEFS.length - 1) return null;
+  const lower = PLACE_DEFS[idx + 1].value;
+  return isPlaceActive(lower) ? lower : null;
 }
 
 // ── りょうがえゾーンにタイルを送る（ひきざんモード）────────────
@@ -1469,6 +1530,7 @@ function renderPlaceTable() {
   table.classList.toggle('cols-fixed',  realPlaces().length <= 4);
   table.classList.toggle('has-write',   state.showWriteRow);
 
+  saveWriteInk();
   table.innerHTML = '';
   table.appendChild(header);
 
@@ -1499,10 +1561,7 @@ function renderPlaceTable() {
         const clrBtn = document.createElement('div');
         clrBtn.className = 'write-clear';
         clrBtn.textContent = '×';
-        clrBtn.addEventListener('click', () => {
-          const ctx = canvas.getContext('2d');
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-        });
+        clrBtn.addEventListener('click', () => clearWriteInk(canvas.dataset.place));
         cell.appendChild(clrBtn);
         attachWriteCanvas(canvas);
       }
@@ -1513,8 +1572,9 @@ function renderPlaceTable() {
     requestAnimationFrame(() => {
       writeRow.querySelectorAll('.write-canvas').forEach(c => {
         const r = c.getBoundingClientRect();
-        c.width  = Math.round(r.width);
+        c.width  = Math.round(r.width);   // 代入した時点で内容は消える
         c.height = Math.round(r.height);
+        restoreWriteInk(c);               // そのあとで描き戻す
       });
     });
   }
@@ -1601,6 +1661,40 @@ function attachTileDrag(el, tile) {
 }
 
 // ── 手書き canvas ────────────────────────────────────
+// renderPlaceTable() は表を毎回作り直すため、そのままだと手書きが消える。
+// 作り直す前に内容を dataURL で退避し、サイズ確定後に描き戻す。
+function saveWriteInk() {
+  document.querySelectorAll('.write-canvas').forEach(c => {
+    if (!c.width || !c.height) return;
+    if (c.dataset.ink !== '1') return;   // 一度も書かれていない canvas は保存しない
+    try { state.writeInk[c.dataset.place] = c.toDataURL(); } catch (e) { /* 取得できない環境は無視 */ }
+  });
+}
+
+function restoreWriteInk(canvas) {
+  const data = state.writeInk[canvas.dataset.place];
+  if (!data) { delete canvas.dataset.ink; return; }
+  canvas.dataset.ink = '1';
+  const img = new Image();
+  img.onload = () => {
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  };
+  img.src = data;
+}
+
+function clearWriteInk(place) {
+  if (place === undefined) state.writeInk = {};
+  else delete state.writeInk[place];
+  // 画面に出ている canvas も消す。ここを消し忘れると
+  // 次の再描画で saveWriteInk() が拾い直してしまう
+  document.querySelectorAll('.write-canvas').forEach(c => {
+    if (place !== undefined && c.dataset.place !== String(place)) return;
+    if (c.width && c.height) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+    delete c.dataset.ink;
+  });
+}
+
 function attachWriteCanvas(canvas) {
   const ctx = canvas.getContext('2d');
   ctx.strokeStyle = '#1f2933';
@@ -1621,6 +1715,7 @@ function attachWriteCanvas(canvas) {
     e.stopPropagation();
     canvas.setPointerCapture(e.pointerId);
     drawing = true;
+    canvas.dataset.ink = '1';   // 退避の対象にする
     ctx.beginPath();
     ctx.moveTo(...pos(e));
   });
@@ -1989,10 +2084,16 @@ function renderHissan() {
 
   const aStr   = hasA ? fmtNum(a) : '？';
   const bStr   = hasB ? fmtNum(b) : '？';
-  let   ansStr = '？';
+  let   ansStr  = '？';
+  let   ansCls  = '';
   if (hasA && hasB) {
-    const ans = isAdd ? a + b : a - b;
-    ansStr = fmtNum(ans);
+    if (!isAdd && b > a) {
+      // 小学校の学習範囲では マイナスの答えは出さない
+      ansStr = 'ひけません';
+      ansCls = ' hissan-cannot';
+    } else {
+      ansStr = fmtNum(isAdd ? a + b : a - b);
+    }
   }
 
   hissanWrap.innerHTML = `
@@ -2000,7 +2101,7 @@ function renderHissan() {
       <tr><td class="op-col"></td><td>${aStr}</td></tr>
       <tr><td class="op-col">${op}</td><td>${bStr}</td></tr>
       <tr class="hissan-line hissan-answer">
-        <td class="op-col"></td><td>${ansStr}</td>
+        <td class="op-col"></td><td class="${ansCls.trim()}">${ansStr}</td>
       </tr>
     </table>`;
   scaleHissanToFit();
@@ -2093,6 +2194,7 @@ function autoScaleTileAreas() {
 
 // ── 全体レンダリング ─────────────────────────────────
 function renderAll() {
+  syncInputAttrs();
   renderPlaceTable();
   renderTilePalette();
   renderCarryZone();
@@ -2134,10 +2236,14 @@ function renderAll() {
     const targetB = parseFloat(inputB.value);
     const removedRounded = Math.round(valB * 100000) / 100000;
     const isCorrect = !isNaN(targetB) && targetB > 0 && removedRounded === targetB;
+    // ひかれる数より大きい数はひけない（タイルが足りず、いつまでも ⭕ にならない）
+    const isOver = !isNaN(targetB) && targetB > Math.round(valA * 100000) / 100000;
     $('chipB').classList.toggle('sub-correct', isCorrect);
+    $('chipB').classList.toggle('sub-over',    isOver);
     $('subCorrectMark').classList.toggle('visible', isCorrect);
   } else {
     $('chipB').classList.remove('sub-correct');
+    $('chipB').classList.remove('sub-over');
     $('subCorrectMark').classList.remove('visible');
   }
 }
@@ -2155,16 +2261,7 @@ function syncTilesFromInputSub(rawValue) {
 
   const value = parseFloat(rawValue);
   if (value > 0) {
-    // 必要な位まで列を自動拡張
-    const allDefs = PLACE_DEFS.filter(d => !d.isDot);
-    for (const pd of allDefs) {
-      if (value >= pd.value) {
-        const curIdx = allDefs.findIndex(d => d.value === state.topPlace);
-        const newIdx = allDefs.findIndex(d => d.value === pd.value);
-        if (newIdx < curIdx) state.topPlace = pd.value;
-        break;
-      }
-    }
+    expandTopPlaceFor(value);
 
     let remaining = Math.round(value * 100000) / 100000;
     realPlaces().forEach(p => {
@@ -2193,6 +2290,10 @@ function syncTilesFromInput(row, rawValue) {
 
   const value = parseFloat(rawValue);
   if (value > 0) {
+    // ひきざんと同じく、入りきる位まで列をひろげる
+    // （これがないと 999 が「じゅうのタイル99枚」になってしまう）
+    expandTopPlaceFor(value);
+
     let remaining = Math.round(value * 100000) / 100000;
     realPlaces().forEach(p => {
       const count = Math.floor(Math.round(remaining / p.value * 1000000) / 1000000);
@@ -2228,7 +2329,7 @@ function applyUIState() {
 
 // ── イベント ─────────────────────────────────────────
 addBtn.addEventListener('click', () => {
-  state.opMode = 'add'; state.removeMode = false;
+  state.opMode = 'add';
   state.exchangeZone = [];
   state.tiles = state.tiles.filter(t => !t.exchanged);
   state.tiles.forEach(t => { t.removed = false; });
@@ -2249,18 +2350,20 @@ resetBtn.addEventListener('click', () => {
   state.carryZone = [];
   state.exchangeZone = [];
   state.nextId = 0;
-  state.removeMode = false;
   state.carryEverDone = false;
   state.animNewTiles.clear();
   state.animNewTileOrder = [];
   inputA.value = ''; inputB.value = '';
+  clearWriteInk();
   renderAll();
 });
 inputA.addEventListener('input', () => {
+  sanitizeInput(inputA);
   if (state.opMode === 'add') syncTilesFromInput('a', inputA.value);
   else syncTilesFromInputSub(inputA.value);
 });
 inputB.addEventListener('input', () => {
+  sanitizeInput(inputB);
   if (state.opMode === 'add') syncTilesFromInput('b', inputB.value);
   else renderAll();
 });
@@ -2310,14 +2413,37 @@ renderAll();
   var HELP = {
     title: 'たしざん・ひきざんのつかいかた',
     body:
+      '<span class="sh">【<ruby>数<rt>かず</rt></ruby>と タイル】</span>' +
+      '<ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れると タイルが ならび、タイルを ふやし<ruby>減<rt>へ</rt></ruby>らすと <ruby>数<rt>かず</rt></ruby>も かわります（9999 まで）。<br>' +
+      '「タイル」から ドラッグして <ruby>足<rt>た</rt></ruby>す／<ruby>表<rt>ひょう</rt></ruby>の そとへ ドラッグして けす こともできます。<br>' +
+      '<ruby>見出<rt>みだ</rt></ruby>しの ＋ − で <ruby>位<rt>くらい</rt></ruby>の <ruby>列<rt>れつ</rt></ruby>を ふやし<ruby>減<rt>へ</rt></ruby>らしできます。<br>' +
+      '1/10・1/100 を ひらくと <ruby>小数<rt>しょうすう</rt></ruby>も <ruby>入<rt>い</rt></ruby>れられます。<br>' +
       '<span class="sh">【たしざん】</span>' +
-      '行Aと行Bにタイルをドラッグして置くと合計が表示されます。<br>' +
+      '<ruby>上<rt>うえ</rt></ruby>の <ruby>行<rt>ぎょう</rt></ruby>が「たされるかず」、<ruby>下<rt>した</rt></ruby>の <ruby>行<rt>ぎょう</rt></ruby>が「たすかず」です。<br>' +
+      'どちらの <ruby>行<rt>ぎょう</rt></ruby>に <ruby>置<rt>お</rt></ruby>くかで しきが かわります。<br>' +
+      '<span class="sub">くりあがり</span>' +
+      '① <ruby>下<rt>した</rt></ruby>の<ruby>位<rt>くらい</rt></ruby>の タイルを 「くりあがりゾーン」へ ドラッグ<br>' +
+      '　（もとの <ruby>場所<rt>ばしょ</rt></ruby>に うすく のこります）<br>' +
+      '② 10<ruby>枚<rt>まい</rt></ruby> たまったら、まとまりを タップして かくてい<br>' +
+      '③ できた <ruby>上<rt>うえ</rt></ruby>の<ruby>位<rt>くらい</rt></ruby>の 1<ruby>枚<rt>まい</rt></ruby>を、じぶんで <ruby>上<rt>うえ</rt></ruby>の<ruby>位<rt>くらい</rt></ruby>の <ruby>列<rt>れつ</rt></ruby>へ はこびます<br>' +
+      'ゾーンの うすい タイルを もとの <ruby>場所<rt>ばしょ</rt></ruby>へ もどすと とりけせます。<br>' +
+      'かくてい したあとは、<ruby>入力<rt>にゅうりょく</rt></ruby>らんは タイルに <ruby>合<rt>あ</rt></ruby>わせて かわらなくなります（リセットで もどります）。<br>' +
       '<span class="sh">【ひきざん】</span>' +
-      '「ひきざん」をオンにして、タイルをタップすると削除されます。<br>' +
-      '<span class="sh">【りょうがえ】</span>' +
-      '10枚のタイルを「りょうがえ」ゾーンにドロップすると上の位に変換されます。<br>' +
-      '<span class="sh">【ひっさん】</span>' +
-      '「ひっさん」をオンにすると、くり上がり・くり下がりの筆算が右ペインに表示されます。',
+      '「ひかれるかず」は <ruby>表<rt>ひょう</rt></ruby>の タイルを ぜんぶ たした <ruby>数<rt>かず</rt></ruby>に なります。<br>' +
+      '① さきに「ひくかず」に、いくつ ひくかを じぶんで <ruby>入力<rt>にゅうりょく</rt></ruby>します<br>' +
+      '② タイルを タップして、ひく ぶんだけ ななめの <ruby>線<rt>せん</rt></ruby>を つけます<br>' +
+      '　（もう<ruby>一度<rt>いちど</rt></ruby> タップすると もどります）<br>' +
+      '③ <ruby>線<rt>せん</rt></ruby>を つけた タイルの <ruby>数<rt>かず</rt></ruby>が「ひくかず」と <ruby>合<rt>あ</rt></ruby>うと ⭕️ が でます<br>' +
+      '（さきに「ひくかず」を <ruby>入力<rt>にゅうりょく</rt></ruby>しておかないと、ただしく ひけても ⭕️ は でません）<br>' +
+      '「ひくかず」が <ruby>大<rt>おお</rt></ruby>きすぎると <ruby>赤<rt>あか</rt></ruby>くなり、ひっさんは「ひけません」に なります。<br>' +
+      '<span class="sub">くりさがり</span>' +
+      '① <ruby>上<rt>うえ</rt></ruby>の<ruby>位<rt>くらい</rt></ruby>の タイルを 「りょうがえゾーン」へ ドラッグ<br>' +
+      '② できた <ruby>下<rt>した</rt></ruby>の<ruby>位<rt>くらい</rt></ruby> 10<ruby>枚<rt>まい</rt></ruby>の まとまりを、じぶんで <ruby>下<rt>した</rt></ruby>の<ruby>位<rt>くらい</rt></ruby>の <ruby>列<rt>れつ</rt></ruby>へ はこびます<br>' +
+      '<span class="sh">【そのほか】</span>' +
+      '・かずをかく…それぞれの <ruby>位<rt>くらい</rt></ruby>に <ruby>手<rt>て</rt></ruby>で <ruby>数字<rt>すうじ</rt></ruby>を かける らんを <ruby>出<rt>だ</rt></ruby>します（× で けす）<br>' +
+      '・ひっさん…<ruby>画面<rt>がめん</rt></ruby>の <ruby>右<rt>みぎ</rt></ruby>はしに ある ◀ を おすと、<br>' +
+      '　いま <ruby>入<rt>い</rt></ruby>れている しきの ひっさんが <ruby>出<rt>で</rt></ruby>ます（▶ で とじる）<br>' +
+      '・リセット…タイルと <ruby>数<rt>かず</rt></ruby>を けす（<ruby>位<rt>くらい</rt></ruby>の <ruby>列<rt>れつ</rt></ruby>は のこる）'
   };
   document.getElementById('help-btn').addEventListener('click', function(){
     document.getElementById('help-title').innerHTML = HELP.title;
@@ -2329,12 +2455,5 @@ renderAll();
 })();
 </script>
 
-<div id="help-overlay" style="display:none">
-  <div id="help-modal">
-    <button id="help-close">✕</button>
-    <h2 id="help-title"></h2>
-    <p id="help-body"></p>
-  </div>
-</div>
 </body>
 </html>

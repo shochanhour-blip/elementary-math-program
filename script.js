@@ -7,6 +7,7 @@ const generateBtn = document.getElementById("generateBtn");
 const showBtn = document.getElementById("showBtn");
 const groupingBtn = document.getElementById("groupingBtn");
 const swapBtn = document.getElementById("swapBtn");
+const clearBtn = document.getElementById("clearBtn");
 const colorPalette = document.getElementById("colorPalette");
 const toggleNumbering = document.getElementById("toggleNumbering");
 const colLabels = document.getElementById("colLabels");
@@ -40,6 +41,7 @@ let showGrouping = false;
 let isOverlayVisible = false;
 let swapFactors = false; // かけ算の表示だけ入れ替える
 const ROOT_STYLE = document.documentElement.style;
+const MAX_SIDE = 12; // ぎょう・れつ の上限（大きすぎると固まる・画面に入らない）
 const DEFAULT_CIRCLE = 44; // px
 const MIN_CIRCLE = 16;
 const MAX_CIRCLE = 64;
@@ -72,9 +74,8 @@ function buildGrid(rows, cols) {
   grid.appendChild(fragment);
   overlay.innerHTML = "";
   isOverlayVisible = false;
-  updateShowButtonLabel();
-  updateGroupingButtonLabel();
   renderLabels(rows, cols);
+  refreshControls();
 }
 
 // ビューポートに収めるために円のサイズを動的に調整
@@ -137,8 +138,10 @@ function handlePointerDown(e) {
   if (!target.classList.contains("circle")) return;
   const row = Number(target.dataset.row);
   const col = Number(target.dataset.col);
-  // もし既に色がついていたら白に戻すドラッグに切り替える
-  selectionGroup = target.dataset.group === "0" ? currentGroup : 0;
+  // 消しゴムを選んでいるときは常に消す。
+  // それ以外は、既に色がついている丸から引き始めたら「消すドラッグ」に切り替える
+  selectionGroup =
+    currentGroup === 0 ? 0 : target.dataset.group === "0" ? currentGroup : 0;
   isSelecting = true;
   activePointerId = e.pointerId;
   target.setPointerCapture(activePointerId);
@@ -186,11 +189,28 @@ function applyRectSelection(targetRow, targetCol, group) {
       paintCell(cell, group);
     }
   });
+
+  refreshControls();
 }
 
 // パレット生成
 function renderPalette() {
   colorPalette.innerHTML = "";
+
+  // 消しゴム（group=0）。色をぬった丸からドラッグしないと消せないのは分かりにくいので明示する
+  const eraser = document.createElement("button");
+  eraser.type = "button";
+  eraser.className = "color-swatch eraser";
+  eraser.dataset.group = "0";
+  eraser.setAttribute("aria-label", "いろを けす");
+  eraser.title = "いろを けす";
+  if (currentGroup === 0) eraser.classList.add("selected");
+  eraser.addEventListener("click", () => {
+    currentGroup = 0;
+    updatePaletteSelection();
+  });
+  colorPalette.appendChild(eraser);
+
   Object.entries(colorMap).forEach(([group, color], idx) => {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -230,28 +250,157 @@ function withAlpha(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function collectGroups() {
+// 同じ色でも「つながっているかたまり」ごとに分ける。
+// 色だけでまとめると、離れた2か所を同じ色で塗ったときに
+// 外接矩形が実際より大きくなり「4 × 4 = 5」のような誤った式が出てしまう。
+// 色を暗くする（白い式ボックスの枠に使う。黄色などでも読める濃さにする）
+function darken(hex, ratio) {
+  const v = hex.replace("#", "");
+  const mix = (c) => Math.round(parseInt(c, 16) * (1 - ratio));
+  const r = mix(v.slice(0, 2));
+  const g = mix(v.slice(2, 4));
+  const b = mix(v.slice(4, 6));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// かたまりの中で いちばん大きい長方形をさがす。
+// 「3 × 3 + 1」のように、長方形の部分と のこりに分けて式にするために使う
+function largestRectangle(cells, minRow, maxRow, minCol, maxCol) {
+  const height = maxRow - minRow + 1;
+  const width = maxCol - minCol + 1;
+  const cols = new Array(width).fill(0);
+  let best = { area: 0, r1: 0, c1: 0, r2: 0, c2: 0 };
+
+  for (let r = 0; r < height; r++) {
+    for (let c = 0; c < width; c++) {
+      cols[c] = cells.has(`${minRow + r},${minCol + c}`) ? cols[c] + 1 : 0;
+    }
+    // その行までの「柱の高さ」から最大長方形を求める（スタック法）
+    const stack = [];
+    for (let c = 0; c <= width; c++) {
+      const h = c === width ? 0 : cols[c];
+      let start = c;
+      while (stack.length && stack[stack.length - 1].h >= h) {
+        const top = stack.pop();
+        const area = top.h * (c - top.i);
+        if (area > best.area) {
+          best = {
+            area,
+            r1: minRow + r - top.h + 1,
+            r2: minRow + r,
+            c1: minCol + top.i,
+            c2: minCol + c - 1,
+          };
+        }
+        start = top.i;
+      }
+      stack.push({ i: start, h });
+    }
+  }
+  return best;
+}
+
+// 分解して式にする価値があるか。
+// 長方形が小さすぎる（1こだけ／全体の半分未満）ときは、こ数だけ出したほうが分かりやすい
+function isUsefulRect(rect, total) {
+  return rect.area >= 2 && rect.area >= total / 2;
+}
+
+// かこいを描く。1列（入れ替え時は1行）ずつのブロックで囲う
+function appendOutlines(startRow, startCol, rowCount, colCount, geom) {
+  const { circleSize, gap, offsetLeft, offsetTop } = geom;
+  const cellSpan = circleSize + gap;
+  const blocks = swapFactors ? rowCount : colCount;
+
+  for (let i = 0; i < blocks; i++) {
+    const outline = document.createElement("div");
+    outline.className = "overlay-group";
+    if (!swapFactors) {
+      outline.style.left = `${offsetLeft + (startCol - 1) * cellSpan + i * cellSpan}px`;
+      outline.style.top = `${offsetTop + (startRow - 1) * cellSpan}px`;
+      outline.style.width = `${circleSize}px`;
+      outline.style.height = `${rowCount * circleSize + (rowCount - 1) * gap}px`;
+    } else {
+      outline.style.left = `${offsetLeft + (startCol - 1) * cellSpan}px`;
+      outline.style.top = `${offsetTop + (startRow - 1) * cellSpan + i * cellSpan}px`;
+      outline.style.width = `${colCount * circleSize + (colCount - 1) * gap}px`;
+      outline.style.height = `${circleSize}px`;
+    }
+    overlay.appendChild(outline);
+  }
+}
+
+// 式ボックスの文字サイズ。丸の大きさに合わせて基準を決め、
+// かたまりの領域からはみ出す場合は収まるまで縮める
+const FORMULA_MIN_FONT = 12;
+function fitFormulaBox(box, maxW, maxH, circleSize) {
+  let font = clamp(circleSize * 0.66, 16, 36);
+  box.style.fontSize = `${font}px`;
+
+  // padding や角丸は em 指定なので、文字サイズを変えれば全体が相似で縮む
+  for (let i = 0; i < 4; i++) {
+    const w = box.offsetWidth;
+    const h = box.offsetHeight;
+    if (w <= maxW && h <= maxH) break;
+    const next = Math.max(FORMULA_MIN_FONT, font * Math.min(maxW / w, maxH / h));
+    if (next >= font - 0.2) {
+      font = next;
+      box.style.fontSize = `${font}px`;
+      break; // これ以上小さくできない（下限に到達）
+    }
+    font = next;
+    box.style.fontSize = `${font}px`;
+  }
+}
+
+function collectClusters() {
   const cells = Array.from(grid.querySelectorAll(".circle"));
-  const groups = new Map();
+  const byPos = new Map();
+  cells.forEach((cell) => {
+    byPos.set(`${cell.dataset.row},${cell.dataset.col}`, cell);
+  });
+
+  const seen = new Set();
+  const clusters = [];
 
   cells.forEach((cell) => {
     const group = Number(cell.dataset.group);
     if (group === 0) return;
-    const row = Number(cell.dataset.row);
-    const col = Number(cell.dataset.col);
-    if (!groups.has(group)) {
-      groups.set(group, {
-        rows: new Set(),
-        cols: new Set(),
-        count: 0,
+    const startKey = `${cell.dataset.row},${cell.dataset.col}`;
+    if (seen.has(startKey)) return;
+
+    const entry = { group, rows: new Set(), cols: new Set(), cells: new Set(), count: 0 };
+    const stack = [startKey];
+    seen.add(startKey);
+
+    while (stack.length) {
+      const key = stack.pop();
+      const cur = byPos.get(key);
+      const row = Number(cur.dataset.row);
+      const col = Number(cur.dataset.col);
+      entry.rows.add(row);
+      entry.cols.add(col);
+      entry.cells.add(key);
+      entry.count += 1;
+
+      // 上下左右の4方向だけをつながりとみなす（ななめは別のかたまり）
+      const around = [
+        [row - 1, col], [row + 1, col],
+        [row, col - 1], [row, col + 1],
+      ];
+      around.forEach(([r, c]) => {
+        const k = `${r},${c}`;
+        if (seen.has(k)) return;
+        const nb = byPos.get(k);
+        if (!nb || Number(nb.dataset.group) !== group) return;
+        seen.add(k);
+        stack.push(k);
       });
     }
-    const entry = groups.get(group);
-    entry.rows.add(row);
-    entry.cols.add(col);
-    entry.count += 1;
+    clusters.push(entry);
   });
-  return groups;
+
+  return clusters;
 }
 
 function renderLabels(rows, cols) {
@@ -286,10 +435,74 @@ function renderLabels(rows, cols) {
 // かけ算を計算してオーバーレイ表示
 function updateShowButtonLabel() {
   showBtn.textContent = isOverlayVisible ? "かけ算を けす" : "かけ算を ひょうじ";
+  showBtn.classList.toggle("is-on", isOverlayVisible);
+  updateSwapAvailability();
 }
 
 function updateGroupingButtonLabel() {
   groupingBtn.textContent = showGrouping ? "かこいを けす" : "かこいを ひょうじ";
+  groupingBtn.classList.toggle("is-on", showGrouping);
+  updateSwapAvailability();
+}
+
+function updateSwapButtonLabel() {
+  swapBtn.textContent = swapFactors ? "いれかえを もどす" : "いれかえる";
+  swapBtn.classList.toggle("is-on", swapFactors);
+  updateSwapAvailability();
+}
+
+// 「いれかえる」は式かかこいが出ているときだけ意味がある。
+// どちらも出ていないときは押せなくして、理由をツールチップで伝える
+// ボタンの有効・無効を切り替える。
+// 使えない間はツールチップが出ないブラウザが多いので、
+// 「いま使えるようになった」瞬間を軽い明滅で伝える
+function setBtnEnabled(btn, usable, hint) {
+  const wasUsable = btn.dataset.usable;
+  btn.disabled = !usable;
+  btn.title = usable ? "" : hint;
+  if (wasUsable === "0" && usable) {
+    btn.classList.remove("just-enabled");
+    void btn.offsetWidth;
+    btn.classList.add("just-enabled");
+    setTimeout(() => btn.classList.remove("just-enabled"), 700);
+  }
+  btn.dataset.usable = usable ? "1" : "0";
+}
+
+function updateSwapAvailability() {
+  setBtnEnabled(
+    swapBtn,
+    isOverlayVisible || showGrouping,
+    "「かけ算を ひょうじ」か「かこいを ひょうじ」を おすと つかえます"
+  );
+}
+
+function hasAnyColor() {
+  return Array.from(grid.querySelectorAll(".circle")).some(
+    (cell) => cell.dataset.group !== "0"
+  );
+}
+
+// いろが1つも塗られていないときは、表示するものも消すものも無い。
+// 表示中の状態を解除したうえで、3つのボタンをまとめて使えなくする
+function refreshControls() {
+  const painted = hasAnyColor();
+  if (!painted && (isOverlayVisible || showGrouping)) {
+    overlay.innerHTML = "";
+    isOverlayVisible = false;
+    showGrouping = false;
+  }
+  const hint = "まるに いろを ぬると つかえます";
+  setBtnEnabled(showBtn, painted, hint);
+  setBtnEnabled(groupingBtn, painted, hint);
+  updateShowButtonLabel();
+  updateGroupingButtonLabel();
+}
+
+// いろを全部消す（ならびはそのまま）
+function clearColors() {
+  grid.querySelectorAll(".circle").forEach((cell) => paintCell(cell, 0));
+  refreshControls(); // 白紙になるので表示状態を解除してボタンも無効化される
 }
 
 function toggleMultiplication() {
@@ -309,9 +522,9 @@ function toggleMultiplication() {
 
 function renderMultiplicationOverlay() {
   overlay.innerHTML = "";
-  const groups = collectGroups();
+  const clusters = collectClusters();
 
-  if (groups.size === 0) {
+  if (clusters.length === 0) {
     const msg = document.createElement("div");
     msg.className = "overlay-box";
     msg.style.left = "50%";
@@ -331,7 +544,13 @@ function renderMultiplicationOverlay() {
   const offsetLeft = gridRect.left - overlayRect.left;
   const offsetTop = gridRect.top - overlayRect.top;
 
-  groups.forEach((entry, group) => {
+  const geom = { circleSize, gap, offsetLeft, offsetTop };
+
+  // 囲みの線が式の文字を横切らないよう、式ボックスは最後にまとめて重ねる
+  const formulaBoxes = [];
+
+  clusters.forEach((entry) => {
+    const group = entry.group;
     const minRow = Math.min(...entry.rows);
     const maxRow = Math.max(...entry.rows);
     const minCol = Math.min(...entry.cols);
@@ -352,67 +571,82 @@ function renderMultiplicationOverlay() {
       (centerRow - 1) * (circleSize + gap) +
       circleSize / 2;
 
+    // ながしかく（すき間なく全部うまっている）かどうか。
+    // 欠けているかたまりに「7 × 3 = 22」のような成り立たない式を出さないための判定
+    const isRectangle = entry.count === rowCount * colCount;
+    const edgeColor = colorMap[group] ? darken(colorMap[group], 0.35) : "#555";
+
+    // ながしかくでない場合は「いちばん大きい長方形 ＋ のこり」に分けて式にする
+    const rect = isRectangle
+      ? null
+      : largestRectangle(entry.cells, minRow, maxRow, minCol, maxCol);
+    const canDecompose = rect ? isUsefulRect(rect, entry.count) : false;
+
     const box = document.createElement("div");
     box.className = "overlay-box";
     box.style.left = `${centerX}px`;
     box.style.top = `${centerY}px`;
-    // 背景の透明度を上げて可読性を向上
-    const bg = colorMap[group] ? withAlpha(colorMap[group], 0.35) : "rgba(0,0,0,0.28)";
-    box.style.background = bg;
-    box.style.color = "#2b2b2b";
-    box.style.border = "2px solid #555";
+    // 中は白。うしろの丸がうっすら見えるくらいの透け具合にする
+    box.style.background = "rgba(255, 255, 255, 0.88)";
+    box.style.color = "#1f2933";
+    // 枠はそのかたまりの色（濃いめ）。どの式がどのかたまりのものか分かるようにする
+    box.style.border = `3px ${isRectangle ? "solid" : "dashed"} ${edgeColor}`;
 
-    // 形に応じて横書き/縦書きを自動切り替え（元の配置で判定する）
-    if (rowCount >= colCount * 1.2) {
+    if (canDecompose) {
+      // 例: 3 × 3 + 1 = 10
+      const rectRows = rect.r2 - rect.r1 + 1;
+      const rectCols = rect.c2 - rect.c1 + 1;
+      const a = swapFactors ? rectCols : rectRows;
+      const b = swapFactors ? rectRows : rectCols;
+      const rest = entry.count - rect.area;
+      box.textContent = `${a} × ${b} + ${rest} = ${entry.count}`;
+      box.style.display = "block";
+      box.style.padding = ".28em .5em";
+      box.title = "ながしかくの ぶんと のこりに わけた しきです";
+    } else if (!isRectangle) {
+      // 長方形の部分が小さすぎて分けても分かりにくいので、数だけ伝える
+      box.textContent = `${entry.count}こ`;
+      box.style.display = "block";
+      box.style.padding = ".28em .5em";
+      box.title = "ながしかくに ならべると かけ算の しきが でます";
+    } else if (rowCount >= colCount * 1.2) {
       // 縦長: 縦積みで表示
       box.innerHTML = `${dispRowCount}<br>×<br>${dispColCount}<br>=<br>${entry.count}`;
       box.style.display = "flex";
       box.style.flexDirection = "column";
       box.style.alignItems = "center";
       box.style.justifyContent = "center";
-      box.style.writingMode = "horizontal-tb";
-      box.style.padding = "12px 10px";
+      box.style.padding = ".34em .5em";
     } else {
       // 横長・ほぼ正方: 横書き
       box.textContent = `${dispRowCount} × ${dispColCount} = ${entry.count}`;
       box.style.display = "block";
-      box.style.writingMode = "horizontal-tb";
-      box.style.padding = "10px 14px";
+      box.style.padding = ".28em .5em";
     }
 
-    overlay.appendChild(box);
+    // かたまりが占める領域。ここに収まるまで文字サイズを詰める
+    const clusterW = colCount * circleSize + (colCount - 1) * gap;
+    const clusterH = rowCount * circleSize + (rowCount - 1) * gap;
+    overlay.appendChild(box); // 実寸を測るため一度置く
+    fitFormulaBox(box, clusterW, clusterH, circleSize);
+    formulaBoxes.push(box);
 
-    // かこい描画（矩形が完全に塗られている場合のみ）
+    // かこい描画。ながしかくでない場合は「長方形の部分」だけを囲う
     if (showGrouping) {
-      const expected = rowCount * colCount;
-      if (entry.count === expected) {
-        const cellSpan = circleSize + gap;
-        if (!swapFactors) {
-          // 列数ごとに縦ブロックで囲う
-          for (let i = 0; i < colCount; i++) {
-            const outline = document.createElement("div");
-            outline.className = "overlay-group";
-            outline.style.left = `${offsetLeft + (minCol - 1) * cellSpan + i * cellSpan}px`;
-            outline.style.top = `${offsetTop + (minRow - 1) * cellSpan}px`;
-            outline.style.width = `${circleSize}px`;
-            outline.style.height = `${rowCount * circleSize + (rowCount - 1) * gap}px`;
-            overlay.appendChild(outline);
-          }
-        } else {
-          // 行数ごとに横ブロックで囲う（入れ替え表示時）
-          for (let i = 0; i < rowCount; i++) {
-            const outline = document.createElement("div");
-            outline.className = "overlay-group";
-            outline.style.left = `${offsetLeft + (minCol - 1) * cellSpan}px`;
-            outline.style.top = `${offsetTop + (minRow - 1) * cellSpan + i * cellSpan}px`;
-            outline.style.width = `${colCount * circleSize + (colCount - 1) * gap}px`;
-            outline.style.height = `${circleSize}px`;
-            overlay.appendChild(outline);
-          }
-        }
+      if (isRectangle) {
+        appendOutlines(minRow, minCol, rowCount, colCount, geom);
+      } else if (canDecompose) {
+        appendOutlines(
+          rect.r1, rect.c1,
+          rect.r2 - rect.r1 + 1, rect.c2 - rect.c1 + 1,
+          geom
+        );
       }
     }
   });
+
+  // 囲みをすべて描いたあとで式を重ね直す（appendChild は移動になる）
+  formulaBoxes.forEach((box) => overlay.appendChild(box));
 
   isOverlayVisible = true;
   updateShowButtonLabel();
@@ -421,8 +655,8 @@ function renderMultiplicationOverlay() {
 // かこいのみを描画（かけ算ボックスは出さない）
 function renderGroupingOverlayOnly() {
   overlay.innerHTML = "";
-  const groups = collectGroups();
-  if (groups.size === 0) return;
+  const clusters = collectClusters();
+  if (clusters.length === 0) return;
 
   const rootStyle = getComputedStyle(document.documentElement);
   const circleSize = parseFloat(rootStyle.getPropertyValue("--circle-size")) || 0;
@@ -432,53 +666,61 @@ function renderGroupingOverlayOnly() {
   const offsetLeft = gridRect.left - overlayRect.left;
   const offsetTop = gridRect.top - overlayRect.top;
 
-  groups.forEach((entry) => {
+  const geom = { circleSize, gap, offsetLeft, offsetTop };
+
+  clusters.forEach((entry) => {
     const minRow = Math.min(...entry.rows);
     const maxRow = Math.max(...entry.rows);
     const minCol = Math.min(...entry.cols);
     const maxCol = Math.max(...entry.cols);
     const rowCount = maxRow - minRow + 1;
     const colCount = maxCol - minCol + 1;
-    const expected = rowCount * colCount;
-    if (entry.count !== expected) return;
 
-    const cellSpan = circleSize + gap;
-    if (!swapFactors) {
-      // 列数ごとに縦ブロックで囲う
-      for (let i = 0; i < colCount; i++) {
-        const outline = document.createElement("div");
-        outline.className = "overlay-group";
-        outline.style.left = `${offsetLeft + (minCol - 1) * cellSpan + i * cellSpan}px`;
-        outline.style.top = `${offsetTop + (minRow - 1) * cellSpan}px`;
-        outline.style.width = `${circleSize}px`;
-        outline.style.height = `${rowCount * circleSize + (rowCount - 1) * gap}px`;
-        overlay.appendChild(outline);
-      }
-    } else {
-      // 行数ごとに横ブロックで囲う（入れ替え表示時）
-      for (let i = 0; i < rowCount; i++) {
-        const outline = document.createElement("div");
-        outline.className = "overlay-group";
-        outline.style.left = `${offsetLeft + (minCol - 1) * cellSpan}px`;
-        outline.style.top = `${offsetTop + (minRow - 1) * cellSpan + i * cellSpan}px`;
-        outline.style.width = `${colCount * circleSize + (colCount - 1) * gap}px`;
-        outline.style.height = `${circleSize}px`;
-        overlay.appendChild(outline);
-      }
+    if (entry.count === rowCount * colCount) {
+      appendOutlines(minRow, minCol, rowCount, colCount, geom);
+      return;
     }
+    // ながしかくでない場合は、式と同じ「長方形の部分」だけを囲う
+    const rect = largestRectangle(entry.cells, minRow, maxRow, minCol, maxCol);
+    if (!isUsefulRect(rect, entry.count)) return;
+    appendOutlines(
+      rect.r1, rect.c1,
+      rect.r2 - rect.r1 + 1, rect.c2 - rect.c1 + 1,
+      geom
+    );
   });
 }
 
 // イベント設定
-generateBtn.addEventListener("click", () => {
-  const rows = Math.max(1, Number(rowInput.value) || 1);
-  const cols = Math.max(1, Number(colInput.value) || 1);
-  buildGrid(rows, cols);
+// 入力値を 1〜MAX_SIDE に収める。入力欄にも書き戻して、直された数が見えるようにする
+function readSide(input) {
+  const n = clamp(Math.round(Number(input.value) || 1), 1, MAX_SIDE);
+  input.value = String(n);
+  return n;
+}
+
+function generate() {
+  buildGrid(readSide(rowInput), readSide(colInput));
+}
+
+generateBtn.addEventListener("click", generate);
+
+// 数を入れて Enter でも作れるようにする
+[rowInput, colInput].forEach((input) => {
+  input.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    generate();
+  });
 });
 
-showBtn.addEventListener("click", toggleMultiplication);
+showBtn.addEventListener("click", () => {
+  if (showBtn.disabled) return;
+  toggleMultiplication();
+});
 
 groupingBtn.addEventListener("click", () => {
+  if (groupingBtn.disabled) return;
   showGrouping = !showGrouping;
   updateGroupingButtonLabel();
   if (isOverlayVisible) {
@@ -493,11 +735,17 @@ groupingBtn.addEventListener("click", () => {
 });
 
 swapBtn.addEventListener("click", () => {
+  if (swapBtn.disabled) return;
   swapFactors = !swapFactors; // 配置は変えず式だけ入れ替える
+  updateSwapButtonLabel();    // 式が出ていなくても押したことが分かるようにする
   if (isOverlayVisible) {
     renderMultiplicationOverlay();
+  } else if (showGrouping) {
+    renderGroupingOverlayOnly(); // かこいの向きも swapFactors で変わる
   }
 });
+
+clearBtn.addEventListener("click", clearColors);
 
 // swap 状態を切り替えた場合でも、次に「かけざんを ひょうじ」を押したときは反映される
 // →renderMultiplicationOverlay 内で swapFactors を参照するのでここでは何もしない
@@ -509,21 +757,31 @@ window.addEventListener("pointercancel", handlePointerUp);
 
 toggleNumbering.addEventListener("change", () => {
   showNumbering = toggleNumbering.checked;
-  const rows = Math.max(1, Number(rowInput.value) || 1);
-  const cols = Math.max(1, Number(colInput.value) || 1);
-  renderLabels(rows, cols);
+  renderLabels(readSide(rowInput), readSide(colInput));
 });
 
-// 画面サイズ変更時にも円サイズを再計算
+// 画面サイズ変更時にも円サイズを再計算。
+// オーバーレイ（式・かこい）は px 直打ちなので、必ず描き直さないとズレたまま残る
+let resizeTimer = null;
+function relayout() {
+  adjustCircleSize(readSide(rowInput), readSide(colInput));
+  if (isOverlayVisible) {
+    renderMultiplicationOverlay();
+  } else if (showGrouping) {
+    renderGroupingOverlayOnly();
+  }
+}
 window.addEventListener("resize", () => {
-  const rows = Math.max(1, Number(rowInput.value) || 1);
-  const cols = Math.max(1, Number(colInput.value) || 1);
-  adjustCircleSize(rows, cols);
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(relayout, 120);
+});
+window.addEventListener("orientationchange", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(relayout, 250);
 });
 
 // 初期表示
-buildGrid(Number(rowInput.value), Number(colInput.value));
+generate();
 renderPalette();
-updateShowButtonLabel();
-updateGroupingButtonLabel();
+updateSwapButtonLabel();
 

@@ -40,8 +40,9 @@
     /* ─── Clock ─── */
     .clock-wrap {
       position: relative;
-      width: 520px;
-      height: 520px;
+      /* viewBox を 420 → 480 に広げたぶん、枠も比例して広げて文字盤の実寸を保つ */
+      width: 594px;
+      height: 594px;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
@@ -118,7 +119,8 @@
     .clock-col {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
+      /* 文字盤の枠より狭いヘッダー行を、文字盤の中心に合わせる */
+      align-items: center;
     }
     .clock-top-row {
       display: flex;
@@ -424,16 +426,22 @@
     .conv-dot.inactive { opacity: 0.25; }
 
     /* ── ヘルプ ── */
-    .help-btn { width:28px;height:28px;border-radius:50%;border:2px solid #90caf9;background:#fff;color:#1565c0;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;padding:0;flex-shrink:0;transition:background .15s; }
-    .help-btn:hover { background:#e3f2fd; }
-    #help-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200; }
-    #help-modal { background:#fff;border-radius:20px;padding:32px 28px 28px;max-width:360px;width:calc(100% - 48px);position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18); }
-    #help-close { position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.1rem;color:#6b7280;cursor:pointer;padding:4px; }
+    /* ── ヘルプボタン（全教材で共通：画面右下に固定） ── */
+    /* この教材は下端に数直線パネル・かんさんパネルが常駐するため、右上に置く */
+    .help-btn { position:fixed;right:16px;top:max(16px, env(safe-area-inset-top));width:44px;height:44px;margin:0;border-radius:50%;border:3px solid #90caf9;background:#fff;color:#1565c0;font-family:inherit;font-size:1.2rem;font-weight:800;line-height:1;padding:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;z-index:210;box-shadow:0 4px 14px rgba(0,0,0,.20);transition:background .15s;-webkit-tap-highlight-color:transparent; }
+    .help-btn:hover  { background:#e3f2fd; }
+    .help-btn:active { transform:translateY(1px); }
+    /* 下端の数直線パネル・かんさんパネルが z-index:200 のため、ボタン210 / モーダル300 にする */
+    #help-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch; }
+    #help-modal { background:#fff;border-radius:20px;padding:22px 28px 26px;max-width:480px;width:100%;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18);
+                  max-height:calc(100svh - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain; }
+    /* スクロールしても閉じるボタンが隠れないよう sticky にする */
+    #help-close { position:sticky;top:0;display:block;margin:0 -10px 4px auto;background:#fff;border:none;font-size:1.2rem;color:#6b7280;cursor:pointer;padding:2px 8px;z-index:1; }
     #help-modal h2 { font-size:1.1rem;font-weight:900;color:#1565c0;margin:0 0 14px; }
-    #help-modal p { font-size:.95rem;line-height:1.8;color:#374151;margin:0; }
+    #help-modal p { font-size:.95rem;line-height:2.05;color:#374151;margin:0; }
+    #help-modal rt { font-size:.58em;font-weight:700;color:#6b7280; }
     #help-modal .sh { display:block;font-weight:900;color:#1565c0;margin-top:14px;margin-bottom:2px; }
     #help-modal .sh:first-child { margin-top:0; }
-    .mode-bar { align-items: center; }
   </style>
 </head>
 <body>
@@ -443,7 +451,6 @@
       <button class="mode-btn active" id="modeClockBtn"></button>
       <button class="mode-btn" id="modeArcBtn"></button>
       <button class="mode-btn" id="modeTilesBtn"></button>
-      <button class="help-btn" id="help-btn" style="margin-left:auto">?</button>
     </div>
 
     <div class="clock-area" id="clockArea">
@@ -454,7 +461,7 @@
           <button class="mem-btn" id="memBtn">📍</button>
         </div>
         <div class="clock-wrap" id="clockWrap">
-      <svg id="clockSvg" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg">
+      <svg id="clockSvg" viewBox="-30 -30 480 480" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <!-- Subtle inner shadow ring -->
           <radialGradient id="faceGrad" cx="45%" cy="38%" r="65%">
@@ -623,6 +630,15 @@
     </div>
   </div>
 
+<button id="help-btn" class="help-btn" aria-label="つかいかた">?</button>
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
+  </div>
+</div>
+
   <script>
     let appMode      = 'clock'; // 'clock' | 'conv'
     let convEqOpen   = false;
@@ -633,7 +649,8 @@
     const MIN_TAIL = 26;   // minute hand tail
     const HR_LEN   = 100;  // hour hand tip
     const HR_TAIL  = 22;   // hour hand tail
-    const SVG_SIZE = 420;
+    const VIEW_MIN = -30;   // viewBox の原点
+    const VIEW_SIZE = 480;  // viewBox の一辺
 
     const state = {
       hours: 10,
@@ -707,8 +724,8 @@
           addText(g, pos, m, 'num-min');
         }
       } else {
-        // 'both': hour numbers inside, minute numbers outside
-        const numROuter = R - 16;
+        // 'both': 時は文字盤の中、分はベゼル(r=205)の外側に出す
+        const numROuter = R + 30;
         for (let i = 1; i <= 12; i++) {
           const pos = clockPt(i / 12 * 360, numR);
           addText(g, pos, i, 'num-hour');
@@ -756,8 +773,11 @@
 
     function svgPoint(clientX, clientY) {
       const rect = document.getElementById('clockSvg').getBoundingClientRect();
-      const s = rect.width / SVG_SIZE;
-      return { x: (clientX - rect.left) / s, y: (clientY - rect.top) / s };
+      const s = rect.width / VIEW_SIZE;
+      return {
+        x: (clientX - rect.left) / s + VIEW_MIN,
+        y: (clientY - rect.top) / s + VIEW_MIN,
+      };
     }
 
     function angleFromCenter(clientX, clientY) {
@@ -1356,7 +1376,7 @@
       }
       const usableH = document.documentElement.clientHeight - el.offsetTop - reservedH - 8;
 
-      const scaleW = availW < 536 ? availW / 536 : 1;
+      const scaleW = availW < 610 ? availW / 610 : 1;
       const scaleH = naturalH > usableH ? usableH / naturalH : 1;
       const scale = Math.min(scaleW, scaleH);
 
@@ -2271,20 +2291,80 @@
     // ── ヘルプ ───────────────────────────────────────────
     (function(){
       var ov = document.getElementById('help-overlay');
+      // モードごとに、そのモードだけの説明を出す
       var HELP = {
-        title: 'とけいのつかいかた',
-        body:
-          '<span class="sh">【モード1：とけいよみ】</span>' +
-          '長い針・短い針をドラッグして時刻を設定します。<br>' +
-          '時計の文字盤をタップすると「時のみ」→「分のみ」→「両方」と数字の表示が切り替わります。<br>' +
-          '<span class="sh">【モード2：かんさんARC】</span>' +
-          '弧で分を視覚化します。針をドラッグして、下の数直線パネルとの対応を確認しましょう。<br>' +
-          '<span class="sh">【モード3：かんさんTILES】</span>' +
-          'タイルで時間と分を表現します。タイルをドラッグして時刻を編集できます。',
+        clock: {
+          title: '<ruby>時刻<rt>じこく</rt></ruby>を よむ・<ruby>時間<rt>じかん</rt></ruby>を かんがえる',
+          body:
+            '<span class="sh">【なにを するの】</span>' +
+            'とけいを よむ<ruby>練習<rt>れんしゅう</rt></ruby>と、ふたつの<ruby>時刻<rt>じこく</rt></ruby>の あいだが' +
+            'どれだけの<ruby>時間<rt>じかん</rt></ruby>かを かんがえる<ruby>練習<rt>れんしゅう</rt></ruby>が できます。<br>' +
+            '<span class="sh">【とけいを あわせる】</span>' +
+            'ながい<ruby>針<rt>はり</rt></ruby>・みじかい<ruby>針<rt>はり</rt></ruby>を ゆびや マウスで うごかすと、<ruby>時刻<rt>じこく</rt></ruby>が かわります。<br>' +
+            '<span class="sh">【<ruby>数字<rt>すうじ</rt></ruby>の ひょうじ】</span>' +
+            '<ruby>文字盤<rt>もじばん</rt></ruby>を タップするたびに<br>' +
+            '「<ruby>時<rt>じ</rt></ruby>だけ」→「<ruby>分<rt>ふん</rt></ruby>だけ」→「りょうほう」と きりかわります。<br>' +
+            'りょうほうのときは、<ruby>分<rt>ふん</rt></ruby>は<ruby>文字盤<rt>もじばん</rt></ruby>の そとがわに でます。<br>' +
+            '<span class="sh">【ごぜん・ごご】</span>' +
+            'ひだり<ruby>上<rt>うえ</rt></ruby>の「ごぜん」「ごご」を タップすると きりかわります。<br>' +
+            '<span class="sh">【📍 きろく（ピンどめ）】</span>' +
+            '📍 を おすと、いまの<ruby>時刻<rt>じこく</rt></ruby>を きろくします。<br>' +
+            'きろくした<ruby>時刻<rt>じこく</rt></ruby>は うすい<ruby>針<rt>はり</rt></ruby>で のこるので、' +
+            'とけいを うごかしても「もとの<ruby>時刻<rt>じこく</rt></ruby>」と くらべられます。<br>' +
+            'きろくした<ruby>時刻<rt>じこく</rt></ruby>と いまの<ruby>時刻<rt>じこく</rt></ruby>を くらべると、' +
+            'そのあいだに どれだけ<ruby>時間<rt>じかん</rt></ruby>が たったかが わかります。<br>' +
+            'もう<ruby>一度<rt>いちど</rt></ruby> おすと きえます。<br>' +
+            '<span class="sh">【<ruby>下<rt>した</rt></ruby>の<ruby>数直線<rt>すうちょくせん</rt></ruby>】</span>' +
+            '<ruby>画面<rt>がめん</rt></ruby>の<ruby>下<rt>した</rt></ruby>にある ▲ を おすと、<ruby>数直線<rt>すうちょくせん</rt></ruby>が でてきます。<br>' +
+            'とけいを うごかすと、<ruby>数直線<rt>すうちょくせん</rt></ruby>の しるしも いっしょに うごきます。<br>' +
+            'とけいの<ruby>針<rt>はり</rt></ruby>は「いつ（<ruby>時刻<rt>じこく</rt></ruby>）」を、<ruby>数直線<rt>すうちょくせん</rt></ruby>は' +
+            '「どれだけ（<ruby>時間<rt>じかん</rt></ruby>）」を くらべるのに べんりです。<br>' +
+            '「２４じかん／１２じかん／６じかん／３じかん」で、<ruby>見<rt>み</rt></ruby>る はばを かえられます。<br>' +
+            '・✏️ …<ruby>数直線<rt>すうちょくせん</rt></ruby>に かきこめます<br>' +
+            '・🗑️ …かいたものを けします<br>' +
+            '・📍 …<ruby>時刻<rt>じこく</rt></ruby>を きろくします',
+        },
+        arc: {
+          title: 'じかんを たす（とけいで）',
+          body:
+            '<span class="sh">【なにを するの】</span>' +
+            'ふたつの じかんを たして、なん<ruby>時間<rt>じかん</rt></ruby>なん<ruby>分<rt>ふん</rt></ruby>に なるかを しらべます。<br>' +
+            '<span class="sh">【① ひとつめの じかん】</span>' +
+            'ながい<ruby>針<rt>はり</rt></ruby>を ぐるぐる まわすと、<ruby>赤<rt>あか</rt></ruby>い<ruby>弧<rt>こ</rt></ruby>が のびて<ruby>分<rt>ふん</rt></ruby>の<ruby>長<rt>なが</rt></ruby>さが<ruby>見<rt>み</rt></ruby>えます。<br>' +
+            '60<ruby>分<rt>ふん</rt></ruby>を こえると、<ruby>弧<rt>こ</rt></ruby>は<ruby>内側<rt>うちがわ</rt></ruby>の<ruby>輪<rt>わ</rt></ruby>に つづきます。<br>' +
+            'きめたら 📍 を おします。<br>' +
+            '<span class="sh">【② ふたつめの じかん】</span>' +
+            'おなじように<ruby>針<rt>はり</rt></ruby>を まわすと、こんどは<ruby>青<rt>あお</rt></ruby>い<ruby>弧<rt>こ</rt></ruby>が' +
+            '<ruby>赤<rt>あか</rt></ruby>い<ruby>弧<rt>こ</rt></ruby>の つづきから のびます。<br>' +
+            'もう<ruby>一度<rt>いちど</rt></ruby> 📍 を おすと こたえが でます。<br>' +
+            '<span class="sh">【③ こたえを<ruby>見<rt>み</rt></ruby>る】</span>' +
+            '<ruby>画面<rt>がめん</rt></ruby>の<ruby>下<rt>した</rt></ruby>の ▲ を おすと「○<ruby>分<rt>ふん</rt></ruby> ＋ ○<ruby>分<rt>ふん</rt></ruby> ＝ ○<ruby>時間<rt>じかん</rt></ruby>○<ruby>分<rt>ふん</rt></ruby>」が でます。<br>' +
+            'ふたつの ● で「しき」と「<ruby>数直線<rt>すうちょくせん</rt></ruby>」を きりかえられます。<br>' +
+            '<span class="sh">【やりなおす】</span>' +
+            '✕ を おすと はじめから やりなおせます。',
+        },
+        tiles: {
+          title: 'じかんの まとまりを かんがえる（タイルで）',
+          body:
+            '<span class="sh">【なにを するの】</span>' +
+            '「<ruby>時間<rt>じかん</rt></ruby>」と「<ruby>分<rt>ふん</rt></ruby>」の タイルを ならべて、じかんの まとまりを かんがえます。<br>' +
+            '<span class="sh">【タイルの<ruby>数<rt>かず</rt></ruby>を かえる】</span>' +
+            'タイルを タップすると<ruby>大<rt>おお</rt></ruby>きな とけいが でます。<br>' +
+            '<ruby>針<rt>はり</rt></ruby>を うごかすと、そのタイルの<ruby>分<rt>ふん</rt></ruby>が かわります。<br>' +
+            '<span class="sh">【60<ruby>分<rt>ふん</rt></ruby>に なったら】</span>' +
+            'タイルが 60<ruby>分<rt>ふん</rt></ruby>に なると ＋ が でて、つぎの タイルを たせます。<br>' +
+            '60<ruby>分<rt>ふん</rt></ruby>の タイルを「<ruby>時間<rt>じかん</rt></ruby>」の<ruby>列<rt>れつ</rt></ruby>へ ドラッグすると、1<ruby>時間<rt>じかん</rt></ruby>の まとまりに できます。<br>' +
+            '「<ruby>分<rt>ふん</rt></ruby>」の<ruby>列<rt>れつ</rt></ruby>へ もどすことも できます。<br>' +
+            '<span class="sh">【ボタン】</span>' +
+            '・「じかんをひょうじ」…ぜんぶで なん<ruby>時間<rt>じかん</rt></ruby>かを<ruby>出<rt>だ</rt></ruby>し<ruby>入<rt>い</rt></ruby>れします<br>' +
+            '・それぞれの<ruby>列<rt>れつ</rt></ruby>の<ruby>下<rt>した</rt></ruby>の しろい ところに かきこめます（✕ で けせます）',
+        },
       };
       document.getElementById('help-btn').addEventListener('click', function(){
-        document.getElementById('help-title').innerHTML = HELP.title;
-        document.getElementById('help-body').innerHTML  = HELP.body;
+        var key = appMode === 'clock' ? 'clock' : convSubMode; // 'clock' | 'arc' | 'tiles'
+        var h = HELP[key] || HELP.clock;
+        document.getElementById('help-title').innerHTML = h.title;
+        document.getElementById('help-body').innerHTML  = h.body;
         ov.style.display = 'flex';
       });
       document.getElementById('help-close').addEventListener('click', function(){ ov.style.display = 'none'; });
@@ -2292,12 +2372,5 @@
     })();
   </script>
 
-<div id="help-overlay" style="display:none">
-  <div id="help-modal">
-    <button id="help-close">✕</button>
-    <h2 id="help-title"></h2>
-    <p id="help-body"></p>
-  </div>
-</div>
 </body>
 </html>

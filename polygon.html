@@ -49,23 +49,26 @@
       background: #fdfdff;
     }
     input[type="number"]:focus { outline: 2px solid #94b7ff; }
-    .cat-button {
-      padding: 10px 14px;
-      font-size: 28px;
-      line-height: 1;
-      min-width: 60px;
+    /* えがくボタン：できあがる図そのものを白ぬきで描いたピクトグラム */
+    .make-btn {
+      width: 60px;
       height: 60px;
+      padding: 0;
+      flex: 0 0 auto;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: none;
+      background: #1565c0;
       border: none;
-      border-radius: 12px;
-      box-shadow: var(--shadow);
+      border-radius: 16px;
+      box-shadow: 0 3px 0 #0d47a1;
       cursor: pointer;
-      transition: transform 0.05s ease;
+      transition: background .15s, transform .05s, box-shadow .05s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .cat-button:active { transform: translateY(1px); }
+    .make-btn:hover  { background: #1976d2; }
+    .make-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #0d47a1; }
+    .make-btn svg { display: block; }
     .toggle-buttons {
       display: flex;
       gap: 8px;
@@ -110,7 +113,18 @@
       <input id="sideInput" type="number" min="3" aria-label="かくのかず">
       <span>角形</span>
     </div>
-    <button id="drawBtn" class="cat-button" aria-label="えがく">😸</button>
+    <button id="drawBtn" class="make-btn" aria-label="えがく" title="えがく">
+      <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
+        <!-- 正五角形と頂点 -->
+        <polygon points="18,4 32,14.2 26.7,30.6 9.3,30.6 4,14.2"
+                 fill="none" stroke="#fff" stroke-width="2.6" stroke-linejoin="round"/>
+        <circle cx="18"   cy="4"    r="2.6" fill="#fff"/>
+        <circle cx="32"   cy="14.2" r="2.6" fill="#fff"/>
+        <circle cx="26.7" cy="30.6" r="2.6" fill="#fff"/>
+        <circle cx="9.3"  cy="30.6" r="2.6" fill="#fff"/>
+        <circle cx="4"    cy="14.2" r="2.6" fill="#fff"/>
+      </svg>
+    </button>
     <div class="toggle-buttons">
       <button id="vertexBtn" class="toggle-btn">頂点を ひょうじ</button>
       <button id="circleBtn" class="toggle-btn">円を ひょうじ</button>
@@ -243,5 +257,81 @@
     updateCircleLabel();
     updateRadiusLabel();
   </script>
+
+
+<!-- ── そうさせつめい（ヘルプ） ────────────────────────── -->
+<style>
+  /* ── ヘルプボタン（全教材で共通：画面右下に固定） ── */
+  .help-btn {
+    position: fixed;
+    right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    width: 44px; height: 44px; margin: 0;
+    border-radius: 50%; border: 3px solid #90caf9;
+    background: #fff; color: #1565c0;
+    font-family: inherit; font-size: 1.2rem; font-weight: 800; line-height: 1;
+    padding: 0; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    z-index: 190;
+    box-shadow: 0 4px 14px rgba(0,0,0,.20);
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-btn:hover  { background: #e3f2fd; }
+  .help-btn:active { transform: translateY(1px); }
+  #help-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #help-modal {
+    background: #fff; border-radius: 20px; padding: 22px 28px 26px;
+    max-width: 480px; width: 100%; position: relative;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    max-height: calc(100svh - 40px); overflow-y: auto;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  }
+  /* スクロールしても閉じるボタンが隠れないよう sticky にする */
+  #help-close {
+    position: sticky; top: 0; display: block;
+    margin: 0 -10px 4px auto;
+    background: #fff; border: none; font-size: 1.2rem;
+    color: #6b7280; cursor: pointer; padding: 2px 8px; z-index: 1;
+  }
+  #help-modal h2 { font-size: 1.1rem; font-weight: 900; color: #1565c0; margin: 0 0 14px; }
+  #help-modal p  { font-size: .95rem; line-height: 2.05; color: #374151; margin: 0; }
+  #help-modal rt { font-size: .58em; font-weight: 700; color: #6b7280; }
+  #help-modal .sh { display: block; font-weight: 900; color: #1565c0; margin-top: 14px; margin-bottom: 2px; }
+  #help-modal .sh:first-child { margin-top: 0; }
+</style>
+
+<button id="help-btn" class="help-btn" aria-label="つかいかた">?</button>
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close" aria-label="とじる">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
+  </div>
+</div>
+<script>
+  (function(){
+    var ov  = document.getElementById('help-overlay');
+    var btn = document.getElementById('help-btn');
+    var HELP = {
+      title: '<ruby>正多角形<rt>せいたかっけい</rt></ruby>ドローのつかいかた',
+      body:  '<span class="sh">【かきかた】</span>「<ruby>正<rt>せい</rt></ruby>◯<ruby>角形<rt>かくけい</rt></ruby>」の ◯に <ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れて、あおい ボタンを おすと、<ruby>図<rt>ず</rt></ruby>が <ruby>出<rt>で</rt></ruby>ます。<br><span class="sh">【ボタン】</span>・「<ruby>頂点<rt>ちょうてん</rt></ruby>を ひょうじ」…かどに <ruby>点<rt>てん</rt></ruby>を <ruby>出<rt>だ</rt></ruby>します<br>・「<ruby>円<rt>えん</rt></ruby>を ひょうじ」…まわりの <ruby>円<rt>えん</rt></ruby>を <ruby>出<rt>だ</rt></ruby>します<br>・「<ruby>半径<rt>はんけい</rt></ruby>を ひょうじ」…<ruby>中心<rt>ちゅうしん</rt></ruby>から かどへの <ruby>線<rt>せん</rt></ruby>を <ruby>出<rt>だ</rt></ruby>します'
+    };
+
+    btn.addEventListener('click', function(){
+      document.getElementById('help-title').innerHTML = HELP.title;
+      document.getElementById('help-body').innerHTML  = HELP.body;
+      ov.style.display = 'flex';
+    });
+    document.getElementById('help-close').addEventListener('click', function(){ ov.style.display = 'none'; });
+    ov.addEventListener('click', function(e){ if (e.target === ov) ov.style.display = 'none'; });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') ov.style.display = 'none'; });
+  })();
+</script>
 </body>
 </html>

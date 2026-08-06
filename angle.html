@@ -241,22 +241,34 @@ svg {
 }
 
 /* ヘルプボタン */
+/* ── ヘルプボタン（全教材で共通：画面右下に固定） ── */
 .help-btn {
-  width: 26px;
-  height: 26px;
+  position: fixed;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: 44px;
+  height: 44px;
+  margin: 0;
   border-radius: 50%;
-  border: 2px solid #90caf9;
-  background: white;
+  border: 3px solid #90caf9;
+  background: #fff;
   color: #1565c0;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
   font-family: inherit;
+  font-size: 1.2rem;
+  font-weight: 800;
   line-height: 1;
   padding: 0;
-  margin-left: auto;
-  flex-shrink: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 190;
+  box-shadow: 0 4px 14px rgba(0,0,0,.20);
+  transition: background .15s;
+  -webkit-tap-highlight-color: transparent;
 }
+.help-btn:hover  { background:#e3f2fd; }
+.help-btn:active { transform: translateY(1px); }
 
 /* ヘルプモーダル */
 #help-overlay {
@@ -266,27 +278,37 @@ svg {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 200; /* ヘルプボタン(190)より前面に出す */
+  padding: 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 #help-modal {
   background: white;
   border-radius: 20px;
-  padding: 32px 28px 28px;
-  max-width: 340px;
-  width: calc(100vw - 48px);
+  padding: 22px 28px 26px;
+  max-width: 480px;
+  width: 100%;
   position: relative;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  max-height: calc(100svh - 40px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
+/* スクロールしても閉じるボタンが隠れないよう sticky にする */
 #help-close {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  background: none;
+  position: sticky;
+  top: 0;
+  display: block;
+  margin: 0 -10px 4px auto;
+  background: white;
   border: none;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   color: #6b7280;
   cursor: pointer;
-  padding: 4px;
+  padding: 2px 8px;
+  z-index: 1;
 }
 #help-title {
   font-size: 1.1rem;
@@ -296,9 +318,14 @@ svg {
 }
 #help-body {
   font-size: 0.95rem;
-  line-height: 1.8;
+  line-height: 2.05;
   color: #374151;
   margin: 0;
+}
+#help-body rt {
+  font-size: 0.58em;
+  font-weight: 700;
+  color: #6b7280;
 }
 #help-body .section-head {
   display: block;
@@ -318,7 +345,6 @@ svg {
 <div class="mode-tabs">
   <button class="mode-tab active" id="tab-proto"></button>
   <button class="mode-tab"        id="tab-hak"></button>
-  <button class="help-btn"        id="help-btn">?</button>
 </div>
 
 <!-- かくどモード UI -->
@@ -345,6 +371,7 @@ svg {
 <div id="panel-hak" style="display:none"></div>
 
 <!-- ヘルプモーダル -->
+<button id="help-btn" class="help-btn" aria-label="つかいかた">?</button>
 <div id="help-overlay" style="display:none">
   <div id="help-modal">
     <button id="help-close">✕</button>

@@ -36,7 +36,8 @@
     /* ── コントロールパネル ── */
     .controls {
       width: 100%;
-      padding: 16px 20px;
+      /* 右上のヘルプボタン(44px)と重ならないよう右側に余白を取る */
+      padding: 16px 68px 16px 20px;
       border-radius: 20px;
       background: var(--panel);
       box-shadow: var(--shadow);
@@ -174,13 +175,18 @@
     .feedback.correct { background:#dcfce7; color:#166534; border-color:#86efac; }
 
     /* ── ヘルプ ── */
-    .help-btn { width:28px;height:28px;border-radius:50%;border:2px solid #90caf9;background:#fff;color:#1565c0;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;padding:0;flex-shrink:0;transition:background .15s; }
-    .help-btn:hover { background:#e3f2fd; }
-    #help-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200; }
-    #help-modal { background:#fff;border-radius:20px;padding:32px 28px 28px;max-width:360px;width:calc(100% - 48px);position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18); }
-    #help-close { position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.1rem;color:#6b7280;cursor:pointer;padding:4px; }
+    /* ── ヘルプボタン（全教材で共通：画面右下に固定） ── */
+    .help-btn { position:fixed;right:16px;top:max(16px, env(safe-area-inset-top));width:44px;height:44px;margin:0;border-radius:50%;border:3px solid #90caf9;background:#fff;color:#1565c0;font-family:inherit;font-size:1.2rem;font-weight:800;line-height:1;padding:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;z-index:190;box-shadow:0 4px 14px rgba(0,0,0,.20);transition:background .15s;-webkit-tap-highlight-color:transparent; }
+    .help-btn:hover  { background:#e3f2fd; }
+    .help-btn:active { transform:translateY(1px); }
+    #help-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch; }
+    #help-modal { background:#fff;border-radius:20px;padding:22px 28px 26px;max-width:480px;width:100%;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18);
+                  max-height:calc(100svh - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain; }
+    /* スクロールしても閉じるボタンが隠れないよう sticky にする */
+    #help-close { position:sticky;top:0;display:block;margin:0 -10px 4px auto;background:#fff;border:none;font-size:1.2rem;color:#6b7280;cursor:pointer;padding:2px 8px;z-index:1; }
     #help-modal h2 { font-size:1.1rem;font-weight:900;color:#1565c0;margin:0 0 14px; }
-    #help-modal p { font-size:.95rem;line-height:1.8;color:#374151;margin:0; }
+    #help-modal p { font-size:.95rem;line-height:2.05;color:#374151;margin:0; }
+    #help-modal rt { font-size:.58em;font-weight:700;color:#6b7280; }
     #help-modal .sh { display:block;font-weight:900;color:#1565c0;margin-top:14px;margin-bottom:2px; }
     #help-modal .sh:first-child { margin-top:0; }
 
@@ -311,6 +317,7 @@
       align-items: flex-start;
       align-content: flex-start;
       overflow: hidden;
+      padding-bottom: 4px;
     }
     .people-adjuster {
       display: flex;
@@ -372,6 +379,40 @@
       color: var(--c-people);
       min-height: 20px;
     }
+
+    /* ── 縮小表示のときのタップ拡大 ── */
+    .people-zone.zoomed-out .person-slot { position: relative; z-index: 0; cursor: zoom-in; }
+    /* 動物のまわりに見えないタップ領域（z-index:-1 でタイルのドラッグは邪魔しない） */
+    .people-zone.zoomed-out .person-slot::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 16px;
+      z-index: -1;
+    }
+    .people-zone.zoomed-out .person-slot:active::before { background: #dbeafe; }
+    .zoom-hint {
+      width: 100%;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--c-people);
+      opacity: .85;
+      margin-bottom: 2px;
+    }
+    /* display:none にすると zoom 再計算で高さが揺れるので visibility で場所を確保する */
+    .people-zone:not(.zoomed-out) .zoom-hint { visibility: hidden; }
+
+    /* タップで選ばれた人を「その場で」大きく表示（機能はそのまま） */
+    /* padding など「レイアウトに影響する指定」は zoom 再計算が揺れるので使わない */
+    .people-zone.zoomed-out .person-slot.enlarged {
+      z-index: 10;
+      background: #fff;
+      outline: 10px solid #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.25);
+      cursor: zoom-out;
+    }
+    .people-zone.zoomed-out .person-slot.enlarged::before { display: none; }
 
     /* トレイカラー（人ごと） */
     .tray-0 { background: #fef9c3; border-color: #fde047; }
@@ -749,7 +790,6 @@
     <button id="hissanBtn" class="mode-btn">ひっさん</button>
     <button id="resetBtn" class="reset-btn">リセット</button>
     <button id="checkBtn" class="check-btn" disabled>式を確認</button>
-    <button id="help-btn" class="help-btn">?</button>
   </div>
 </header>
 
@@ -799,6 +839,15 @@
     <div class="step-item" data-step="kakeru">かける</div>
     <div class="step-item" data-step="hiku">ひく</div>
     <div class="step-item" data-step="orosu">おろす</div>
+  </div>
+</div>
+
+<button id="help-btn" class="help-btn" aria-label="つかいかた">?</button>
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
   </div>
 </div>
 
@@ -1039,9 +1088,17 @@
     }
 
     const count = getPeopleCount();
+
+    const hint = document.createElement('div');
+    hint.className = 'zoom-hint';
+    hint.innerHTML = '🔍 どうぶつをタップすると その<ruby>場<rt>ば</rt></ruby>で<ruby>大<rt>おお</rt></ruby>きくなります（もう<ruby>一度<rt>いちど</rt></ruby>タップでもどる）';
+    peopleZone.appendChild(hint);
+
     for (let i = 0; i < count; i++) {
       const slot = document.createElement('div');
       slot.className = 'person-slot';
+      slot.dataset.person = i;
+      attachPersonTap(slot, i);
 
       const icon = document.createElement('div');
       icon.className = 'person-icon';
@@ -1069,7 +1126,73 @@
     }
     // アニメーション中以外は毎回 zoom を再計算（tightenZoom で縮小されたままになるのを防ぐ）
     if (!isDistributing) scalePeopleToFit();
+    applyEnlarge(); // 再描画で消えた拡大表示を復元
+
   }
+
+  /* ── 縮小時のタップ拡大（その場で拡大。ドラッグなどの機能はそのまま） ── */
+  var enlargedPerson = -1;
+
+  function attachPersonTap(slot, idx) {
+    let sx = 0, sy = 0, st = 0, valid = false;
+    slot.addEventListener('pointerdown', e => {
+      // タイルのドラッグを優先。縮小表示のときだけ拡大タップを受け付ける
+      valid = !e.target.closest('.dot')
+              && (peopleZone.classList.contains('zoomed-out') || slot.classList.contains('enlarged'));
+      sx = e.clientX; sy = e.clientY; st = Date.now();
+    });
+    slot.addEventListener('pointerup', e => {
+      if (!valid) return;
+      valid = false;
+      if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) return;
+      if (Date.now() - st > 600) return;
+      setEnlargedPerson(enlargedPerson === idx ? -1 : idx);
+    });
+  }
+
+  function setEnlargedPerson(idx) {
+    enlargedPerson = idx;
+    applyEnlarge();
+  }
+
+  // 拡大は transform: scale。zone からはみ出さないよう transform-origin を寄せる
+  function applyEnlarge() {
+    peopleZone.querySelectorAll('.person-slot.enlarged').forEach(el => {
+      el.classList.remove('enlarged');
+      el.style.transform = '';
+      el.style.transformOrigin = '';
+    });
+    if (enlargedPerson < 0) return;
+    if (!peopleZone.classList.contains('zoomed-out')) { enlargedPerson = -1; return; }
+
+    const slot = peopleZone.querySelector('.person-slot[data-person="' + enlargedPerson + '"]');
+    if (!slot) { enlargedPerson = -1; return; }
+
+    const zr = peopleZone.getBoundingClientRect();
+    const sr = slot.getBoundingClientRect();
+    if (sr.width <= 0 || sr.height <= 0) return;
+
+    const z   = parseFloat(peopleZone.style.zoom) || 1;
+    // outline のぶん 24px 余裕をみて、zone の外にはみ出さないようにする
+    const fit = Math.min((zr.width - 24) / sr.width, (zr.height - 24) / sr.height);
+    // 等倍(1/z)の 2.5 倍を目標に、zone に収まる範囲(fit)まで大きくする
+    const k   = Math.max(1, Math.min((1 / z) * 2.5, fit, 8));
+    if (k <= 1.02) return;
+
+    // 左端の人は右へ、右端の人は左へ広がるように原点を決める
+    const slackX = zr.width  - sr.width;
+    const slackY = zr.height - sr.height;
+    const ox = slackX > 0 ? Math.min(1, Math.max(0, (sr.left - zr.left) / slackX)) : 0.5;
+    const oy = slackY > 0 ? Math.min(1, Math.max(0, (sr.top  - zr.top ) / slackY)) : 0.5;
+
+    slot.classList.add('enlarged');
+    slot.style.transformOrigin = (ox * 100) + '% ' + (oy * 100) + '%';
+    slot.style.transform = 'scale(' + k + ')';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && enlargedPerson >= 0) setEnlargedPerson(-1);
+  });
 
   /* ── ドラッグ & ドロップ ── */
   function attachDrag(el, item) {
@@ -1312,22 +1435,86 @@
     scalePeopleToFit();
   }
 
+  // zoom を適用しつつ、小さくなりすぎたら「タップで拡大」モードに切り替える
+  var ZOOM_TAP_THRESHOLD = 0.8;
+  function setZoom(el, z) {
+    el.style.zoom = (z === '' ? '' : String(z));
+    if (el.id === 'peopleZone') {
+      var zz = (z === '' ? 1 : parseFloat(z)) || 1;
+      el.classList.toggle('zoomed-out', zz < ZOOM_TAP_THRESHOLD);
+      if (typeof applyEnlarge === 'function') applyEnlarge();
+    }
+    scheduleFitCheck(el);
+  }
+
+  // ── はみ出し検証 ──────────────────────────────────────
+  // zoom 計算はレイアウト確定前の寸法をもとに走ることがあり、
+  // あとからゾーンの高さが変わるとクロップしたまま残ってしまう。
+  // zoom を当てたあとに必ず実測し直し、収まるまで縮める安全網。
+  var fitCheckTimers = new WeakMap();
+  function scheduleFitCheck(el) {
+    clearTimeout(fitCheckTimers.get(el));
+    fitCheckTimers.set(el, setTimeout(function() { enforceFit(el, 3); }, 160));
+  }
+  function enforceFit(el, tries) {
+    if (!el || tries <= 0 || !el.isConnected) return;
+    var aW = el.clientWidth, aH = el.clientHeight;
+    if (aW <= 0 || aH <= 0) return;
+    var ms = measureNatural(el);
+    if (ms.h <= aH && ms.w <= aW) return;
+    var cur = parseFloat(el.style.zoom) || 1;
+    var s = cur * Math.min(
+      ms.w > aW ? (aW * 0.97) / ms.w : 1,
+      ms.h > aH ? (aH * 0.97) / ms.h : 1
+    );
+    s = Math.max(0.2, s);
+    if (s >= cur - 0.002) return;
+    el.style.zoom = String(s);
+    if (el.id === 'peopleZone') {
+      el.classList.toggle('zoomed-out', s < ZOOM_TAP_THRESHOLD);
+      if (typeof applyEnlarge === 'function') applyEnlarge();
+    }
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { enforceFit(el, tries - 1); });
+    });
+  }
+
+  // コンテンツの実寸を測る。flex-wrap コンテナでは scrollHeight が最終行の
+  // はみ出しを取りこぼすブラウザがあるため、子要素の実際の下端も併せて見る
+  function measureNatural(el) {
+    var prevOverflow = el.style.overflow;
+    el.style.overflow = 'visible';
+    var w = el.scrollWidth, h = el.scrollHeight;
+    var op = el.offsetParent;
+    // 子の offset* は offsetParent の座標系（zoom 適用後）で返るため、
+    // el 自身の offsetWidth/Height との「比率」に直してから内部単位に換算する
+    if (op && el.offsetHeight > 0 && el.offsetWidth > 0) {
+      var baseT = el.offsetTop, baseL = el.offsetLeft;
+      var extT = 0, extL = 0;
+      for (var i = 0; i < el.children.length; i++) {
+        var c = el.children[i];
+        if (c.offsetParent !== op) continue;
+        extT = Math.max(extT, c.offsetTop  - baseT + c.offsetHeight);
+        extL = Math.max(extL, c.offsetLeft - baseL + c.offsetWidth);
+      }
+      h = Math.max(h, (extT / el.offsetHeight) * el.clientHeight);
+      w = Math.max(w, (extL / el.offsetWidth)  * el.clientWidth);
+    }
+    el.style.overflow = prevOverflow;
+    return { w: w, h: h };
+  }
+
   function scaleZoneContent(el) {
     if (!el) return;
-    el.style.zoom = '1';
+    setZoom(el, 1);
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
         var availW = el.clientWidth;
         var availH = el.clientHeight;
-        if (availW <= 0 || availH <= 0) { el.style.zoom = ''; return; }
-        // overflow:hidden をいったん解除してコンテンツの実寸を正確に測る
-        // (overflow:hidden のまま scrollWidth/scrollHeight を測ると、Chromeなど一部ブラウザで
-        //  clienWidth/clientHeight と同じ値を返しオーバーフローを検知できないことがある)
-        el.style.overflow = 'visible';
-        var natW = el.scrollWidth;
-        var natH = el.scrollHeight;
-        el.style.overflow = '';
-        if (natW <= availW && natH <= availH) { el.style.zoom = ''; return; }
+        if (availW <= 0 || availH <= 0) { setZoom(el, ''); return; }
+        var nat0 = measureNatural(el);
+        var natW = nat0.w, natH = nat0.h;
+        if (natW <= availW && natH <= availH) { setZoom(el, ''); return; }
 
         // パス1: 線形式（保守的・オーバーフロー回避保証）— 96% マージンでクロップ防止
         var sLo = Math.max(0.25, Math.min(
@@ -1340,16 +1527,18 @@
         sSqrt = Math.max(0.25, sSqrt);
 
         if (sSqrt <= sLo * 1.05) {
-          el.style.zoom = String(sLo);
+          setZoom(el, sLo);
         } else {
-          el.style.zoom = String(sSqrt);
+          setZoom(el, sSqrt);
         }
 
-        function measureScroll() {
-          el.style.overflow = 'visible';
-          var w = el.scrollWidth, h = el.scrollHeight;
-          el.style.overflow = '';
-          return { w: w, h: h };
+        function measureScroll() { return measureNatural(el); }
+
+        // zoom を当てると el 自身の座標系が変わるため、比較用の avail は毎回取り直す
+        function availNow() { return { w: el.clientWidth, h: el.clientHeight }; }
+        function overflows(ms) {
+          var a = availNow();
+          return (ms.h > a.h * 0.97 || ms.w > a.w * 0.97);
         }
 
         // パス3以降: 縦余白を使って段階的に拡大（最大 2 ラウンド）
@@ -1358,19 +1547,16 @@
             requestAnimationFrame(function() {
               var cur = parseFloat(el.style.zoom) || 1;
               var ms  = measureScroll();
-              var h = ms.h, w = ms.w;
+              var a   = availNow();
 
-              // 直前パスがオーバーフロー（97% 超で判定） → fallback に戻して終了
-              if (h > availH * 0.97 || w > availW * 0.97) {
-                el.style.zoom = String(fallbackZoom);
-                return;
-              }
+              // 直前パスがオーバーフロー → fallback に戻して終了
+              if (overflows(ms)) { setZoom(el, fallbackZoom); return; }
 
               // 縦余白 < 15% ならこのラウンドは不要
-              if (h >= availH * 0.85 || h <= 0) return;
+              if (ms.h >= a.h * 0.85 || ms.h <= 0) return;
 
               // 目標を 95% に抑えてクロップ防止マージンを確保
-              var ratio     = (availH * 0.95) / h;
+              var ratio     = (a.h * 0.95) / ms.h;
               // 積極的な推定: sqrt(ratio) — flex-wrap 折り返しでの行数増加を想定
               var tryZoom   = Math.min(1, cur * Math.sqrt(ratio));
               // 保守的な推定: 4乗根 — tryZoom がオーバーフローしたときの fallback
@@ -1378,30 +1564,22 @@
 
               if (tryZoom <= cur * 1.02) return; // 改善量が 2% 未満なら打ち切り
 
-              el.style.zoom = String(tryZoom);
+              setZoom(el, tryZoom);
 
-              // 検証: tryZoom がオーバーフローなら safeZoom を試す（97% で判定してマージン確保）
               requestAnimationFrame(function() {
                 requestAnimationFrame(function() {
-                  var ms2 = measureScroll();
-                  if (ms2.h > availH * 0.97 || ms2.w > availW * 0.97) {
-                    // tryZoom はオーバーフロー
+                  if (overflows(measureScroll())) {
                     if (safeZoom > cur * 1.02) {
-                      el.style.zoom = String(safeZoom);
-                      // safeZoom の検証（97% 超過なら cur に戻す）
+                      setZoom(el, safeZoom);
                       requestAnimationFrame(function() {
                         requestAnimationFrame(function() {
-                          var ms3 = measureScroll();
-                          if (ms3.h > availH * 0.97 || ms3.w > availW * 0.97) {
-                            el.style.zoom = String(cur);
-                          }
+                          if (overflows(measureScroll())) setZoom(el, cur);
                         });
                       });
                     } else {
-                      el.style.zoom = String(cur);
+                      setZoom(el, cur);
                     }
                   } else if (round < 2) {
-                    // tryZoom が収まった → 次ラウンドでさらに余白を詰める
                     upscaleRound(cur, round + 1);
                   }
                 });
@@ -1418,17 +1596,16 @@
   function tightenZoom(el) {
     if (!el) return;
     requestAnimationFrame(function() {
-      el.style.overflow = 'visible';
-      var h = el.scrollHeight, w = el.scrollWidth;
-      el.style.overflow = '';
+      var ms = measureNatural(el);
+      var h = ms.h, w = ms.w;
       var aH = el.clientHeight, aW = el.clientWidth;
       if (h > aH || w > aW) {
         var cur = parseFloat(el.style.zoom) || 1;
         var s = Math.max(0.25, Math.min(
-          w > aW ? aW / w * cur : cur,
-          h > aH ? aH / h * cur : cur
+          w > aW ? (aW * 0.97) / w * cur : cur,
+          h > aH ? (aH * 0.97) / h * cur : cur
         ));
-        if (s < cur) el.style.zoom = String(s);
+        if (s < cur) setZoom(el, s);
       }
     });
   }
@@ -2610,6 +2787,37 @@
       scaleLeftPaneToFit();
     });
     ro.observe(document.querySelector('.app-layout') || document.body);
+
+    // ゾーンの箱そのものの大きさが後から変わる場合（左ペインの flex-basis トランジション、
+    // 筆算モードの切替、コントロール行の折り返しなど）にも作り直す。
+    // 監視対象は zoom を当てる要素の「親」なので、zoom 変更でループしない。
+    var lastBox = new WeakMap(), refitBusy = false;
+    var zoneRo = new ResizeObserver(function(entries) {
+      if (refitBusy) return;
+      var changed = false;
+      entries.forEach(function(en) {
+        var r = en.contentRect, prev = lastBox.get(en.target);
+        if (prev && Math.abs(prev.w - r.width) < 1.5 && Math.abs(prev.h - r.height) < 1.5) return;
+        lastBox.set(en.target, { w: r.width, h: r.height });
+        changed = true;
+      });
+      if (!changed) return;
+      refitBusy = true;
+      requestAnimationFrame(function() {
+        scaleLeftPaneToFit();
+        setTimeout(function() { refitBusy = false; }, 450);
+      });
+    });
+    ['.zone-people', '.zone-objects'].forEach(function(sel) {
+      var z = document.querySelector(sel);
+      if (z) zoneRo.observe(z);
+    });
+
+    // 左ペインの幅アニメーション終了時にも確実に再フィット
+    var lp = document.querySelector('.left-pane');
+    if (lp) lp.addEventListener('transitionend', function(e) {
+      if (e.propertyName === 'flex-basis') scaleLeftPaneToFit();
+    });
   } else {
     window.addEventListener('resize', function() {
       scaleHissanToFit();
@@ -2622,14 +2830,28 @@
     var HELP = {
       title: '<ruby>わり算<rt>わりざん</rt></ruby>のつかいかた',
       body:
-        '「ぜんぶの数」と「人数」または「１人分の数」を入力します。<br><br>' +
+        '<span class="sh">【はじめに】</span>' +
+        '「ぜんぶの<ruby>数<rt>かず</rt></ruby>」と「<ruby>人数<rt>にんずう</rt></ruby>」または「１<ruby>人分<rt>にんぶん</rt></ruby>の<ruby>数<rt>かず</rt></ruby>」を<ruby>入力<rt>にゅうりょく</rt></ruby>すると、' +
+        'まると どうぶつが あらわれます。<br>' +
         '<span class="sh">【まるモード】</span>' +
-        '●をドラッグして「わける」のトレイに配りましょう。<br>「くばる」ボタンで自動配布もできます。<br>' +
+        '●をドラッグして「わける」のトレイに<ruby>配<rt>くば</rt></ruby>りましょう。<br>' +
+        'トレイの<ruby>下<rt>した</rt></ruby>に「○こ」と でるので、ひとりぶんが わかります。<br>' +
         '<span class="sh">【くらいモード】</span>' +
-        '十の位・百の位のタイルで学習できます。<br>「りょうがえ」ゾーンにドロップすると位を変換できます。<br>' +
+        '「くらい」を おすと、<ruby>十<rt>じゅう</rt></ruby>の<ruby>位<rt>くらい</rt></ruby>・<ruby>百<rt>ひゃく</rt></ruby>の<ruby>位<rt>くらい</rt></ruby>の タイルで<ruby>学習<rt>がくしゅう</rt></ruby>できます。<br>' +
+        '10や100のタイルを「りょうがえ」ゾーンに ドロップすると、こまかい タイルに かえられます。<br>' +
         '<span class="sh">【ひっさんモード】</span>' +
-        '「ひっさん」をオンにすると筆算の手順をステップごとに確認できます。<br>' +
-        '→ で次のステップへ、← で前のステップに戻れます。',
+        '「ひっさん」を オンにすると、<ruby>筆算<rt>ひっさん</rt></ruby>の<ruby>手順<rt>てじゅん</rt></ruby>を ステップごとに<ruby>確<rt>たし</rt></ruby>かめられます。<br>' +
+        '・→ …<ruby>次<rt>つぎ</rt></ruby>のステップへ　・← …<ruby>前<rt>まえ</rt></ruby>のステップへ もどる<br>' +
+        '・↩ …ステップを さいしょから やりなおす<br>' +
+        '・▶ …<ruby>自動<rt>じどう</rt></ruby>で すすめる（もう<ruby>一度<rt>いちど</rt></ruby> おすと とまります）<br>' +
+        '　よこの「<ruby>遅<rt>おそ</rt></ruby>—<ruby>速<rt>はや</rt></ruby>」で すすむ はやさを かえられます。<br>' +
+        '<span class="sh">【こたえを たしかめる】</span>' +
+        '「<ruby>式<rt>しき</rt></ruby>を<ruby>確認<rt>かくにん</rt></ruby>」を おすと、ぜんぶ<ruby>配<rt>くば</rt></ruby>れているかを しらべて<ruby>式<rt>しき</rt></ruby>が でます。<br>' +
+        'あまりが ある ときは、<ruby>上<rt>うえ</rt></ruby>の「あまり」に<ruby>数<rt>かず</rt></ruby>が でます。<br>' +
+        '「リセット」で さいしょから やりなおせます。<br>' +
+        '<span class="sh">【<ruby>小<rt>ちい</rt></ruby>さくて<ruby>見<rt>み</rt></ruby>えないとき】</span>' +
+        '<ruby>人数<rt>にんずう</rt></ruby>が<ruby>多<rt>おお</rt></ruby>くて<ruby>表示<rt>ひょうじ</rt></ruby>が<ruby>小<rt>ちい</rt></ruby>さくなったら、どうぶつをタップするとその<ruby>場<rt>ば</rt></ruby>で<ruby>大<rt>おお</rt></ruby>きくなります。<br>' +
+        '<ruby>大<rt>おお</rt></ruby>きくなったままタイルをドラッグして<ruby>配<rt>くば</rt></ruby>ったり<ruby>取<rt>と</rt></ruby>り<ruby>出<rt>だ</rt></ruby>したりできます。もう<ruby>一度<rt>いちど</rt></ruby>タップするともどります。',
     };
     document.getElementById('help-btn').addEventListener('click', function(){
       document.getElementById('help-title').innerHTML = HELP.title;
@@ -2641,13 +2863,6 @@
   })();
 </script>
 
-<div id="help-overlay" style="display:none">
-  <div id="help-modal">
-    <button id="help-close">✕</button>
-    <h2 id="help-title"></h2>
-    <p id="help-body"></p>
-  </div>
-</div>
 </div><!-- #pageWrap -->
 </body>
 </html>
