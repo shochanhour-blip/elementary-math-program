@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>がいすう</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --text: #1f2933;
+      --warn: #d4574f;
+      --blue: #1e88e5;
+      --blue-dark: #1565c0;
+      --orange: #ef8b25;
+      --orange-dark: #d97a12;
+      --mid: #78909c;
+      --mid-dark: #546e7a;
+      --shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      background: #f7f9fc;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100svh;
+      padding: 16px 12px;
+    }
+    :focus-visible { outline: 3px solid #1e88e5; outline-offset: 2px; }
+
+    .board {
+      width: 100%;
+      max-width: 1100px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 10px 10px 6px;
+    }
+    .board-head {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 2px;
+    }
+    .head-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    /* 子どもが じぶんで しきと こたえを 書くところ（カードの そと・上のよはく） */
+    .quiz {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 42px;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .quiz .arrow { font-size: 30px; color: #52606d; }
+    .quiz rt { font-size: .42em; font-weight: 700; color: #6b7280; }
+    .quiz-box {
+      min-width: 150px;
+      padding: 10px 16px;
+      font-family: inherit;
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.2;
+      text-align: center;
+      white-space: nowrap;
+      color: var(--text);
+      background: #fff;
+      border: 3px solid #cfd8e3;
+      border-radius: 12px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .quiz-box.empty { border-style: dashed; }
+    .quiz-box.empty::after { content: "\00a0"; }
+    .quiz-box:hover { background: #f4f7fb; }
+    .quiz-box.editing { box-shadow: 0 0 0 4px #e3e8ee; }
+    /* まるつけ */
+    .judge-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 10px 12px;
+      color: var(--blue-dark);
+      background: #fff;
+      border: 3px solid #90caf9;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .judge-btn svg { display: block; }
+    .judge-btn:hover { background: #e3f2fd; }
+    .judge-btn:disabled { color: #d7dee7; border-color: #e6ebf1; background: #fff; cursor: default; }
+    .judge-mark {
+      width: 48px; height: 48px;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex: 0 0 auto;
+    }
+    .tool-btn {
+      padding: 9px 16px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--blue-dark);
+      background: #fff;
+      border: 2.5px solid #90caf9;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tool-btn:hover { background: #e3f2fd; }
+    .tool-btn[aria-pressed="true"] {
+      background: var(--blue-dark);
+      border-color: var(--blue-dark);
+      color: #fff;
+    }
+    .tool-btn:disabled {
+      color: #b0bac4;
+      border-color: #dbe3ec;
+      background: #f7f9fc;
+      cursor: default;
+    }
+    /* めもりの かずの きりかえ */
+    .seg {
+      display: flex;
+      border: 2.5px solid #90caf9;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-right: auto;
+    }
+    .seg-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      color: var(--blue-dark);
+      background: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .seg-btn svg { display: block; }
+    .seg-btn + .seg-btn { border-left: 2.5px solid #90caf9; }
+    .seg-btn:hover { background: #e3f2fd; }
+    .seg-btn[aria-pressed="true"] { background: var(--blue-dark); color: #fff; }
+
+    /* SVG と、そのうえに重ねる入力ボックスの土台 */
+    .stage { position: relative; }
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      touch-action: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .grabzone { cursor: grab; }
+    /* ▲がまだ無いあいだ、うすい点線の▲でタップをさそう */
+    .ghost { animation: ghost-pulse 2.4s ease-in-out infinite; }
+    @keyframes ghost-pulse { 0%, 100% { opacity: .38; } 50% { opacity: .75; } }
+    @media (prefers-reduced-motion: reduce) { .ghost { animation: none; opacity: .55; } }
+    svg.dragging, svg.dragging .grabzone { cursor: grabbing; }
+
+    /* 数直線の始点・終点のうえに置く入力ボックス（めもりの数より一段うえの行） */
+    .axis-box {
+      position: absolute;
+      bottom: 63%;
+      transform: translateX(-50%);
+      min-width: clamp(86px, 14%, 158px);
+      padding: 6px 12px 7px;
+      font-family: inherit;
+      font-size: clamp(15px, 2.1vw, 23px);
+      font-weight: 800;
+      line-height: 1.2;
+      text-align: center;
+      white-space: nowrap;
+      color: var(--text);
+      background: #fff;
+      border: 3px solid var(--blue);
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .10);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* からっぽのときは点線にして、入力をさそう */
+    .axis-box.empty { border-style: dashed; }
+    .axis-box.empty::after { content: "\00a0"; }
+    .axis-box:hover { background: #f4f9ff; }
+    .axis-box.editing { box-shadow: 0 0 0 4px #bbdefb; }
+    .axis-box.invalid {
+      color: var(--warn);
+      border-color: var(--warn);
+      background: #fdeeed;
+    }
+    #startBox { left: 11%; }
+    #midBox   { left: 50%; border-color: var(--mid); }
+    #midBox.editing { box-shadow: 0 0 0 4px #cfd8dc; }
+    #midBox:hover { background: #f5f7f8; }
+    #endBox   { left: 89%; border-color: var(--orange); }
+    #endBox.editing { box-shadow: 0 0 0 4px #ffe0b2; }
+    #endBox:hover { background: #fff8ef; }
+
+    /* ── こうほ の パネル ── */
+    #cand-holder {
+      position: fixed;
+      left: 0; right: 0;
+      bottom: max(10px, env(safe-area-inset-bottom));
+      display: flex; justify-content: center;
+      z-index: 195; padding: 0 12px;
+      pointer-events: none;
+    }
+    #cand {
+      pointer-events: auto;
+      background: #fff;
+      border: 2px solid #dbe3ec;
+      border-radius: 18px;
+      padding: 12px 14px 14px;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .26);
+      width: 340px; max-width: 100%;
+    }
+    #cand-title { font-size: .98rem; font-weight: 800; color: var(--blue-dark); }
+    #cand-close {
+      background: none; border: none; font-size: 1.1rem; line-height: 1;
+      color: #6b7280; cursor: pointer; padding: 4px 6px;
+    }
+    #cand-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .cand-item {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 12px 8px;
+      font-family: inherit; font-size: 1.2rem; font-weight: 800;
+      color: var(--text); background: #f1f5fa;
+      border: 2px solid #dbe3ec; border-radius: 12px;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .cand-item:hover  { background: #e3f2fd; }
+    .cand-item:active { background: #dbe7f5; transform: translateY(1px); }
+    .cand-item .sep { color: #90a4ae; font-weight: 700; }
+
+    /* ── がめんの テンキー（数直線をかくさないよう、下によせて出す） ── */
+    #pad-holder {
+      position: fixed;
+      left: 0; right: 0;
+      bottom: max(10px, env(safe-area-inset-bottom));
+      display: flex; justify-content: center;
+      z-index: 195; padding: 0 12px;
+      pointer-events: none;
+    }
+    #pad {
+      pointer-events: auto;
+      background: #fff;
+      border: 2px solid #dbe3ec;
+      border-radius: 18px;
+      padding: 12px 14px 14px;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .26);
+      width: 300px; max-width: 100%;
+    }
+    .pad-head { display: flex; align-items: center; justify-content: space-between; }
+    #pad-title { font-size: .98rem; font-weight: 800; color: var(--blue-dark); }
+    #pad-title.mid { color: var(--mid-dark); }
+    #pad-title.end { color: var(--orange-dark); }
+    #pad-close {
+      background: none; border: none; font-size: 1.1rem; line-height: 1;
+      color: #6b7280; cursor: pointer; padding: 4px 6px;
+    }
+    #pad-display {
+      font-size: 1.9rem; font-weight: 900; text-align: center;
+      padding: 6px 10px; margin: 6px 0 4px;
+      border: 3px solid #cfd8e3; border-radius: 12px;
+      min-height: 54px; letter-spacing: .04em;
+    }
+    #pad-display.invalid { color: var(--warn); border-color: var(--warn); background: #fdeeed; }
+    /* つぎの数字が どこに入るかを しめすカーソル */
+    #pad-caret {
+      display: inline-block;
+      width: 3px; height: 1.05em;
+      vertical-align: -.14em;
+      margin-left: 3px;
+      background: var(--blue-dark);
+      animation: caret-blink 1.06s step-end infinite;
+    }
+    #pad-display.mid #pad-caret { background: var(--mid-dark); }
+    #pad-display.end #pad-caret { background: var(--orange-dark); }
+    #pad-display.invalid #pad-caret { background: var(--warn); }
+    @keyframes caret-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { #pad-caret { animation: none; } }
+    #pad-hint {
+      font-size: .8rem; font-weight: 700; line-height: 1.4;
+      color: var(--warn); text-align: center;
+      min-height: 2.4em; padding: 2px 0 4px;
+    }
+    #pad-hint.ok { color: #2e7d32; }
+    .pad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .pad-key {
+      padding: 13px 0;
+      font-family: inherit; font-size: 1.45rem; font-weight: 800;
+      color: var(--text); background: #f1f5fa;
+      border: 2px solid #dbe3ec; border-radius: 12px;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .pad-key:active { background: #dbe7f5; transform: translateY(1px); }
+    .pad-key.sub {
+      font-size: .88rem; color: #52606d;
+      white-space: nowrap; letter-spacing: -.02em; padding: 13px 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="quiz">
+    <button id="quizNumBox" class="quiz-box empty" aria-label="もとの数"></button>
+    <button id="candBtn" class="judge-btn" aria-label="こうほから えらぶ" title="こうほから えらぶ" disabled>
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+        <g stroke="currentColor" stroke-width="3.4" stroke-linecap="round">
+          <line x1="5" y1="7"  x2="25" y2="7"/>
+          <line x1="5" y1="15" x2="21" y2="15"/>
+          <line x1="5" y1="23" x2="17" y2="23"/>
+        </g>
+      </svg>
+    </button>
+    <span class="arrow" aria-hidden="true">→</span>
+    <span><ruby>約<rt>やく</rt></ruby></span>
+    <button id="quizAnsBox" class="quiz-box empty" aria-label="約の数"></button>
+    <span id="judgeMark" class="judge-mark" aria-live="polite"></span>
+    <button id="judgeBtn" class="judge-btn" aria-label="まるつけ" title="まるつけ" disabled>
+      <svg width="32" height="30" viewBox="0 0 32 30" aria-hidden="true">
+        <polyline points="4,16 12,24 28,6" fill="none" stroke="currentColor"
+                  stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <main class="board">
+    <div class="board-head">
+      <div class="head-tools">
+        <div class="seg" role="group" aria-label="数直線の はば">
+          <button class="seg-btn" data-div="10" aria-pressed="true"
+                  aria-label="おおきい めもり 2つ" title="おおきい めもり 2つ">
+            <svg width="54" height="26" viewBox="0 0 54 26" aria-hidden="true">
+              <line x1="3" y1="15" x2="51" y2="15" stroke="currentColor" stroke-width="2"/>
+              <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".65">
+                <line x1="18" y1="10" x2="18" y2="20"/>
+                <line x1="27" y1="10" x2="27" y2="20"/>
+                <line x1="36" y1="10" x2="36" y2="20"/>
+              </g>
+              <g stroke="currentColor" stroke-width="3.2" stroke-linecap="round">
+                <line x1="9" y1="6" x2="9" y2="24"/>
+                <line x1="45" y1="6" x2="45" y2="24"/>
+              </g>
+            </svg>
+          </button>
+          <button class="seg-btn" data-div="20" aria-pressed="false"
+                  aria-label="おおきい めもり 3つ" title="おおきい めもり 3つ">
+            <svg width="54" height="26" viewBox="0 0 54 26" aria-hidden="true">
+              <line x1="3" y1="15" x2="51" y2="15" stroke="currentColor" stroke-width="2"/>
+              <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".65">
+                <line x1="15" y1="10" x2="15" y2="20"/>
+                <line x1="21" y1="10" x2="21" y2="20"/>
+                <line x1="33" y1="10" x2="33" y2="20"/>
+                <line x1="39" y1="10" x2="39" y2="20"/>
+              </g>
+              <g stroke="currentColor" stroke-width="3.2" stroke-linecap="round">
+                <line x1="9" y1="6" x2="9" y2="24"/>
+                <line x1="27" y1="6" x2="27" y2="24"/>
+                <line x1="45" y1="6" x2="45" y2="24"/>
+              </g>
+            </svg>
+          </button>
+        </div>
+        <button id="clearBtn" class="tool-btn" disabled>▲を けす</button>
+        <button id="numBtn" class="tool-btn" aria-pressed="false">数を ひょうじ</button>
+      </div>
+    </div>
+    <div class="stage">
+      <svg id="svg" viewBox="0 0 1000 260" aria-label="がいすうの数直線">
+        <g id="bands"></g>
+        <g id="ticks"></g>
+        <g id="tickLabels"></g>
+        <g id="marker"></g>
+      </svg>
+      <button id="startBox" class="axis-box empty" aria-label="はじめの数"></button>
+      <button id="midBox" class="axis-box empty" aria-label="まんなかの数" style="display:none"></button>
+      <button id="endBox" class="axis-box empty" aria-label="おわりの数"></button>
+    </div>
+  </main>
+
+  <div id="cand-holder" style="display:none">
+    <div id="cand">
+      <div class="pad-head">
+        <span id="cand-title">こうほ</span>
+        <button id="cand-close" aria-label="とじる">✕</button>
+      </div>
+      <div id="cand-list"></div>
+    </div>
+  </div>
+
+  <div id="pad-holder" style="display:none">
+    <div id="pad">
+      <div class="pad-head">
+        <span id="pad-title"></span>
+        <button id="pad-close" aria-label="とじる">✕</button>
+      </div>
+      <div id="pad-display"><span id="pad-value"></span><span id="pad-caret"></span></div>
+      <div id="pad-hint"></div>
+      <div class="pad-grid">
+        <button class="pad-key" data-key="1">1</button>
+        <button class="pad-key" data-key="2">2</button>
+        <button class="pad-key" data-key="3">3</button>
+        <button class="pad-key" data-key="4">4</button>
+        <button class="pad-key" data-key="5">5</button>
+        <button class="pad-key" data-key="6">6</button>
+        <button class="pad-key" data-key="7">7</button>
+        <button class="pad-key" data-key="8">8</button>
+        <button class="pad-key" data-key="9">9</button>
+        <button class="pad-key sub" data-key="clear">ぜんぶけす</button>
+        <button class="pad-key" data-key="0">0</button>
+        <button class="pad-key sub" data-key="back">← けす</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    // ── ジオメトリ（viewBox 0 0 1000 260 の座標系） ──
+    const START_X = 110;
+    const END_X   = 890;
+    const SPAN_PX = END_X - START_X;   // 780
+    const LINE_Y  = 170;
+    const LINE_X0 = 12;
+    const LINE_X1 = 988;
+    const BAND_H   = 32;               // ハイライトは数直線の上半分だけ
+    const BAND_TOP = LINE_Y - BAND_H;
+    const LABEL_Y  = BAND_TOP - 10;    // めもりの数のベースライン
+    const TRI_SIDE = 28;               // ▲は正三角形
+    const TRI_H    = TRI_SIDE * Math.sqrt(3) / 2;
+    const TRI_GAP  = 6;                // ▲の頂点と数直線のあいだ
+
+    // となりあうボックスどうしの「さ」としてゆるすもの
+    const STEPS = [10, 100, 1000, 10000, 100000];
+    const MAX_VALUE = 1000000;
+    const MAX_DIGITS = 7;
+
+    const state = {
+      start: null,       // まだ有効な数が入っていなければ null
+      mid: null,         // めもり21のときの まんなかの数
+      end: null,
+      marker: null,      // ▲がさす数。null なら未配置
+      divisions: 10,     // 10分割（めもり11こ）／20分割（めもり21こ）
+      showNumbers: false,
+      judged: null,      // まるつけの けっか。true / false / null（まだ）
+      // ボックスに見えている文字。これが入力の実体
+      text: { start: "", mid: "", end: "", quizNum: "", quizAns: "" },
+      editing: null      // ボックスの名まえ／null
+    };
+
+    // 数直線のうえの、チェックのたいしょうになるボックス
+    function fields() { return state.divisions === 20 ? ["start", "mid", "end"] : ["start", "end"]; }
+    // 子どもが じゆうに 書くところ（チェックしない）
+    const QUIZ_FIELDS = ["quizNum", "quizAns"];
+    const ALL_FIELDS = ["start", "mid", "end", ...QUIZ_FIELDS];
+
+    const svg      = document.getElementById("svg");
+    const bandsG   = document.getElementById("bands");
+    const ticksG   = document.getElementById("ticks");
+    const labelsG  = document.getElementById("tickLabels");
+    const markerG  = document.getElementById("marker");
+    const numBtn   = document.getElementById("numBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const boxes    = {
+      start: document.getElementById("startBox"),
+      mid:   document.getElementById("midBox"),
+      end:   document.getElementById("endBox"),
+      quizNum: document.getElementById("quizNumBox"),
+      quizAns: document.getElementById("quizAnsBox")
+    };
+    const candBtn   = document.getElementById("candBtn");
+    const candHold  = document.getElementById("cand-holder");
+    const candEl    = document.getElementById("cand");
+    const candList  = document.getElementById("cand-list");
+    const judgeBtn  = document.getElementById("judgeBtn");
+    const judgeMark = document.getElementById("judgeMark");
+    const padHold  = document.getElementById("pad-holder");
+    const padEl    = document.getElementById("pad");
+    const padTitle = document.getElementById("pad-title");
+    const padDisp  = document.getElementById("pad-display");
+    const padValue = document.getElementById("pad-value");
+    const padHint  = document.getElementById("pad-hint");
+
+    function el(name, attrs) {
+      const node = document.createElementNS(SVG_NS, name);
+      for (const key in attrs) node.setAttribute(key, attrs[key]);
+      return node;
+    }
+
+    function hasRange() { return state.start !== null && state.end !== null; }
+    function span() { return state.end - state.start; }
+    function valueToX(v) { return START_X + (v - state.start) / span() * SPAN_PX; }
+    function xToValue(x) {
+      const v = state.start + (x - START_X) / SPAN_PX * span();
+      return Math.min(state.end, Math.max(state.start, Math.round(v)));
+    }
+
+    // めもりの数が横に並びきるよう、けた数にあわせて字を小さくする
+    function tickFontSize() {
+      const digits = hasRange() ? String(state.end).length : 4;
+      const avail = SPAN_PX / state.divisions - 6;   // となりのめもりまでの すきま
+      return Math.max(9, Math.min(23, Math.floor(avail / (digits * 0.6))));
+    }
+
+    // ── めもり・線・めもりの数（始点／終点がかわったときだけ） ──
+    function renderAll() {
+      ticksG.textContent = "";
+      labelsG.textContent = "";
+
+      ticksG.appendChild(el("line", {
+        x1: LINE_X0, y1: LINE_Y, x2: LINE_X1, y2: LINE_Y,
+        stroke: "#1f2933", "stroke-width": 3
+      }));
+
+      const ranged = hasRange();
+      const div = state.divisions;
+      const gap = SPAN_PX / div;
+      const step = ranged ? span() / div : 0;
+      const fs = tickFontSize();
+
+      for (let i = -1; i <= div + 1; i++) {
+        const x = START_X + i * gap;
+        const inRange = i >= 0 && i <= div;
+        // ボックスがのっているめもり（はじめ・まんなか・おわり）は大きく
+        const isEdge  = i === 0 || i === div || (div === 20 && i === 10);
+
+        const half = isEdge ? 24 : 13;
+        ticksG.appendChild(el("line", {
+          x1: x, y1: LINE_Y - half, x2: x, y2: LINE_Y + half,
+          stroke: inRange ? "#1f2933" : "#b0bac4",
+          "stroke-width": isEdge ? 4 : 2.5,
+          "stroke-linecap": "round"
+        }));
+
+        // 始点と終点の数は入力ボックスがしめしている
+        if (!ranged || !inRange || isEdge) continue;
+
+        const label = el("text", {
+          x: x, y: LABEL_Y,
+          "text-anchor": "middle",
+          "font-size": fs,
+          "font-weight": 700,
+          fill: "#52606d"
+        });
+        label.textContent = String(state.start + i * step);
+        labelsG.appendChild(label);
+      }
+
+      labelsG.style.display = state.showNumbers ? "" : "none";
+      renderMarker();
+    }
+
+    // ── ▲・ハイライト・▲の数（ドラッグ中はここだけ） ──
+    function renderMarker() {
+      bandsG.textContent = "";
+      markerG.textContent = "";
+      clearBtn.disabled = state.marker === null;
+
+      if (!hasRange()) return;   // 数がそろうまで▲は出さない
+
+      if (state.marker === null) {
+        const gx = (START_X + END_X) / 2;
+        const gy = LINE_Y + TRI_GAP;
+        markerG.appendChild(el("polygon", {
+          class: "ghost",
+          points: `${gx},${gy} ${gx - TRI_SIDE / 2},${gy + TRI_H} ${gx + TRI_SIDE / 2},${gy + TRI_H}`,
+          fill: "#e57373", "fill-opacity": .22,
+          stroke: "#e57373", "stroke-width": 2,
+          "stroke-dasharray": "4 4", "stroke-linejoin": "round"
+        }));
+        return;
+      }
+
+      const mx = valueToX(state.marker);
+
+      // めもり21のときは、▲がいる がわの ボックスどうしで くらべる
+      let loX = START_X, hiX = END_X;
+      if (state.divisions === 20 && state.mid !== null) {
+        const midX = valueToX(state.mid);
+        if (mx <= midX) hiX = midX; else loX = midX;
+      }
+
+      bandsG.appendChild(el("rect", {
+        x: loX, y: BAND_TOP, width: Math.max(0, mx - loX), height: BAND_H,
+        fill: "#64b5f6", "fill-opacity": 0.32
+      }));
+      bandsG.appendChild(el("rect", {
+        x: mx, y: BAND_TOP, width: Math.max(0, hiX - mx), height: BAND_H,
+        fill: "#ffb74d", "fill-opacity": 0.45
+      }));
+      bandsG.appendChild(el("line", {
+        x1: mx, y1: BAND_TOP, x2: mx, y2: LINE_Y,
+        stroke: "#e57373", "stroke-width": 2.5
+      }));
+
+      const top = LINE_Y + TRI_GAP;
+      markerG.appendChild(el("polygon", {
+        points: `${mx},${top} ${mx - TRI_SIDE / 2},${top + TRI_H} ${mx + TRI_SIDE / 2},${top + TRI_H}`,
+        fill: "#e57373", stroke: "#cf6161", "stroke-width": 1.5, "stroke-linejoin": "round"
+      }));
+      // ▲は「つまんで動かすもの」と伝えるための、見えないつかみしろ
+      markerG.appendChild(el("rect", {
+        x: mx - 28, y: LINE_Y, width: 56, height: 46,
+        fill: "transparent", class: "grabzone"
+      }));
+
+      if (!state.showNumbers) return;
+
+      const text = String(state.marker);
+      const w = 30 + text.length * 15;
+      const bx = Math.min(END_X + 40 - w, Math.max(START_X - 40, mx - w / 2));
+      const by = top + TRI_H + 8;
+
+      markerG.appendChild(el("rect", {
+        x: bx, y: by, width: w, height: 40, rx: 10,
+        fill: "#fff", stroke: "#e57373", "stroke-width": 2.5
+      }));
+      const t = el("text", {
+        x: bx + w / 2, y: by + 28,
+        "text-anchor": "middle", "font-size": 23, "font-weight": 900, fill: "#c96060"
+      });
+      t.textContent = text;
+      markerG.appendChild(t);
+    }
+
+    // ── 入力チェック ──
+    // 数直線のうえは色でしらせるだけ。なおしかたはテンキーのなかに出す
+    const FIELD_NAME = { start: "はじめ", mid: "まんなか", end: "おわり" };
+    const PAD_TITLE = {
+      start: "はじめの 数", mid: "まんなかの 数", end: "おわりの 数",
+      quizNum: "もとの 数", quizAns: "<ruby>約<rt>やく</rt></ruby>の 数"
+    };
+
+    function check() {
+      const c = { raw: {}, val: {}, ok: {}, allFilled: true, spanOk: false };
+      for (const f of fields()) {
+        const raw = state.text[f];
+        const v = Number(raw);
+        c.raw[f] = raw;
+        c.val[f] = v;
+        c.ok[f] = raw !== "" && Number.isInteger(v) && v >= 0 && v <= MAX_VALUE && v % 10 === 0;
+        if (raw === "") c.allFilled = false;
+      }
+      if (fields().every((f) => c.ok[f])) {
+        if (state.divisions === 10) {
+          c.spanOk = STEPS.includes(c.val.end - c.val.start);
+        } else {
+          const d1 = c.val.mid - c.val.start;
+          const d2 = c.val.end - c.val.mid;
+          c.spanOk = d1 === d2 && STEPS.includes(d1);
+        }
+      }
+      return c;
+    }
+
+    function hintFor(which, c) {
+      if (c.raw[which] === "") return "数を いれてね";
+      if (c.val[which] % 10 !== 0) return "一のくらいは 0 に してね";
+      if (c.val[which] > MAX_VALUE) return "おおきすぎます";
+      if (!c.ok[which]) return "この 数は つかえません";
+      if (c.spanOk) return "";
+
+      const others = fields().filter((f) => f !== which);
+      const bad = others.find((f) => !c.ok[f]);
+      if (bad) return FIELD_NAME[bad] + "の 数も なおしてね";
+
+      const seq = fields();
+      for (let i = 1; i < seq.length; i++) {
+        if (c.val[seq[i]] <= c.val[seq[i - 1]]) {
+          return FIELD_NAME[seq[i]] + "は " + FIELD_NAME[seq[i - 1]] + "より 大きく してね";
+        }
+      }
+      if (state.divisions === 20 && c.val.mid - c.val.start !== c.val.end - c.val.mid) {
+        return "はじめ→まんなか と まんなか→おわり を おなじ さに してね";
+      }
+      return "となりどうしの さは 10・100・1000・10000 の どれかに してね";
+    }
+
+    function validate() {
+      const c = check();
+
+      // からっぽのうちは「まちがい」あつかいにしない
+      for (const f of fields()) {
+        boxes[f].classList.toggle("invalid",
+          c.raw[f] !== "" && (!c.ok[f] || (c.allFilled && !c.spanOk)));
+      }
+
+      if (state.editing && QUIZ_FIELDS.includes(state.editing)) {
+        // じゆうに書くところなので、なにも言わない
+        padDisp.classList.remove("invalid");
+        padHint.classList.remove("ok");
+        padHint.textContent = "";
+      } else if (state.editing) {
+        const hint = hintFor(state.editing, c);
+        padDisp.classList.toggle("invalid", hint !== "");
+        padHint.classList.toggle("ok", hint === "");
+        padHint.textContent = hint === "" ? "この 数で つくれます" : hint;
+      }
+
+      if (!c.spanOk) return;
+      if (c.val.start === state.start && c.val.end === state.end
+          && (state.divisions !== 20 || c.val.mid === state.mid)) return;
+
+      state.start = c.val.start;
+      state.end = c.val.end;
+      state.mid = state.divisions === 20 ? c.val.mid : null;
+      state.marker = null;   // はんいがかわったので▲はいったん消す
+      renderAll();
+    }
+
+    // ── こうほ（もとの数から、数直線に入れられる数の くみあわせを つくる） ──
+    function candidates() {
+      const raw = state.text.quizNum;
+      const num = Number(raw);
+      if (raw === "" || !Number.isInteger(num)) return [];
+
+      const out = [];
+      for (const step of [100000, 10000, 1000, 100, 10]) {
+        const lo = Math.floor(num / step) * step;
+        if (lo <= 0) continue;
+        let anchors;
+        if (state.divisions === 20) {
+          anchors = lo + 2 * step <= MAX_VALUE ? [lo, lo + step, lo + 2 * step]
+                  : (lo - step >= 0 ? [lo - step, lo, lo + step] : null);
+        } else {
+          anchors = lo + step <= MAX_VALUE ? [lo, lo + step] : null;
+        }
+        if (anchors) out.push(anchors);
+      }
+      return out;
+    }
+
+    function renderCandBtn() { candBtn.disabled = candidates().length === 0; }
+
+    function openCand() {
+      const list = candidates();
+      if (!list.length) return;
+      closePad();
+      candList.textContent = "";
+      for (const anchors of list) {
+        const item = document.createElement("button");
+        item.className = "cand-item";
+        item.innerHTML = anchors.map((v) => "<span>" + v + "</span>")
+                                .join('<span class="sep">〜</span>');
+        item.addEventListener("click", () => applyCandidate(anchors));
+        candList.appendChild(item);
+      }
+      candHold.style.display = "flex";
+    }
+
+    function closeCand() { candHold.style.display = "none"; }
+
+    function applyCandidate(anchors) {
+      state.text.start = String(anchors[0]);
+      state.text.end   = String(anchors[anchors.length - 1]);
+      if (state.divisions === 20) state.text.mid = String(anchors[1]);
+      state.marker = null;
+      clearJudge();
+      closeCand();
+      refreshText();
+      renderAll();
+    }
+
+    candBtn.addEventListener("click", openCand);
+    document.getElementById("cand-close").addEventListener("click", closeCand);
+    document.addEventListener("pointerdown", (ev) => {
+      if (candHold.style.display === "none") return;
+      if (candEl.contains(ev.target) || candBtn.contains(ev.target)) return;
+      closeCand();
+    });
+
+    // ── まるつけ ──
+    // 何のくらいで四捨五入するかは、となりあうボックスの さ（＝目もりの まとまり）できまる
+    function roundStep() { return (state.end - state.start) / (state.divisions / 10); }
+
+    function canJudge() {
+      return hasRange() && state.text.quizNum !== "" && state.text.quizAns !== ""
+        && Number.isInteger(Number(state.text.quizNum))
+        && Number.isInteger(Number(state.text.quizAns));
+    }
+
+    function renderJudge() {
+      judgeBtn.disabled = !canJudge();
+      if (state.judged === null) { judgeMark.textContent = ""; return; }
+      judgeMark.innerHTML = state.judged
+        ? '<svg width="46" height="46" viewBox="0 0 46 46" role="img" aria-label="せいかい">' +
+          '<circle cx="23" cy="23" r="17" fill="none" stroke="#2e7d32" stroke-width="5"/></svg>'
+        : '<svg width="46" height="46" viewBox="0 0 46 46" role="img" aria-label="ちがいます">' +
+          '<g stroke="#d4574f" stroke-width="5" stroke-linecap="round">' +
+          '<line x1="10" y1="10" x2="36" y2="36"/><line x1="36" y1="10" x2="10" y2="36"/></g></svg>';
+    }
+
+    function clearJudge() {
+      state.judged = null;
+      renderJudge();
+    }
+
+    judgeBtn.addEventListener("click", () => {
+      if (!canJudge()) return;
+      const step = roundStep();
+      const num = Number(state.text.quizNum);
+      const correct = Math.floor(num / step + 0.5) * step;
+      state.judged = Number(state.text.quizAns) === correct;
+      renderJudge();
+    });
+
+    // ── 数の入力（がめんのテンキー／キーボード） ──
+    function refreshText() {
+      for (const f of ALL_FIELDS) {
+        boxes[f].textContent = state.text[f];
+        boxes[f].classList.toggle("empty", state.text[f] === "");
+      }
+      if (state.editing) {
+        padValue.textContent = state.text[state.editing];
+      }
+      validate();
+      renderJudge();
+      renderCandBtn();
+    }
+
+    function openPad(which) {
+      state.editing = which;
+      padTitle.innerHTML = PAD_TITLE[which];
+      for (const cls of ["mid", "end"]) {
+        padTitle.classList.toggle(cls, which === cls);
+        padDisp.classList.toggle(cls, which === cls);
+      }
+      for (const f of ALL_FIELDS) {
+        boxes[f].classList.toggle("editing", which === f);
+      }
+      padHold.style.display = "flex";
+      refreshText();
+    }
+
+    function closePad() {
+      if (!state.editing) return;
+      state.editing = null;
+      for (const f of ALL_FIELDS) boxes[f].classList.remove("editing");
+      padDisp.classList.remove("invalid");
+      padHold.style.display = "none";
+    }
+
+    function padPress(key) {
+      if (!state.editing) return;
+      const cur = state.text[state.editing];
+      clearJudge();   // 数がかわったら まるつけは やりなおし
+      if (key === "clear") state.text[state.editing] = "";
+      else if (key === "back") state.text[state.editing] = cur.slice(0, -1);
+      else if (cur.length < MAX_DIGITS) state.text[state.editing] = cur === "0" ? key : cur + key;
+      refreshText();
+    }
+
+    for (const f of ALL_FIELDS) {
+      boxes[f].addEventListener("click", () => openPad(f));
+    }
+
+    padEl.addEventListener("click", (ev) => {
+      const key = ev.target.dataset && ev.target.dataset.key;
+      if (key) padPress(key);
+    });
+    document.getElementById("pad-close").addEventListener("click", closePad);
+
+    // テンキーの そとを さわったら とじる
+    document.addEventListener("pointerdown", (ev) => {
+      if (!state.editing) return;
+      if (padEl.contains(ev.target)) return;
+      if (ALL_FIELDS.some((f) => boxes[f].contains(ev.target))) return;
+      closePad();
+    });
+
+    document.addEventListener("keydown", (ev) => {
+      if (!state.editing) return;
+      if (ev.key >= "0" && ev.key <= "9") padPress(ev.key);
+      else if (ev.key === "Backspace") padPress("back");
+      else if (ev.key === "Enter" || ev.key === "Escape") closePad();
+      else return;
+      ev.preventDefault();
+    });
+
+    // ── ポインタ操作 ──
+    function pointerToValue(ev) {
+      const rect = svg.getBoundingClientRect();
+      const x = (ev.clientX - rect.left) * (1000 / rect.width);
+      return xToValue(x);
+    }
+
+    let dragging = false;
+
+    svg.addEventListener("pointerdown", (ev) => {
+      closePad();
+      if (!hasRange()) return;
+      dragging = true;
+      svg.classList.add("dragging");
+      svg.setPointerCapture(ev.pointerId);
+      state.marker = pointerToValue(ev);
+      renderMarker();
+    });
+
+    svg.addEventListener("pointermove", (ev) => {
+      if (!dragging) return;
+      const v = pointerToValue(ev);
+      if (v === state.marker) return;
+      state.marker = v;
+      renderMarker();
+    });
+
+    function endDrag(ev) {
+      if (!dragging) return;
+      dragging = false;
+      svg.classList.remove("dragging");
+      if (svg.hasPointerCapture(ev.pointerId)) svg.releasePointerCapture(ev.pointerId);
+    }
+    svg.addEventListener("pointerup", endDrag);
+    svg.addEventListener("pointercancel", endDrag);
+
+    numBtn.addEventListener("click", () => {
+      state.showNumbers = !state.showNumbers;
+      numBtn.setAttribute("aria-pressed", String(state.showNumbers));
+      labelsG.style.display = state.showNumbers ? "" : "none";
+      renderMarker();
+    });
+
+    clearBtn.addEventListener("click", () => {
+      state.marker = null;
+      renderMarker();
+    });
+
+    // ── めもりの かずの きりかえ（10分割／20分割） ──
+    document.querySelectorAll(".seg-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const d = Number(btn.dataset.div);
+        if (d === state.divisions) return;
+        state.divisions = d;
+        document.querySelectorAll(".seg-btn").forEach((b) => {
+          b.setAttribute("aria-pressed", String(Number(b.dataset.div) === d));
+        });
+        boxes.mid.style.display = d === 20 ? "" : "none";
+        // いまの数がこの分割では つかえないなら、いったん未かくていに もどす
+        if (!check().spanOk) { state.start = null; state.mid = null; state.end = null; }
+        state.marker = null;
+        clearJudge();
+        closeCand();
+        refreshText();
+        renderAll();
+      });
+    });
+
+    refreshText();
+    renderAll();
+  </script>
+
+
+<!-- ── そうさせつめい（ヘルプ） ────────────────────────── -->
+<style>
+  /* ── ヘルプボタン（画面右上に固定） ── */
+  .help-btn {
+    position: fixed;
+    right: 16px;
+    top: max(16px, env(safe-area-inset-top));
+    width: 44px; height: 44px; margin: 0;
+    border-radius: 50%; border: 3px solid #90caf9;
+    background: #fff; color: #1565c0;
+    font-family: inherit; font-size: 1.2rem; font-weight: 800; line-height: 1;
+    padding: 0; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    z-index: 190;
+    box-shadow: 0 4px 14px rgba(0,0,0,.20);
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-btn:hover  { background: #e3f2fd; }
+  .help-btn:active { transform: translateY(1px); }
+  #help-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #help-modal {
+    background: #fff; border-radius: 20px; padding: 22px 28px 26px;
+    max-width: 480px; width: 100%; position: relative;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    max-height: calc(100svh - 40px); overflow-y: auto;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  }
+  /* スクロールしても閉じるボタンが隠れないよう sticky にする */
+  #help-close {
+    position: sticky; top: 0; display: block;
+    margin: 0 -10px 4px auto;
+    background: #fff; border: none; font-size: 1.2rem;
+    color: #6b7280; cursor: pointer; padding: 2px 8px; z-index: 1;
+  }
+  #help-modal h2 { font-size: 1.1rem; font-weight: 900; color: #1565c0; margin: 0 0 14px; }
+  #help-modal p  { font-size: .95rem; line-height: 2.05; color: #374151; margin: 0; }
+  #help-modal rt { font-size: .58em; font-weight: 700; color: #6b7280; }
+  #help-modal .sh { display: block; font-weight: 900; color: #1565c0; margin-top: 14px; margin-bottom: 2px; }
+  #help-modal .sh:first-child { margin-top: 0; }
+  /* 説明のなかに 本物とおなじ見た目の ボックスを出す */
+  #help-modal .bx {
+    display: inline-block;
+    width: 34px; height: 19px;
+    margin: 0 2px;
+    vertical-align: -3px;
+    background: #fff;
+    border: 2.5px solid #90caf9;
+    border-radius: 6px;
+  }
+  #help-modal .bx.b  { border-color: #1e88e5; }
+  #help-modal .bx.m  { border-color: #78909c; }
+  #help-modal .bx.o  { border-color: #ef8b25; }
+  #help-modal .bx.q  { border-color: #cfd8e3; border-style: dashed; }
+  #help-modal .bx.ng { border-color: #d4574f; background: #fdeeed; }
+</style>
+
+<button id="help-btn" class="help-btn" aria-label="つかいかた">?</button>
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close" aria-label="とじる">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
+  </div>
+</div>
+<script>
+  (function(){
+    var ov  = document.getElementById('help-overlay');
+    var btn = document.getElementById('help-btn');
+    var HELP = {
+      title: 'がいすうの つかいかた',
+      body:  '<span class="sh">【<ruby>数直線<rt>すうちょくせん</rt></ruby>を つくる】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>の <ruby>上<rt>うえ</rt></ruby>に ある <span class="bx"></span> を タップすると、テンキーが でます。<ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れたら、テンキーの そとを タップして とじます。<br><ruby>四捨五入<rt>ししゃごにゅう</rt></ruby>したい <ruby>数<rt>かず</rt></ruby>と、どの くらいで <ruby>概数<rt>がいすう</rt></ruby>に するかに <ruby>合<rt>あ</rt></ruby>わせて、ボックスの <ruby>数<rt>かず</rt></ruby>を きめます。<br>たとえば 1237 を <ruby>百<rt>ひゃく</rt></ruby>のくらいまでの <ruby>概数<rt>がいすう</rt></ruby>に するなら、1200 と 1300 に します。<br><span class="sh">【はばを かえる】</span><ruby>右上<rt>みぎうえ</rt></ruby>の 2つの ボタン（<ruby>数直線<rt>すうちょくせん</rt></ruby>の え）で、ボックスの かずを かえられます。<br>・おおきい めもり 2つ… <span class="bx b"></span><span class="bx o"></span> の 2つ<br>・おおきい めもり 3つ… まんなかにも ふえて <span class="bx b"></span><span class="bx m"></span><span class="bx o"></span> の 3つ。おなじ こまかさの まま <ruby>2倍<rt>にばい</rt></ruby>の はばが <ruby>見<rt>み</rt></ruby>られます<br><span class="sh">【▲を うごかす】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>を タップすると ▲が でます。ドラッグすると なめらかに うごきます。「▲を けす」で <ruby>消<rt>け</rt></ruby>せます。<br><span class="sh">【くらべる】</span>▲の <ruby>左<rt>ひだり</rt></ruby>の あおい ところと、<ruby>右<rt>みぎ</rt></ruby>の オレンジの ところは、▲から となりの <span class="bx"></span> までの <ruby>広<rt>ひろ</rt></ruby>さです。せまい ほうが、▲の <ruby>数<rt>かず</rt></ruby>に <ruby>近<rt>ちか</rt></ruby>い ほうです。<br><span class="sh">【<ruby>数<rt>かず</rt></ruby>を ひょうじ】</span>ボタンを おすと、めもりの <ruby>数<rt>かず</rt></ruby>と ▲の <ruby>数<rt>かず</rt></ruby>が でます。もう <ruby>一度<rt>いちど</rt></ruby> おすと きえます。<br><span class="sh">【もんだいと こたえ】</span>いちばん <ruby>上<rt>うえ</rt></ruby>の <span class="bx q"></span> → <ruby>約<rt>やく</rt></ruby> <span class="bx q"></span> に、じぶんで もんだいと こたえを <ruby>書<rt>か</rt></ruby>きます。ひだりに もとの <ruby>数<rt>かず</rt></ruby>、みぎに <ruby>約<rt>やく</rt></ruby>の <ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れます。<br>ぜんぶ うまったら、よこの チェックの ボタンが おせるように なります。おすと ◯ か ✕ が でます。'
+    };
+
+    btn.addEventListener('click', function(){
+      document.getElementById('help-title').innerHTML = HELP.title;
+      document.getElementById('help-body').innerHTML  = HELP.body;
+      ov.style.display = 'flex';
+    });
+    document.getElementById('help-close').addEventListener('click', function(){ ov.style.display = 'none'; });
+    ov.addEventListener('click', function(e){ if (e.target === ov) ov.style.display = 'none'; });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') ov.style.display = 'none'; });
+  })();
+</script>
+</body>
+</html>

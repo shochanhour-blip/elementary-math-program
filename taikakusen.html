@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>たいかくせん</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --text: #1f2933;
+      --blue: #1e88e5;
+      --blue-dark: #1565c0;
+      --rod: #7f96ab;
+      --vertex: #ef8b25;
+      --join: #d4574f;
+      --side: #37474f;
+      --shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      background: #f7f9fc;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100svh;
+      padding: 16px 12px;
+    }
+    :focus-visible { outline: 3px solid #1e88e5; outline-offset: 2px; }
+
+    .board {
+      width: 100%;
+      max-width: 1100px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 10px 10px 6px;
+      position: relative;
+    }
+    .board-head {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+    .tool-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      color: var(--blue-dark);
+      background: #fff;
+      border: 2.5px solid #90caf9;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tool-btn svg { display: block; }
+    /* ふつうの 行として ならべる（アイコンの flex とは 別あつかい） */
+    .tool-btn--text {
+      display: inline-block;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.3;
+      padding: 9px 16px;
+      white-space: nowrap;
+    }
+    .tool-btn:hover { background: #e3f2fd; }
+    .tool-btn:disabled {
+      color: #cfd8e3;
+      border-color: #e6ebf1;
+      background: #fff;
+      cursor: default;
+    }
+    .tool-btn[aria-pressed="true"] {
+      background: var(--blue-dark);
+      border-color: var(--blue-dark);
+      color: #fff;
+    }
+
+    svg#svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      touch-action: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <div class="board-head">
+      <button id="clearBtn" class="tool-btn" aria-label="ぜんぶ かたづける" title="ぜんぶ かたづける">
+        <svg width="34" height="26" viewBox="0 0 34 26" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-width="2.6"
+             stroke-linecap="round" stroke-linejoin="round">
+            <line x1="9" y1="6" x2="25" y2="6"/>
+            <path d="M14 6 V3.6 h6 V6"/>
+            <path d="M11 6 l1.2 16 h9.6 L23 6"/>
+            <line x1="15" y1="10" x2="15" y2="18"/>
+            <line x1="19" y1="10" x2="19" y2="18"/>
+          </g>
+        </svg>
+      </button>
+      <button id="paraBtn" class="tool-btn tool-btn--text" aria-pressed="false">平行を見る</button>
+      <button id="nameBtn" class="tool-btn tool-btn--text" aria-pressed="false">形の名前</button>
+    </div>
+
+    <svg id="svg" viewBox="0 0 1000 640" aria-label="たいかくせんの ばん">
+      <g id="gStatic"></g>
+      <g id="gShelf"></g>
+      <g id="gFill"></g>
+      <g id="gRods"></g>
+      <g id="gSides"></g>
+      <g id="gPoints"></g>
+      <g id="gMarks"></g>
+      <g id="gUI"></g>
+    </svg>
+  </main>
+
+  <script>
+    const NS = "http://www.w3.org/2000/svg";
+
+    // ── ばんの かたち ──
+    const FIELD = { x: 10, y: 10, w: 760, h: 620 };
+    const SHELF = { x: 790, y: 10, w: 200, h: 620 };
+    const GRID = 40;
+
+    // 長さごとの色。おなじ長さ＝おなじ色
+    const LEN_COLORS = ["#f2994a", "#56b870", "#4a9fd8", "#b07fd6"];
+    const VERT_C = "#e53935";                    // ちょうてん
+    const GLOW_C = "#ffd23f";
+    const JOIN_C = "#e94f4f";
+    const RIGHT_C = "#ef9a9a";                   // 直角マーク（うすい赤）
+    const SIDE_C = "#37474f";
+    // 辺の 長さを 0〜100 に あてはめて、そのまま 色に する
+    // 100 = 辺として つくれる いちばん 長い ながさ（420の5/6 が 2つ、15°で ひらいた とき ≒694）
+    const SIDE_MAX = 700;
+    const SIDE_RAMP = [
+      [0.00, [ 15,  45, 165]],   // こい あお
+      [0.25, [  0, 160, 235]],   // あお
+      [0.50, [  0, 200, 140]],   // みどり
+      [0.75, [255, 190,   0]],   // きいろ
+      [1.00, [235,  35,  35]]    // あざやかな あか
+    ];
+    const FILL_C = "#ffd166";
+
+    const ROD_W    = 13;
+    const LENGTHS  = [240, 300, 360, 420];
+    const SHELF_XS = [830, 870, 910, 950];
+    const SHELF_CY = 320;
+
+    const SNAP_JOIN = 24;   // 点どうしが これより近ければ 結合の こうほ
+    const DETACH    = 60;   // これ以上 ひっぱると はずれる
+    const PERP_TOL  = 4;    // 90°への きゅうちゃく
+    const MIN_REL   = 15;   // これ以上 つぶせない
+    const VERT_HIT  = 18;
+    const JOIN_HIT  = 26;
+
+    const state = {
+      rods: [],          // {id, len, color, cx, cy, angle}。いくつでも おける
+      joins: [],         // {a:{rod,pt}, b:{rod,pt}}。1本の棒は 1つの 結合まで
+      sides: [],         // [[vid, vid], ...] 頂点idの くみ
+      pick: null,        // 辺を ひくとき、さいしょに タップした 頂点
+      hover: null,       // いま ポインタが ある ところ（辺を のばして 見せる ため）
+      showName: false,
+      showParallel: false
+    };
+
+    let nextId = 1;
+    let drag = null;
+
+    const svg     = document.getElementById("svg");
+    const gStatic = document.getElementById("gStatic");
+    const gShelf  = document.getElementById("gShelf");
+    const gFill   = document.getElementById("gFill");
+    const gRods   = document.getElementById("gRods");
+    const gSides  = document.getElementById("gSides");
+    const gPoints = document.getElementById("gPoints");
+    const gMarks  = document.getElementById("gMarks");
+    const gUI     = document.getElementById("gUI");
+    const nameBtn = document.getElementById("nameBtn");
+    const paraBtn = document.getElementById("paraBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    function el(name, attrs) {
+      const n = document.createElementNS(NS, name);
+      for (const k in attrs) n.setAttribute(k, attrs[k]);
+      return n;
+    }
+
+    // ── きほんの けいさん ──
+    const rad = (d) => d * Math.PI / 180;
+
+    function rodById(id) { return state.rods.find((r) => r.id === id); }
+    function joinOf(rodId) {
+      return state.joins.find((j) => j.a.rod === rodId || j.b.rod === rodId) || null;
+    }
+    function partnerOf(rodId) {
+      const j = joinOf(rodId);
+      if (!j) return null;
+      return rodById(j.a.rod === rodId ? j.b.rod : j.a.rod);
+    }
+    function ptIndexOf(join, rodId) {
+      return join.a.rod === rodId ? join.a.pt : join.b.pt;
+    }
+
+    // 棒は つねに6分割。長さに たいする ひりつ なので、点3は かならず中点
+    function pointOf(rod, i) {
+      const d = (i / 6 - 0.5) * rod.len;
+      return { x: rod.cx + Math.cos(rad(rod.angle)) * d,
+               y: rod.cy + Math.sin(rad(rod.angle)) * d };
+    }
+    function vid(rodId, i) { return rodId + ":" + i; }
+    function rodOfVid(v) { return Number(v.split(":")[0]); }
+    function vertexPos(v) {
+      const [rid, i] = v.split(":");
+      return pointOf(rodById(Number(rid)), Number(i));
+    }
+
+    function joinPointOf(join) { return pointOf(rodById(join.a.rod), join.a.pt); }
+
+    function sidesOf(join) {
+      const ids = [join.a.rod, join.b.rod];
+      return state.sides.filter(([v1, v2]) =>
+        ids.includes(rodOfVid(v1)) && ids.includes(rodOfVid(v2)));
+    }
+    function dropSidesOf(join) {
+      const ids = [join.a.rod, join.b.rod];
+      state.sides = state.sides.filter(([v1, v2]) =>
+        !(ids.includes(rodOfVid(v1)) && ids.includes(rodOfVid(v2))));
+    }
+
+    function norm180(a) { return ((a % 180) + 180) % 180; }
+    function relAngleOf(join) {
+      return norm180(rodById(join.b.rod).angle - rodById(join.a.rod).angle);
+    }
+    function isPerpOf(join) { return Math.abs(relAngleOf(join) - 90) < 0.01; }
+
+    // 結合を まもるように 棒bを うごかす
+    function enforceJoin(join) {
+      const target = pointOf(rodById(join.a.rod), join.a.pt);
+      const rb = rodById(join.b.rod);
+      const cur = pointOf(rb, join.b.pt);
+      rb.cx += target.x - cur.x;
+      rb.cy += target.y - cur.y;
+    }
+
+    function removeJoin(join) {
+      dropSidesOf(join);
+      state.joins = state.joins.filter((j) => j !== join);
+    }
+
+    function rotateAbout(rod, pivot, newAngle) {
+      const d = rad(newAngle - rod.angle);
+      const dx = rod.cx - pivot.x, dy = rod.cy - pivot.y;
+      rod.cx = pivot.x + dx * Math.cos(d) - dy * Math.sin(d);
+      rod.cy = pivot.y + dx * Math.sin(d) + dy * Math.cos(d);
+      rod.angle = newAngle;
+    }
+
+    // 90°に きゅうちゃく、15°より つぶれないように する
+    function constrainAngle(rod, want) {
+      const other = partnerOf(rod.id);
+      if (!other) return want;
+      const pick = (relWanted) => {
+        let best = null;
+        for (let k = -2; k <= 2; k++) {
+          const cand = other.angle - relWanted + 180 * k;
+          if (best === null || Math.abs(cand - want) < Math.abs(best - want)) best = cand;
+        }
+        return best;
+      };
+      const rel = norm180(other.angle - want);
+      if (Math.abs(rel - 90) <= PERP_TOL) return pick(90);
+      if (rel < MIN_REL)       return pick(MIN_REL);
+      if (rel > 180 - MIN_REL) return pick(180 - MIN_REL);
+      return want;
+    }
+
+    // ── 図形の しゅるい ──
+    function shapeNameOf(join) {
+      if (sidesOf(join).length !== 4) return null;
+      const pa = join.a.pt, pb = join.b.pt;
+      const equal = rodById(join.a.rod).len === rodById(join.b.rod).len;
+      const perp = isPerpOf(join);
+
+      if (pa === 3 && pb === 3) {
+        if (equal && perp) return "せいほうけい";
+        if (equal) return "ちょうほうけい";
+        if (perp) return "ひしがた";
+        return "へいこうしへんけい";
+      }
+      // むかいあう 辺は 2組。どちらかが 平行なら 台形
+      if (pa === pb || pa + pb === 6) return "だいけい";
+      return "しかくけい";
+    }
+
+    const NAME_TEXT = {
+      せいほうけい:   ["正方形", "せいほうけい"],
+      ちょうほうけい: ["長方形", "ちょうほうけい"],
+      ひしがた:       ["ひし形", "ひしがた"],
+      へいこうしへんけい: ["平行四辺形", "へいこうしへんけい"],
+      だいけい:       ["台形", "だいけい"],
+      しかくけい:     ["（いっぱん）四角形", "しかくけい"]
+    };
+
+    // ── 静止している ぶぶん ──
+    function renderStatic() {
+      gStatic.textContent = "";
+      gStatic.appendChild(el("rect", {
+        x: FIELD.x, y: FIELD.y, width: FIELD.w, height: FIELD.h,
+        rx: 10, fill: "#fff", stroke: "#dbe3ec", "stroke-width": 2
+      }));
+      for (let x = FIELD.x + GRID; x < FIELD.x + FIELD.w; x += GRID) {
+        gStatic.appendChild(el("line", {
+          x1: x, y1: FIELD.y, x2: x, y2: FIELD.y + FIELD.h, stroke: "#eef2f7", "stroke-width": 1
+        }));
+      }
+      for (let y = FIELD.y + GRID; y < FIELD.y + FIELD.h; y += GRID) {
+        gStatic.appendChild(el("line", {
+          x1: FIELD.x, y1: y, x2: FIELD.x + FIELD.w, y2: y, stroke: "#eef2f7", "stroke-width": 1
+        }));
+      }
+      gStatic.appendChild(el("rect", {
+        x: SHELF.x, y: SHELF.y, width: SHELF.w, height: SHELF.h,
+        rx: 10, fill: "#f2f5f9", stroke: "#dbe3ec", "stroke-width": 2
+      }));
+      gShelf.textContent = "";
+      LENGTHS.forEach((len, i) => {
+        gShelf.appendChild(el("line", {
+          x1: SHELF_XS[i], y1: SHELF_CY - len / 2, x2: SHELF_XS[i], y2: SHELF_CY + len / 2,
+          stroke: LEN_COLORS[i], "stroke-width": ROD_W, "stroke-linecap": "round"
+        }));
+      });
+    }
+
+    // 4本そろった かたちの りんかく。交点の まわりの 角度で ならべると 凸四角形になる
+    function figurePolyOf(join) {
+      if (sidesOf(join).length !== 4) return null;
+      const jp = joinPointOf(join);
+      const vs = [];
+      for (const id of [join.a.rod, join.b.rod]) {
+        for (const i of [0, 6]) vs.push(pointOf(rodById(id), i));
+      }
+      vs.sort((a, b) => Math.atan2(a.y - jp.y, a.x - jp.x) - Math.atan2(b.y - jp.y, b.x - jp.x));
+      return vs;
+    }
+
+    function pointInPoly(p, vs) {
+      let inside = false;
+      for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        const a = vs[i], b = vs[j];
+        if (((a.y > p.y) !== (b.y > p.y)) &&
+            (p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x)) inside = !inside;
+      }
+      return inside;
+    }
+
+    // 長さから 色を きめる。おなじ 長さなら かならず おなじ 色に なる
+    function sideColor(len) {
+      const t = Math.max(0, Math.min(1, len / SIDE_MAX));
+      for (let i = 1; i < SIDE_RAMP.length; i++) {
+        if (t <= SIDE_RAMP[i][0]) {
+          const [t0, c0] = SIDE_RAMP[i - 1], [t1, c1] = SIDE_RAMP[i];
+          const k = (t - t0) / (t1 - t0);
+          const c = c0.map((v, j) => Math.round(v + (c1[j] - v) * k));
+          return `rgb(${c[0]},${c[1]},${c[2]})`;
+        }
+      }
+      return SIDE_C;
+    }
+
+    // ── うごく ぶぶん ──
+    function renderAll() {
+      [gFill, gSides, gRods, gPoints, gMarks, gUI].forEach((g) => { g.textContent = ""; });
+
+      for (const join of state.joins) {
+        const poly = figurePolyOf(join);
+        if (poly) {
+          gFill.appendChild(el("polygon", {
+            points: poly.map((p) => p.x + "," + p.y).join(" "),
+            fill: FILL_C, "fill-opacity": 0.30
+          }));
+        }
+      }
+
+      for (const rod of state.rods) {
+        const p0 = pointOf(rod, 0), p6 = pointOf(rod, 6);
+        gRods.appendChild(el("line", {
+          x1: p0.x, y1: p0.y, x2: p6.x, y2: p6.y,
+          stroke: rod.color, "stroke-width": ROD_W, "stroke-linecap": "round"
+        }));
+      }
+
+      for (const sd of state.sides) {
+        const p = vertexPos(sd[0]), q = vertexPos(sd[1]);
+        gSides.appendChild(el("line", {
+          x1: p.x, y1: p.y, x2: q.x, y2: q.y,
+          stroke: "#fff", "stroke-width": 13, "stroke-linecap": "round"
+        }));
+        gSides.appendChild(el("line", {
+          x1: p.x, y1: p.y, x2: q.x, y2: q.y,
+          stroke: sideColor(Math.hypot(p.x - q.x, p.y - q.y)),
+          "stroke-width": 9, "stroke-linecap": "round"
+        }));
+      }
+
+      const glow = pickTargets();
+      for (const rod of state.rods) {
+        const joined = !!joinOf(rod.id);
+        for (let i = 1; i <= 5; i++) {
+          const p = pointOf(rod, i);
+          gPoints.appendChild(el("circle", { cx: p.x, cy: p.y, r: 2.6, fill: "#fff" }));
+        }
+        for (const i of [0, 6]) {
+          const p = pointOf(rod, i);
+          const id = vid(rod.id, i);
+          const picked = state.pick === id;
+          if (glow.includes(id) || picked) {
+            gPoints.appendChild(el("circle", {
+              cx: p.x, cy: p.y, r: picked ? 12 : 10,
+              fill: GLOW_C, "fill-opacity": picked ? .9 : .55
+            }));
+          }
+          gPoints.appendChild(el("circle", {
+            cx: p.x, cy: p.y, r: joined ? 5 : 4.5,
+            fill: joined ? VERT_C : "#fff",
+            stroke: VERT_C, "stroke-width": 2
+          }));
+        }
+      }
+
+      for (const join of state.joins) {
+        const jp = joinPointOf(join);
+        const pulling = drag && drag.type === "rod" && drag.pull !== undefined
+                        && joinOf(drag.rod) === join;
+        gPoints.appendChild(el("circle", {
+          cx: jp.x, cy: jp.y, r: 6, fill: JOIN_C,
+          "fill-opacity": pulling ? Math.max(0.15, 1 - drag.pull / DETACH) : 1
+        }));
+        if (isPerpOf(join)) renderRightAngle(join);
+        if (state.showParallel) renderParallel(join);
+      }
+
+      if (state.showName) renderNames();
+      renderDragUI();
+      clearBtn.disabled = state.rods.length === 0;
+    }
+
+    // 90°に きゅうちゃくしたら、交わって できる 4つの 直角 すべてに しるし
+    function renderRightAngle(join) {
+      const jp = joinPointOf(join), s = 18;
+      const ra = rodById(join.a.rod), rb = rodById(join.b.rod);
+      const u = { x: Math.cos(rad(ra.angle)), y: Math.sin(rad(ra.angle)) };
+      const v = { x: Math.cos(rad(rb.angle)), y: Math.sin(rad(rb.angle)) };
+      for (const [su, sv] of [[1, 1], [1, -1], [-1, -1], [-1, 1]]) {
+        const p1 = { x: jp.x + u.x * s * su, y: jp.y + u.y * s * su };
+        const p3 = { x: jp.x + v.x * s * sv, y: jp.y + v.y * s * sv };
+        const p2 = { x: p1.x + v.x * s * sv, y: p1.y + v.y * s * sv };
+        gMarks.appendChild(el("polyline", {
+          points: `${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`,
+          fill: "none", stroke: RIGHT_C, "stroke-width": 2.4, "stroke-linejoin": "round"
+        }));
+      }
+    }
+
+    // むかいあう 辺が 平行なら、矢羽根の しるしを つける（1組め…1つ、2組め…2つ）
+    function renderParallel(join) {
+      const dirs = sidesOf(join).map(([a, b]) => {
+        const p = vertexPos(a), q = vertexPos(b);
+        const L = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+        return {
+          mx: (p.x + q.x) / 2, my: (p.y + q.y) / 2,
+          ux: (q.x - p.x) / L, uy: (q.y - p.y) / L,
+          ang: norm180(Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI)
+        };
+      });
+      const groups = [];
+      dirs.forEach((d, i) => {
+        const g = groups.find((x) => {
+          const diff = Math.abs(x.ang - d.ang);
+          return diff < 0.5 || diff > 179.5;
+        });
+        if (g) g.idx.push(i); else groups.push({ ang: d.ang, idx: [i] });
+      });
+
+      let k = 0;
+      for (const g of groups) {
+        if (g.idx.length < 2) continue;
+        k++;
+        // 頂点の ならび順で 向きが 逆に なることが あるので、組の なかで そろえる
+        const ref = dirs[g.idx[0]];
+        for (const i of g.idx) {
+          const d = dirs[i];
+          const flip = d.ux * ref.ux + d.uy * ref.uy < 0 ? -1 : 1;
+          drawChevrons(d.mx, d.my, d.ux * flip, d.uy * flip, k);
+        }
+      }
+    }
+
+    function drawChevrons(mx, my, ux, uy, n) {
+      const nx = -uy, ny = ux;
+      for (let t = 0; t < n; t++) {
+        const off = (t - (n - 1) / 2) * 9;
+        const cx = mx + ux * off, cy = my + uy * off;
+        const pts = `${cx - ux * 6 + nx * 6},${cy - uy * 6 + ny * 6} ${cx},${cy} `
+                  + `${cx - ux * 6 - nx * 6},${cy - uy * 6 - ny * 6}`;
+        for (const [col, w] of [["#fff", 6], ["#1f2933", 2.6]]) {
+          gMarks.appendChild(el("polyline", {
+            points: pts, fill: "none", stroke: col, "stroke-width": w,
+            "stroke-linecap": "round", "stroke-linejoin": "round"
+          }));
+        }
+      }
+    }
+
+    // かたちの まんなかに 名前を おく（図形ごと）
+    function renderNames() {
+      for (const join of state.joins) {
+        const poly = figurePolyOf(join);
+        const name = shapeNameOf(join);
+        if (!poly || !name) continue;
+        const cx = poly.reduce((a, p) => a + p.x, 0) / 4;
+        const cy = poly.reduce((a, p) => a + p.y, 0) / 4;
+        const [kanji, kana] = NAME_TEXT[name];
+        // ふりがなは 漢字の うえ
+        const t2 = el("text", {
+          x: cx, y: cy - 12, "text-anchor": "middle", "font-size": 12, "font-weight": 700,
+          fill: "#607d8b", stroke: "#fff", "stroke-width": 4, "paint-order": "stroke"
+        });
+        t2.textContent = kana;
+        const t1 = el("text", {
+          x: cx, y: cy + 10, "text-anchor": "middle", "font-size": 24, "font-weight": 800,
+          fill: "#263238", stroke: "#fff", "stroke-width": 5, "paint-order": "stroke"
+        });
+        t1.textContent = kanji;
+        gMarks.appendChild(t2);
+        gMarks.appendChild(t1);
+      }
+    }
+
+    // さいしょに タップした 頂点から、つなげる あいての 頂点
+    function pickTargets() {
+      if (!state.pick) return [];
+      const other = partnerOf(rodOfVid(state.pick));
+      return other ? [vid(other.id, 0), vid(other.id, 6)] : [];
+    }
+
+    // ポインタが つなげる さきに 近ければ そこへ すいつく
+    function hoverSnap() {
+      if (!state.pick || !state.hover) return null;
+      for (const id of pickTargets()) {
+        if (dist(state.hover, vertexPos(id)) <= 34) return id;
+      }
+      return null;
+    }
+
+    function connectTo(v) {
+      const pair = [state.pick, v].sort();
+      const at = state.sides.findIndex((x) => x[0] === pair[0] && x[1] === pair[1]);
+      if (at >= 0) {
+        state.sides.splice(at, 1);
+        state.pick = null;
+      } else {
+        const join = joinOf(rodOfVid(v));
+        if (join && sidesOf(join).length < 4) {
+          state.sides.push(pair);
+          // とめた ちょうてんから、そのまま つぎの 辺を ひきはじめる
+          state.pick = sidesOf(join).length < 4 ? v : null;
+        } else {
+          state.pick = null;
+        }
+      }
+      state.hover = null;
+    }
+
+    function renderDragUI() {
+      if (state.pick) {
+        const a = vertexPos(state.pick);
+        const snap = hoverSnap();
+        if (snap || state.hover) {
+          const q = snap ? vertexPos(snap) : state.hover;
+          gUI.appendChild(el("line", {
+            x1: a.x, y1: a.y, x2: q.x, y2: q.y,
+            stroke: SIDE_C, "stroke-width": snap ? 8 : 5,
+            "stroke-linecap": "round",
+            "stroke-dasharray": snap ? "" : "10 8",
+            opacity: snap ? 1 : .55
+          }));
+        }
+      }
+      if (drag && drag.type === "rod" && drag.cand) {
+        const p = pointOf(rodById(drag.cand.moving.rod), drag.cand.moving.pt);
+        gUI.appendChild(el("circle", {
+          cx: p.x, cy: p.y, r: 14, fill: JOIN_C, "fill-opacity": .3
+        }));
+      }
+    }
+
+    // ── あたり判定 ──
+    function toSvg(ev) {
+      const r = svg.getBoundingClientRect();
+      return { x: (ev.clientX - r.left) * (1000 / r.width),
+               y: (ev.clientY - r.top) * (640 / r.height) };
+    }
+    function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+    function distToRod(p, rod) {
+      const a = pointOf(rod, 0), b = pointOf(rod, 6);
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
+      return Math.hypot(p.x - (a.x + dx * t), p.y - (a.y + dy * t));
+    }
+
+    function inField(p) {
+      return p.x >= FIELD.x && p.x <= FIELD.x + FIELD.w
+          && p.y >= FIELD.y && p.y <= FIELD.y + FIELD.h;
+    }
+
+    function shelfHit(p) {
+      for (let i = 0; i < LENGTHS.length; i++) {
+        if (Math.abs(p.x - SHELF_XS[i]) <= ROD_W && Math.abs(p.y - SHELF_CY) <= LENGTHS[i] / 2 + 10) {
+          return LENGTHS[i];
+        }
+      }
+      return null;
+    }
+
+    function removeRod(id) {
+      const j = joinOf(id);
+      if (j) removeJoin(j);
+      state.rods = state.rods.filter((r) => r.id !== id);
+      state.pick = null;
+      state.hover = null;
+    }
+
+    // ── ポインタ ──
+    svg.addEventListener("pointerdown", (ev) => {
+      const p = toSvg(ev);
+      svg.setPointerCapture(ev.pointerId);
+
+      // 1. 棒の はし … うごかせば 回転、うごかさなければ 辺の タップ
+      for (let k = state.rods.length - 1; k >= 0; k--) {
+        const rod = state.rods[k];
+        for (const i of [0, 6]) {
+          if (dist(p, pointOf(rod, i)) <= VERT_HIT) {
+            const j = joinOf(rod.id);
+            const pivot = j ? joinPointOf(j) : { x: rod.cx, y: rod.cy };
+            drag = { type: "end", rod: rod.id, vertex: vid(rod.id, i), pivot, moved: false,
+                     down: p,
+                     startPtr: Math.atan2(p.y - pivot.y, p.x - pivot.x) * 180 / Math.PI,
+                     startAngle: rod.angle };
+            return;
+          }
+        }
+      }
+
+      // 2. 結合部 → かたちごと うごかす
+      for (const join of state.joins) {
+        if (dist(p, joinPointOf(join)) <= JOIN_HIT) {
+          drag = { type: "figure", rods: [join.a.rod, join.b.rod], last: p };
+          return;
+        }
+      }
+
+      // 3. 棒
+      for (let k = state.rods.length - 1; k >= 0; k--) {
+        const rod = state.rods[k];
+        if (distToRod(p, rod) <= ROD_W / 2 + 8) {
+          drag = { type: "rod", rod: rod.id, last: p, start: p, cand: null,
+                   pull: joinOf(rod.id) ? 0 : undefined };
+          return;
+        }
+      }
+
+      // 4. ぬりつぶした なか → かたちごと うごかす
+      for (const join of state.joins) {
+        const poly = figurePolyOf(join);
+        if (poly && pointInPoly(p, poly)) {
+          drag = { type: "figure", rods: [join.a.rod, join.b.rod], last: p };
+          return;
+        }
+      }
+
+      // 5. 棚から とりだす
+      const len = shelfHit(p);
+      if (len !== null) {
+        const color = LEN_COLORS[LENGTHS.indexOf(len)];
+        const rod = { id: nextId++, len, color, cx: p.x, cy: p.y, angle: 90 };
+        state.rods.push(rod);
+        drag = { type: "rod", rod: rod.id, last: p, start: p, cand: null };
+        renderAll();
+        return;
+      }
+
+      // 6. 頂点を えらんでいる あいだは、なぞると 辺が のびる
+      if (state.pick) {
+        drag = { type: "aim", down: p, moved: false };
+        return;
+      }
+
+      // 7. なにもない ところ … えらびかけを やめる
+      state.pick = null; state.hover = null;
+      drag = null;
+      renderAll();
+    });
+
+    svg.addEventListener("pointermove", (ev) => {
+      if (!drag) {
+        if (state.pick) { state.hover = toSvg(ev); renderAll(); }
+        return;
+      }
+      const p = toSvg(ev);
+
+      if (drag.type === "aim") {
+        if (!drag.moved && dist(p, drag.down) < 8) return;
+        drag.moved = true;
+        state.hover = p;
+        renderAll();
+        return;
+      }
+
+      if (drag.type === "end") {
+        if (!drag.moved && dist(p, drag.down) < 8) return;
+        drag.moved = true;
+        const cur = Math.atan2(p.y - drag.pivot.y, p.x - drag.pivot.x) * 180 / Math.PI;
+        const rod = rodById(drag.rod);
+        const want = drag.startAngle + (cur - drag.startPtr);
+        rotateAbout(rod, drag.pivot, constrainAngle(rod, want));
+        renderAll();
+        return;
+      }
+
+      if (drag.type === "figure") {
+        const dx = p.x - drag.last.x, dy = p.y - drag.last.y;
+        for (const id of drag.rods) {
+          const r = rodById(id);
+          if (r) { r.cx += dx; r.cy += dy; }
+        }
+        drag.last = p;
+        renderAll();
+        return;
+      }
+
+      if (drag.type === "rod") {
+        const rod = rodById(drag.rod);
+        const dx = p.x - drag.last.x, dy = p.y - drag.last.y;
+        const j = joinOf(rod.id);
+
+        // 結合しているあいだは、ひっぱると のびて、こえると はずれる
+        if (j && drag.pull !== undefined) {
+          const d = dist(p, drag.start);
+          if (d < DETACH) {
+            drag.pull = d;
+            rod.cx += dx * 0.25;
+            rod.cy += dy * 0.25;
+            drag.last = p;
+            renderAll();
+            return;
+          }
+          removeJoin(j);
+          state.pick = null;
+          drag.pull = undefined;
+        }
+
+        rod.cx += dx;
+        rod.cy += dy;
+        drag.last = p;
+
+        // まだ どこにも つながっていない 棒どうしで、結合の こうほを さがす
+        drag.cand = null;
+        if (!joinOf(rod.id)) {
+          let best = SNAP_JOIN;
+          for (const other of state.rods) {
+            if (other.id === rod.id || joinOf(other.id)) continue;
+            for (let i = 1; i <= 5; i++) {
+              for (let jj = 1; jj <= 5; jj++) {
+                const d = dist(pointOf(rod, i), pointOf(other, jj));
+                if (d < best) {
+                  best = d;
+                  drag.cand = { moving: { rod: rod.id, pt: i }, fixed: { rod: other.id, pt: jj } };
+                }
+              }
+            }
+          }
+        }
+        renderAll();
+      }
+    });
+
+    function endDrag(ev) {
+      if (!drag) {
+        if (svg.hasPointerCapture(ev.pointerId)) svg.releasePointerCapture(ev.pointerId);
+        return;
+      }
+      const p = toSvg(ev);
+
+      if (drag.type === "aim") {
+        if (!drag.moved) {
+          state.pick = null; state.hover = null;      // ただの タップ … やめる
+        } else {
+          const snap = hoverSnap();
+          if (snap) connectTo(snap);
+          state.hover = null;
+        }
+      }
+
+      if (drag.type === "end" && !drag.moved) {
+        const v = drag.vertex;
+        if (!joinOf(drag.rod)) {
+          state.pick = null; state.hover = null;
+        } else if (!state.pick || state.pick === v || !pickTargets().includes(v)) {
+          state.pick = state.pick === v ? null : v;   // えらぶ／えらび直す／やめる
+          state.hover = null;
+        } else {
+          connectTo(v);
+        }
+      }
+
+      if (drag.type === "rod") {
+        const j = joinOf(drag.rod);
+        if (drag.pull !== undefined && j) {
+          enforceJoin(j);                      // はずれなかったので もどす
+        } else if (!inField(p)) {
+          removeRod(drag.rod);
+        } else if (drag.cand) {
+          const join = { a: drag.cand.fixed, b: drag.cand.moving };
+          state.joins.push(join);
+          enforceJoin(join);
+        }
+      }
+
+      if (drag.type === "figure" && !inField(p)) {
+        for (const id of [...drag.rods]) removeRod(id);
+      }
+
+      drag = null;
+      if (svg.hasPointerCapture(ev.pointerId)) svg.releasePointerCapture(ev.pointerId);
+      renderAll();
+    }
+    svg.addEventListener("pointerup", endDrag);
+    svg.addEventListener("pointercancel", endDrag);
+    svg.addEventListener("pointerleave", () => {
+      if (state.hover) { state.hover = null; renderAll(); }
+    });
+
+    clearBtn.addEventListener("click", () => {
+      state.rods = [];
+      state.joins = [];
+      state.sides = [];
+      state.pick = null;
+      state.hover = null;
+      renderAll();
+    });
+
+    paraBtn.addEventListener("click", () => {
+      state.showParallel = !state.showParallel;
+      paraBtn.setAttribute("aria-pressed", String(state.showParallel));
+      renderAll();
+    });
+
+    nameBtn.addEventListener("click", () => {
+      state.showName = !state.showName;
+      nameBtn.setAttribute("aria-pressed", String(state.showName));
+      renderAll();
+    });
+
+    renderStatic();
+    renderAll();
+  </script>
+
+
+<!-- ── そうさせつめい（ヘルプ） ────────────────────────── -->
+<style>
+  /* ── ヘルプボタン（画面右上に固定） ── */
+  .help-btn {
+    position: fixed;
+    right: 16px;
+    top: max(16px, env(safe-area-inset-top));
+    width: 44px; height: 44px; margin: 0;
+    border-radius: 50%; border: 3px solid #90caf9;
+    background: #fff; color: #1565c0;
+    font-family: inherit; font-size: 1.2rem; font-weight: 800; line-height: 1;
+    padding: 0; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    z-index: 190;
+    box-shadow: 0 4px 14px rgba(0,0,0,.20);
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-btn:hover  { background: #e3f2fd; }
+  .help-btn:active { transform: translateY(1px); }
+  #help-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #help-modal {
+    background: #fff; border-radius: 20px; padding: 22px 28px 26px;
+    max-width: 480px; width: 100%; position: relative;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    max-height: calc(100svh - 40px); overflow-y: auto;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  }
+  /* スクロールしても閉じるボタンが隠れないよう sticky にする */
+  #help-close {
+    position: sticky; top: 0; display: block;
+    margin: 0 -10px 4px auto;
+    background: #fff; border: none; font-size: 1.2rem;
+    color: #6b7280; cursor: pointer; padding: 2px 8px; z-index: 1;
+  }
+  #help-modal h2 { font-size: 1.1rem; font-weight: 900; color: #1565c0; margin: 0 0 14px; }
+  #help-modal p  { font-size: .95rem; line-height: 2.05; color: #374151; margin: 0; }
+  #help-modal rt { font-size: .58em; font-weight: 700; color: #6b7280; }
+  #help-modal .sh { display: block; font-weight: 900; color: #1565c0; margin-top: 14px; margin-bottom: 2px; }
+  #help-modal .sh:first-child { margin-top: 0; }
+</style>
+
+<button id="help-btn" class="help-btn" aria-label="つかいかた">?</button>
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close" aria-label="とじる">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
+  </div>
+</div>
+<script>
+  (function(){
+    var ov  = document.getElementById('help-overlay');
+    var btn = document.getElementById('help-btn');
+    var HELP = {
+      title: '<ruby>対角線<rt>たいかくせん</rt></ruby>の つかいかた',
+      body:  '<span class="sh">【<ruby>棒<rt>ぼう</rt></ruby>を おく】</span><ruby>右<rt>みぎ</rt></ruby>の たなから、<ruby>長<rt>なが</rt></ruby>さの ちがう <ruby>棒<rt>ぼう</rt></ruby>を ドラッグして もってきます。<ruby>何本<rt>なんぼん</rt></ruby>でも おけるので、かたちを いくつも つくれます。<ruby>棒<rt>ぼう</rt></ruby>の <ruby>色<rt>いろ</rt></ruby>は <ruby>長<rt>なが</rt></ruby>さごとに きまっています。<br>'
+           + '<span class="sh">【つなぐ】</span><ruby>棒<rt>ぼう</rt></ruby>の うえの <ruby>点<rt>てん</rt></ruby>どうしを <ruby>近<rt>ちか</rt></ruby>づけると くっつきます。まんなかの <ruby>点<rt>てん</rt></ruby>どうしで つなぐか、はしの ほうで つなぐかで、できる かたちが かわります。<br>'
+           + '<span class="sh">【<ruby>辺<rt>へん</rt></ruby>を ひく】</span>つないだら、<ruby>棒<rt>ぼう</rt></ruby>の はしの あかい <ruby>丸<rt>まる</rt></ruby>（ちょうてん）を タップします。<ruby>光<rt>ひか</rt></ruby>った あいての ちょうてんを もう <ruby>一<rt>ひと</rt></ruby>つ タップすると <ruby>辺<rt>へん</rt></ruby>が ひけます。とめた ところから つぎの <ruby>辺<rt>へん</rt></ruby>が つづけて ひけるので、ぐるっと 4<ruby>本<rt>ほん</rt></ruby> まわると かたちが できます。おなじ ところを もう <ruby>一度<rt>いちど</rt></ruby> えらぶと けせます。<br>'
+           + '<span class="sh">【うごかす】</span>・<ruby>棒<rt>ぼう</rt></ruby>の まんなかあたりを ドラッグ… その <ruby>棒<rt>ぼう</rt></ruby>が うごく<br>・つないだ ところや、<ruby>色<rt>いろ</rt></ruby>の ついた なかを ドラッグ… かたちごと うごく<br>・<ruby>棒<rt>ぼう</rt></ruby>の はしを つかんで ドラッグ… その <ruby>棒<rt>ぼう</rt></ruby>だけ まわる<br>'
+           + '<span class="sh">【<ruby>辺<rt>へん</rt></ruby>の <ruby>色<rt>いろ</rt></ruby>】</span><ruby>辺<rt>へん</rt></ruby>の <ruby>色<rt>いろ</rt></ruby>は <ruby>長<rt>なが</rt></ruby>さで きまります。みじかい ほうから こい あお → あお → みどり → きいろ → あか。おなじ <ruby>色<rt>いろ</rt></ruby>の <ruby>辺<rt>へん</rt></ruby>は、<ruby>長<rt>なが</rt></ruby>さが おなじです。<br>'
+           + '<span class="sh">【しらべる】</span>・2<ruby>本<rt>ほん</rt></ruby>の <ruby>棒<rt>ぼう</rt></ruby>が <ruby>直角<rt>ちょっかく</rt></ruby>に なると、<ruby>交<rt>まじ</rt></ruby>わった ところに しるしが 4つ でます<br>・「<ruby>平行<rt>へいこう</rt></ruby>を <ruby>見<rt>み</rt></ruby>る」… むかいあう <ruby>辺<rt>へん</rt></ruby>が <ruby>平行<rt>へいこう</rt></ruby>なら 矢じるしが つきます<br>・「<ruby>形<rt>かたち</rt></ruby>の <ruby>名前<rt>なまえ</rt></ruby>」… できた かたちの なまえが でます<br>'
+           + '<span class="sh">【はずす・かたづける】</span>・<ruby>棒<rt>ぼう</rt></ruby>を つよく ひっぱると はずれます<br>・わくの そとへ ドラッグすると かたづきます<br>・ゴミばこの ボタンで ぜんぶ かたづきます'
+    };
+
+    btn.addEventListener('click', function(){
+      document.getElementById('help-title').innerHTML = HELP.title;
+      document.getElementById('help-body').innerHTML  = HELP.body;
+      ov.style.display = 'flex';
+    });
+    document.getElementById('help-close').addEventListener('click', function(){ ov.style.display = 'none'; });
+    ov.addEventListener('click', function(e){ if (e.target === ov) ov.style.display = 'none'; });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') ov.style.display = 'none'; });
+  })();
+</script>
+</body>
+</html>

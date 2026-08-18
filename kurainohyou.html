@@ -71,7 +71,6 @@
     #addBtn.on    { background: var(--c-add);   color: #fff; border-color: var(--c-add); }
     #subBtn.on    { background: var(--c-sub);   color: #fff; border-color: var(--c-sub); }
     #gutiBtn.on   { background: #16a34a;        color: #fff; border-color: #16a34a; }
-    #hissanBtn.on { background: rgba(14,165,233,0.18); color: #0ea5e9; border-color: transparent; }
     .divider { width: 1px; height: 28px; background: #e5e7eb; flex-shrink: 0; }
     .reset-btn {
       padding: 9px 18px;
@@ -113,7 +112,6 @@
     .input-wrap { position: relative; }
     /* ひく数が ひかれる数より大きいとき */
     .num-chip.sub-over input { border-color: #ef4444; background: #fef2f2; color: #b91c1c; }
-    .hissan-cannot { font-size: .55em; color: #b91c1c; white-space: nowrap; }
     #subCorrectMark { position: absolute; top: -10px; right: -10px; font-size: 1.1rem; display: none; line-height: 1; z-index: 10; }
     #subCorrectMark.visible { display: block; }
     .op-display { font-size: 32px; font-weight: 900; color: #6b7280; padding: 0 4px; }
@@ -138,7 +136,6 @@
       overflow: hidden;
       transition: flex-basis .35s ease;
     }
-    .app-layout.hissan-active .left-pane { flex: 1 1 58%; }
 
     /* ペイン境界ドラッグハンドル */
     .pane-divider {
@@ -226,51 +223,6 @@
       padding: 0;
     }
 
-    .right-pane {
-      flex: 0 0 0px;
-      overflow: hidden;
-      opacity: 0;
-      transition: flex-basis .35s ease, opacity .3s ease;
-      min-width: 0;
-      min-height: 0;
-    }
-    .app-layout.hissan-active .right-pane {
-      flex: 1 1 34%;
-      overflow: hidden;
-      opacity: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* ── 筆算タブ（右端固定） ── */
-    .hissan-tab {
-      position: fixed;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 26px;
-      height: 56px;
-      background: rgba(0,0,0,0.07);
-      border: none;
-      border-radius: 8px 0 0 8px;
-      font-size: 14px;
-      color: rgba(0,0,0,0.25);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 200;
-      padding: 0;
-      transition: background .15s, color .15s;
-    }
-    .hissan-tab:hover {
-      background: rgba(0,0,0,0.15);
-      color: rgba(0,0,0,0.5);
-    }
-    .hissan-tab.on {
-      background: rgba(14,165,233,0.18);
-      color: #0ea5e9;
-    }
 
     /* ── 位の表ヘッダー内ボタン群 ── */
     .zone-place-mode-btns {
@@ -928,47 +880,6 @@
       border-style: solid;
     }
 
-    /* 筆算ゾーン */
-    .zone-hissan {
-      background: #f0f9ff;
-      border: 3px solid #7dd3fc;
-      border-radius: 20px;
-      width: 100%;
-      flex: 1 1 0;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      padding: 14px 16px;
-      overflow: hidden;
-    }
-    .zone-hissan .zone-title { color: #0284c7; }
-    #hissanDisplay {
-      flex: 1 1 0;
-      min-height: 0;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-start;
-      padding: 8px 0;
-    }
-    .hissan-wrap { display: inline-block; transform-origin: top left; }
-    .hissan-table {
-      border-collapse: collapse;
-      font-size: 40px;
-      font-weight: 900;
-    }
-    .hissan-table td {
-      padding: 4px 10px;
-      text-align: right;
-      min-width: 52px;
-    }
-    .hissan-table .op-col {
-      text-align: left;
-      padding-right: 8px;
-      min-width: 36px;
-      color: #374151;
-    }
-    .hissan-line td { border-top: 4px solid #1f2933; padding-top: 8px; }
-    .hissan-answer td { color: var(--c-place); }
 
     /* ゴースト */
     .ghost {
@@ -1100,19 +1011,8 @@
         </div>
       </div>
     </div>
-
-    <div class="right-pane" id="rightPane">
-      <section class="zone-hissan">
-        <div class="zone-title">ひっさん</div>
-        <div id="hissanDisplay">
-          <div class="hissan-wrap" id="hissanWrap"></div>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <button id="hissanBtn" class="hissan-tab">◀</button>
-</div>
+  </div><!-- .app-layout -->
+</div><!-- #pageWrap -->
 
 <button id="help-btn" class="help-btn" aria-label="つかいかた">?</button>
 <div id="help-overlay" style="display:none">
@@ -1140,7 +1040,6 @@ const PLACE_DEFS = [
 const state = {
   opMode:      'add',
   gutiMode:    true,
-  hissanMode:  false,
   showWriteRow: false,
   topPlace:    10,
   botPlace:    1,
@@ -1158,7 +1057,6 @@ const state = {
 const $ = id => document.getElementById(id);
 const addBtn        = $('addBtn');
 const subBtn        = $('subBtn');
-const hissanBtn     = $('hissanBtn');
 const resetBtn      = $('resetBtn');
 const writeRowBtn   = $('writeRowBtn');
 const tilePalette   = $('tilePalette');
@@ -1178,7 +1076,6 @@ const inputB        = $('inputB');
 const opDisplay     = $('opDisplay');
 const labelA        = $('labelA');
 const labelB        = $('labelB');
-const hissanWrap    = $('hissanWrap');
 
 // ── アクティブな位リスト ─────────────────────────────
 function getActivePlaces() {
@@ -2072,59 +1969,6 @@ confirmNoBtn.addEventListener('click', () => {
   pendingAction = null;
 });
 
-// ── 筆算レンダリング ─────────────────────────────────
-function renderHissan() {
-  if (!state.hissanMode) { hissanWrap.innerHTML = ''; return; }
-  const a = parseFloat(inputA.value);
-  const b = parseFloat(inputB.value);
-  const hasA = !isNaN(a);
-  const hasB = !isNaN(b);
-  const isAdd = state.opMode === 'add';
-  const op = isAdd ? '＋' : '－';
-
-  const aStr   = hasA ? fmtNum(a) : '？';
-  const bStr   = hasB ? fmtNum(b) : '？';
-  let   ansStr  = '？';
-  let   ansCls  = '';
-  if (hasA && hasB) {
-    if (!isAdd && b > a) {
-      // 小学校の学習範囲では マイナスの答えは出さない
-      ansStr = 'ひけません';
-      ansCls = ' hissan-cannot';
-    } else {
-      ansStr = fmtNum(isAdd ? a + b : a - b);
-    }
-  }
-
-  hissanWrap.innerHTML = `
-    <table class="hissan-table">
-      <tr><td class="op-col"></td><td>${aStr}</td></tr>
-      <tr><td class="op-col">${op}</td><td>${bStr}</td></tr>
-      <tr class="hissan-line hissan-answer">
-        <td class="op-col"></td><td class="${ansCls.trim()}">${ansStr}</td>
-      </tr>
-    </table>`;
-  scaleHissanToFit();
-}
-
-function fmtNum(n) {
-  return String(Math.round(n * 100000) / 100000);
-}
-
-function scaleHissanToFit() {
-  const display = $('hissanDisplay');
-  if (!display || !hissanWrap) return;
-  hissanWrap.style.zoom = '1';
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    const aw = display.clientWidth - 24, ah = display.clientHeight - 24;
-    const nw = hissanWrap.offsetWidth, nh = hissanWrap.offsetHeight;
-    if (aw > 0 && ah > 0 && nw > 0 && nh > 0) {
-      const s = Math.min(1, aw / nw, ah / nh);
-      hissanWrap.style.zoom = s < 1 ? String(Math.max(0.3, s)) : '';
-    }
-  }));
-}
-
 // ── タイルパレット描画 ────────────────────────────────
 function renderTilePalette() {
   tilePalette.innerHTML = '';
@@ -2198,7 +2042,6 @@ function renderAll() {
   renderPlaceTable();
   renderTilePalette();
   renderCarryZone();
-  renderHissan();
   autoScaleTileAreas();
   // タイルからinput値を更新（たし算モード・input側からの更新中は除く）
   if (state.opMode === 'add' && !syncingFromInput) {
@@ -2312,13 +2155,10 @@ function syncTilesFromInput(row, rawValue) {
 function applyUIState() {
   addBtn.classList.toggle('on',        state.opMode === 'add');
   subBtn.classList.toggle('on',        state.opMode === 'sub');
-  hissanBtn.classList.toggle('on',     state.hissanMode);
-  hissanBtn.textContent = state.hissanMode ? '▶' : '◀';
   writeRowBtn.classList.toggle('on',   state.showWriteRow);
   if (carryZoneTitle) {
     carryZoneTitle.textContent = state.opMode === 'sub' ? 'りょうがえゾーン' : 'くりあがりゾーン';
   }
-  appLayout.classList.toggle('hissan-active', state.hissanMode);
   appLayout.classList.toggle('guti-active',   state.gutiMode);
   appLayout.classList.toggle('remove-mode',   state.opMode === 'sub');
 
@@ -2337,9 +2177,6 @@ addBtn.addEventListener('click', () => {
 });
 subBtn.addEventListener('click', () => {
   state.opMode = 'sub'; applyUIState(); renderAll();
-});
-hissanBtn.addEventListener('click', () => {
-  state.hissanMode = !state.hissanMode; applyUIState(); renderAll();
 });
 writeRowBtn.addEventListener('click', () => {
   state.showWriteRow = !state.showWriteRow; applyUIState(); renderAll();
@@ -2435,15 +2272,12 @@ renderAll();
       '　（もう<ruby>一度<rt>いちど</rt></ruby> タップすると もどります）<br>' +
       '③ <ruby>線<rt>せん</rt></ruby>を つけた タイルの <ruby>数<rt>かず</rt></ruby>が「ひくかず」と <ruby>合<rt>あ</rt></ruby>うと ⭕️ が でます<br>' +
       '（さきに「ひくかず」を <ruby>入力<rt>にゅうりょく</rt></ruby>しておかないと、ただしく ひけても ⭕️ は でません）<br>' +
-      '「ひくかず」が <ruby>大<rt>おお</rt></ruby>きすぎると <ruby>赤<rt>あか</rt></ruby>くなり、ひっさんは「ひけません」に なります。<br>' +
+      '「ひくかず」が「ひかれるかず」より <ruby>大<rt>おお</rt></ruby>きいと <ruby>赤<rt>あか</rt></ruby>く なります。<br>' +
       '<span class="sub">くりさがり</span>' +
       '① <ruby>上<rt>うえ</rt></ruby>の<ruby>位<rt>くらい</rt></ruby>の タイルを 「りょうがえゾーン」へ ドラッグ<br>' +
       '② できた <ruby>下<rt>した</rt></ruby>の<ruby>位<rt>くらい</rt></ruby> 10<ruby>枚<rt>まい</rt></ruby>の まとまりを、じぶんで <ruby>下<rt>した</rt></ruby>の<ruby>位<rt>くらい</rt></ruby>の <ruby>列<rt>れつ</rt></ruby>へ はこびます<br>' +
-      '<span class="sh">【そのほか】</span>' +
-      '・かずをかく…それぞれの <ruby>位<rt>くらい</rt></ruby>に <ruby>手<rt>て</rt></ruby>で <ruby>数字<rt>すうじ</rt></ruby>を かける らんを <ruby>出<rt>だ</rt></ruby>します（× で けす）<br>' +
-      '・ひっさん…<ruby>画面<rt>がめん</rt></ruby>の <ruby>右<rt>みぎ</rt></ruby>はしに ある ◀ を おすと、<br>' +
-      '　いま <ruby>入<rt>い</rt></ruby>れている しきの ひっさんが <ruby>出<rt>で</rt></ruby>ます（▶ で とじる）<br>' +
-      '・リセット…タイルと <ruby>数<rt>かず</rt></ruby>を けす（<ruby>位<rt>くらい</rt></ruby>の <ruby>列<rt>れつ</rt></ruby>は のこる）'
+      '<span class="sh">【かずをかく】</span>' +
+      'それぞれの <ruby>位<rt>くらい</rt></ruby>に <ruby>手<rt>て</rt></ruby>で <ruby>数字<rt>すうじ</rt></ruby>を かける らんを <ruby>出<rt>だ</rt></ruby>します（× で けす）'
   };
   document.getElementById('help-btn').addEventListener('click', function(){
     document.getElementById('help-title').innerHTML = HELP.title;
