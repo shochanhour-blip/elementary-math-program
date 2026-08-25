@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>どうぶつを ならべよう</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --panel: rgba(255, 255, 255, .92);
+      --line: #8d6e4a;
+      --accent: #5b8f3a;
+      --shadow: 0 6px 20px rgba(0, 0, 0, .18);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    img { -webkit-user-drag: none; user-select: none; }
+
+    /* ── ひろば（背景は 画面いっぱいに ひろげる） ── */
+    #stage {
+      position: fixed;
+      inset: 0;
+      background: url("background.png") center / cover no-repeat;
+      touch-action: none;
+    }
+
+    /* ── どうぶつ ── */
+    .item { position: absolute; transform: translate(-50%, -50%); }
+    .item .pic {
+      display: block;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .item.flip .pic { transform: scaleX(-1); }
+    .item .frame {
+      position: absolute;
+      inset: -8px;
+      border: 3px dashed var(--accent);
+      border-radius: 12px;
+      display: none;
+      pointer-events: none;
+    }
+    .item.sel .frame { display: block; }
+
+    /* かどに つく ボタン */
+    .knob {
+      position: absolute;
+      width: 38px; height: 38px;
+      margin: -19px;
+      border-radius: 50%;
+      border: 3px solid var(--accent);
+      background: #fff;
+      color: var(--accent);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      touch-action: none;
+    }
+    .item.sel .knob { display: inline-flex; }
+    .knob svg { display: block; pointer-events: none; }
+    .knob:active { background: #eef7e6; }
+    .k-del  { left: -8px;  top: -8px;  border-color: #d4574f; color: #d4574f; }
+    .k-copy { right: -8px; top: -8px; }
+    .k-flip { left: -8px;  bottom: -8px; }
+    .k-size { right: -8px; bottom: -8px; cursor: nwse-resize; }
+
+    /* ── どうぐばこ ── */
+    #bar {
+      position: fixed;
+      left: 50%;
+      bottom: max(14px, env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--panel);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      transition: transform .28s ease, opacity .28s ease;
+      touch-action: none;
+      max-width: calc(100vw - 96px);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    #bar::-webkit-scrollbar { display: none; }
+    body.hidden-bar #bar {
+      transform: translateX(-50%) translateY(160%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .pick {
+      width: 84px; height: 78px;
+      border: none;
+      background: none;
+      padding: 0;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      touch-action: none;
+    }
+    .pick:hover { background: rgba(0, 0, 0, .05); }
+    .pick img { max-width: 100%; max-height: 100%; }
+    .sep { width: 2px; height: 46px; background: #dfe3e8; border-radius: 1px; flex: 0 0 auto; }
+    .pick, .tool { flex: 0 0 auto; }
+    @media (max-width: 620px) {
+      .pick { width: 64px; height: 60px; }
+      #bar { gap: 6px; padding: 8px 10px; }
+    }
+    .tool {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      border: 3px solid var(--line);
+      background: #fff;
+      color: var(--line);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+      touch-action: none;
+    }
+    .tool:active { background: #f4efe8; }
+    .tool svg { display: block; }
+
+    /* どうぐばこを しまう つまみ */
+    #toggle {
+      position: fixed;
+      right: max(14px, env(safe-area-inset-right));
+      bottom: max(14px, env(safe-area-inset-bottom));
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      border: 3px solid var(--line);
+      background: var(--panel);
+      color: var(--line);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      z-index: 5;
+      touch-action: none;
+    }
+    #toggle svg { display: block; transition: transform .28s ease; }
+    body.hidden-bar #toggle svg { transform: rotate(180deg); }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <div id="bar">
+    <button class="pick" data-kind="sheep"  aria-label="ひつじ" title="ひつじ"><img src="sheep.png"  alt="ひつじ"></button>
+    <button class="pick" data-kind="horse"  aria-label="うま"   title="うま"><img src="horse.png"  alt="うま"></button>
+    <button class="pick" data-kind="duck"   aria-label="あひる" title="あひる"><img src="duck.png"   alt="あひる"></button>
+    <button class="pick" data-kind="rabbit" aria-label="うさぎ" title="うさぎ"><img src="rabbit.png" alt="うさぎ"></button>
+    <div class="sep"></div>
+    <button id="clearBtn" class="tool" aria-label="ぜんぶ かたづける" title="ぜんぶ かたづける">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="7" x2="22" y2="7"/>
+          <path d="M10 7 V4.4 h6 V7"/>
+          <path d="M6.5 7 l1.3 15 h10.4 L19.5 7"/>
+          <line x1="11" y1="11" x2="11" y2="18"/>
+          <line x1="15" y1="11" x2="15" y2="18"/>
+        </g>
+      </svg>
+    </button>
+  </div>
+
+  <button id="toggle" aria-label="どうぐばこを しまう" title="どうぐばこを しまう" aria-expanded="true">
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <polyline points="5,9 12,16 19,9" fill="none" stroke="currentColor"
+                stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <script>
+    const KINDS = {
+      sheep:  { src: "sheep.png",  w: 228, h: 200 },
+      horse:  { src: "horse.png",  w: 230, h: 220 },
+      duck:   { src: "duck.png",   w: 134, h: 130 },
+      rabbit: { src: "rabbit.png", w: 128, h:  84 }
+    };
+    const BASE = 0.9;          // おいたときの おおきさ
+    const MIN_SCALE = 0.25;
+    const MAX_SCALE = 3.2;
+
+    const stage  = document.getElementById("stage");
+    const bar    = document.getElementById("bar");
+    const toggle = document.getElementById("toggle");
+
+    let selected = null;
+    let drag = null;
+
+    // ── どうぶつを つくる ──
+    function addAnimal(kind, x, y) {
+      const k = KINDS[kind];
+      const item = document.createElement("div");
+      item.className = "item";
+      item.dataset.kind = kind;
+      item.dataset.scale = BASE;
+      item.dataset.x = x;
+      item.dataset.y = y;
+
+      const img = document.createElement("img");
+      img.className = "pic";
+      img.src = k.src;
+      img.alt = "";
+      item.appendChild(img);
+
+      const frame = document.createElement("div");
+      frame.className = "frame";
+      item.appendChild(frame);
+
+      item.appendChild(knob("k-del",  "けす",   '<line x1="7" y1="7" x2="17" y2="17"/><line x1="17" y1="7" x2="7" y2="17"/>'));
+      item.appendChild(knob("k-copy", "ふやす", '<rect x="4.5" y="4.5" width="11" height="11" rx="2"/><rect x="9" y="9" width="11" height="11" rx="2"/>'));
+      item.appendChild(knob("k-flip", "むきを かえる",
+        '<line x1="12" y1="4" x2="12" y2="20" stroke-dasharray="3 3"/>'
+        + '<polyline points="8,9 4,12 8,15"/><polyline points="16,9 20,12 16,15"/>'));
+      item.appendChild(knob("k-size", "おおきさを かえる",
+        '<polyline points="14,5 19,5 19,10"/><polyline points="10,19 5,19 5,14"/><line x1="19" y1="5" x2="5" y2="19"/>'));
+
+      stage.appendChild(item);
+      layout(item);
+      return item;
+    }
+
+    function knob(cls, label, inner) {
+      const b = document.createElement("button");
+      b.className = "knob " + cls;
+      b.setAttribute("aria-label", label);
+      b.title = label;
+      b.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">'
+        + '<g fill="none" stroke="currentColor" stroke-width="2.6" '
+        + 'stroke-linecap="round" stroke-linejoin="round">' + inner + '</g></svg>';
+      return b;
+    }
+
+    function layout(item) {
+      const k = KINDS[item.dataset.kind];
+      const s = Number(item.dataset.scale);
+      item.style.width  = k.w * s + "px";
+      item.style.height = k.h * s + "px";
+      item.style.left = item.dataset.x + "px";
+      item.style.top  = item.dataset.y + "px";
+    }
+
+    function select(item) {
+      if (selected === item) return;
+      if (selected) selected.classList.remove("sel");
+      selected = item;
+      if (item) {
+        item.classList.add("sel");
+        stage.appendChild(item);        // えらんだ ものを いちばん まえに
+      }
+    }
+
+    function center(item) {
+      return { x: Number(item.dataset.x), y: Number(item.dataset.y) };
+    }
+
+    // ── ポインタ ──
+    function pt(ev) { return { x: ev.clientX, y: ev.clientY }; }
+
+    stage.addEventListener("pointerdown", (ev) => {
+      const knobEl = ev.target.closest(".knob");
+      const item = ev.target.closest(".item");
+
+      if (knobEl && item) {
+        ev.preventDefault();
+        stage.setPointerCapture(ev.pointerId);
+        if (knobEl.classList.contains("k-del")) {
+          item.remove();
+          if (selected === item) selected = null;
+        } else if (knobEl.classList.contains("k-copy")) {
+          const cx = Number(item.dataset.x) + 36, cy = Number(item.dataset.y) + 36;
+          const copy = addAnimal(item.dataset.kind, cx, cy);
+          copy.dataset.scale = item.dataset.scale;
+          if (item.classList.contains("flip")) copy.classList.add("flip");
+          layout(copy);
+          select(copy);
+          drag = { type: "move", item: copy, dx: cx - ev.clientX, dy: cy - ev.clientY };
+        } else if (knobEl.classList.contains("k-flip")) {
+          item.classList.toggle("flip");
+        } else if (knobEl.classList.contains("k-size")) {
+          const c = center(item);
+          drag = { type: "size", item,
+                   r0: Math.hypot(ev.clientX - c.x, ev.clientY - c.y) || 1,
+                   s0: Number(item.dataset.scale), c };
+        }
+        return;
+      }
+
+      if (item) {
+        ev.preventDefault();
+        stage.setPointerCapture(ev.pointerId);
+        select(item);
+        drag = { type: "move", item,
+                 dx: Number(item.dataset.x) - ev.clientX,
+                 dy: Number(item.dataset.y) - ev.clientY };
+        return;
+      }
+
+      select(null);      // なにも ない ところ
+    });
+
+    stage.addEventListener("pointermove", (ev) => {
+      if (!drag) return;
+      if (drag.type === "move") {
+        drag.item.dataset.x = ev.clientX + drag.dx;
+        drag.item.dataset.y = ev.clientY + drag.dy;
+        layout(drag.item);
+      } else if (drag.type === "size") {
+        const r = Math.hypot(ev.clientX - drag.c.x, ev.clientY - drag.c.y);
+        const s = Math.min(MAX_SCALE, Math.max(MIN_SCALE, drag.s0 * r / drag.r0));
+        drag.item.dataset.scale = s;
+        layout(drag.item);
+      }
+    });
+
+    function endDrag(ev) {
+      drag = null;
+      if (stage.hasPointerCapture(ev.pointerId)) stage.releasePointerCapture(ev.pointerId);
+    }
+    stage.addEventListener("pointerup", endDrag);
+    stage.addEventListener("pointercancel", endDrag);
+
+    // ── どうぐばこから とりだす ──
+    for (const b of document.querySelectorAll(".pick")) {
+      b.addEventListener("pointerdown", (ev) => {
+        ev.preventDefault();
+        const item = addAnimal(b.dataset.kind, ev.clientX, ev.clientY - 70);
+        select(item);
+        drag = { type: "move", item, dx: -0, dy: -70 };
+        stage.setPointerCapture(ev.pointerId);
+      });
+    }
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      for (const el of stage.querySelectorAll(".item")) el.remove();
+      selected = null;
+    });
+
+    toggle.addEventListener("click", () => {
+      const hidden = document.body.classList.toggle("hidden-bar");
+      toggle.setAttribute("aria-expanded", String(!hidden));
+      const label = hidden ? "どうぐばこを ひらく" : "どうぐばこを しまう";
+      toggle.setAttribute("aria-label", label);
+      toggle.title = label;
+    });
+
+    window.addEventListener("keydown", (ev) => {
+      if (!selected) return;
+      if (ev.key === "Delete" || ev.key === "Backspace") {
+        selected.remove(); selected = null; ev.preventDefault();
+      } else if (ev.key === "Escape") {
+        select(null);
+      }
+    });
+  </script>
+</body>
+</html>
