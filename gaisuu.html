@@ -42,7 +42,7 @@
     }
     .board-head {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
@@ -50,17 +50,38 @@
     }
     .head-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
+    /* いちばん 上の、しらべたい 数を 書くところ */
+    .target {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 22px;
+    }
+    #targetBox, #quizNumBox { border-color: #8bc34a; }
+    #targetBox:hover { background: #f5faee; }
+    #targetBox.editing { box-shadow: 0 0 0 4px #dcedc8; }
+    /* しらべたい数が 入ったら、こたえの 欄は あかく なって 入力を まつ */
+    #quizAnsBox { border-color: #e53935; }
+    #quizAnsBox:hover { background: #fdf3f2; }
+    #quizAnsBox.editing { box-shadow: 0 0 0 4px #ffcdd2; }
+    /* からっぽの あいだは ほかの 欄と おなじ グレーの 点線 */
+    #targetBox.empty, #quizNumBox.empty { border-color: #cfd8e3; }
+    #quizAnsBox:disabled { border-color: #cfd8e3; }
+
     /* 子どもが じぶんで しきと こたえを 書くところ（カードの そと・上のよはく） */
     .quiz {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;   /* まんなかを 画面の 中心に そろえる */
       align-items: center;
-      justify-content: center;
       gap: 16px;
       margin-bottom: 42px;
       font-size: 26px;
       font-weight: 800;
       color: var(--text);
     }
+    .quiz-core { display: flex; align-items: center; justify-content: center; gap: 16px; }
+    .quiz-side { display: flex; align-items: center; gap: 10px; }
+    .quiz-side--l { justify-content: flex-end; }
+    .quiz-side--r { justify-content: flex-start; }
     .quiz .arrow { font-size: 30px; color: #52606d; }
     .quiz rt { font-size: .42em; font-weight: 700; color: #6b7280; }
     .quiz-box {
@@ -83,6 +104,9 @@
     .quiz-box.empty::after { content: "\00a0"; }
     .quiz-box:hover { background: #f4f7fb; }
     .quiz-box.editing { box-shadow: 0 0 0 4px #e3e8ee; }
+    .quiz-box.mirror { cursor: default; }
+    .quiz-box.mirror:hover { background: #fff; }
+    .quiz-box:disabled { cursor: default; opacity: .5; }
     /* まるつけ */
     .judge-btn {
       display: inline-flex;
@@ -117,6 +141,8 @@
       transition: background .15s, color .15s;
       -webkit-tap-highlight-color: transparent;
     }
+    .tool-btn--icon { display: inline-flex; align-items: center; padding: 8px 12px; }
+    .tool-btn--icon svg { display: block; }
     .tool-btn:hover { background: #e3f2fd; }
     .tool-btn[aria-pressed="true"] {
       background: var(--blue-dark);
@@ -173,8 +199,8 @@
     /* 数直線の始点・終点のうえに置く入力ボックス（めもりの数より一段うえの行） */
     .axis-box {
       position: absolute;
-      bottom: 63%;
-      transform: translateX(-50%);
+      top: 37%;                       /* JS が 数直線の 高さに あわせて 出しなおす */
+      transform: translate(-50%, -100%);
       min-width: clamp(86px, 14%, 158px);
       padding: 6px 12px 7px;
       font-family: inherit;
@@ -314,20 +340,21 @@
   </style>
 </head>
 <body>
+  <div class="target">
+    <button id="targetBox" class="quiz-box empty" aria-label="しらべたい数"></button>
+  </div>
+
   <div class="quiz">
-    <button id="quizNumBox" class="quiz-box empty" aria-label="もとの数"></button>
-    <button id="candBtn" class="judge-btn" aria-label="こうほから えらぶ" title="こうほから えらぶ" disabled>
-      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
-        <g stroke="currentColor" stroke-width="3.4" stroke-linecap="round">
-          <line x1="5" y1="7"  x2="25" y2="7"/>
-          <line x1="5" y1="15" x2="21" y2="15"/>
-          <line x1="5" y1="23" x2="17" y2="23"/>
-        </g>
-      </svg>
-    </button>
-    <span class="arrow" aria-hidden="true">→</span>
-    <span><ruby>約<rt>やく</rt></ruby></span>
-    <button id="quizAnsBox" class="quiz-box empty" aria-label="約の数"></button>
+    <div class="quiz-side quiz-side--l"></div>
+
+    <div class="quiz-core">
+      <button id="quizNumBox" class="quiz-box empty mirror" aria-label="もとの数" tabindex="-1"></button>
+      <span class="arrow" aria-hidden="true">→</span>
+      <span><ruby>約<rt>やく</rt></ruby></span>
+      <button id="quizAnsBox" class="quiz-box empty" aria-label="約の数"></button>
+    </div>
+
+    <div class="quiz-side quiz-side--r">
     <span id="judgeMark" class="judge-mark" aria-live="polite"></span>
     <button id="judgeBtn" class="judge-btn" aria-label="まるつけ" title="まるつけ" disabled>
       <svg width="32" height="30" viewBox="0 0 32 30" aria-hidden="true">
@@ -335,12 +362,32 @@
                   stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
+    </div>
   </div>
 
   <main class="board">
     <div class="board-head">
+      <button id="candBtn" class="tool-btn tool-btn--icon" aria-label="こうほから えらぶ" title="こうほから えらぶ" disabled>
+        <svg width="30" height="26" viewBox="0 0 30 26" aria-hidden="true">
+        <g stroke="currentColor" stroke-width="3.4" stroke-linecap="round">
+          <line x1="4" y1="5"  x2="26" y2="5"/>
+          <line x1="4" y1="13" x2="22" y2="13"/>
+          <line x1="4" y1="21" x2="18" y2="21"/>
+        </g>
+        </svg>
+      </button>
       <div class="head-tools">
-        <div class="seg" role="group" aria-label="数直線の はば">
+        <div class="seg" role="group" aria-label="めもりの せってい">
+          <button id="tickBtn" class="seg-btn" aria-pressed="false"
+                  aria-label="あいだの めもりを けす" title="あいだの めもりを けす">
+            <svg width="54" height="26" viewBox="0 0 54 26" aria-hidden="true">
+              <line x1="3" y1="15" x2="51" y2="15" stroke="currentColor" stroke-width="2"/>
+              <g stroke="currentColor" stroke-width="3.2" stroke-linecap="round">
+                <line x1="9" y1="6" x2="9" y2="24"/>
+                <line x1="45" y1="6" x2="45" y2="24"/>
+              </g>
+            </svg>
+          </button>
           <button class="seg-btn" data-div="10" aria-pressed="true"
                   aria-label="おおきい めもり 2つ" title="おおきい めもり 2つ">
             <svg width="54" height="26" viewBox="0 0 54 26" aria-hidden="true">
@@ -375,15 +422,17 @@
           </button>
         </div>
         <button id="clearBtn" class="tool-btn" disabled>▲を けす</button>
-        <button id="numBtn" class="tool-btn" aria-pressed="false">数を ひょうじ</button>
       </div>
     </div>
     <div class="stage">
       <svg id="svg" viewBox="0 0 1000 260" aria-label="がいすうの数直線">
+        <g id="links"></g>
         <g id="bands"></g>
         <g id="ticks"></g>
         <g id="tickLabels"></g>
         <g id="marker"></g>
+        <g id="sel"></g>
+        <g id="zoomG"></g>
       </svg>
       <button id="startBox" class="axis-box empty" aria-label="はじめの数"></button>
       <button id="midBox" class="axis-box empty" aria-label="まんなかの数" style="display:none"></button>
@@ -447,24 +496,27 @@
     const STEPS = [10, 100, 1000, 10000, 100000];
     const MAX_VALUE = 1000000;
     const MAX_DIGITS = 7;
+    const TARGET_SNAP = 5;    // しらべたい数への すいつき（viewBox の はば）
 
     const state = {
       start: null,       // まだ有効な数が入っていなければ null
       mid: null,         // めもり21のときの まんなかの数
       end: null,
       marker: null,      // ▲がさす数。null なら未配置
+      zooms: [],         // 拡大した数直線。[{start, end, marker}] 上から順に
+      tickSel: null,     // えらんだ めもり {level, i, j}。level -1 は いちばん上の線
+      showTicks: true,   // 始点と終点の あいだの めもりの 数
       divisions: 10,     // 10分割（めもり11こ）／20分割（めもり21こ）
-      showNumbers: false,
       judged: null,      // まるつけの けっか。true / false / null（まだ）
       // ボックスに見えている文字。これが入力の実体
-      text: { start: "", mid: "", end: "", quizNum: "", quizAns: "" },
+      text: { start: "", mid: "", end: "", quizNum: "", quizAns: "", target: "" },
       editing: null      // ボックスの名まえ／null
     };
 
     // 数直線のうえの、チェックのたいしょうになるボックス
     function fields() { return state.divisions === 20 ? ["start", "mid", "end"] : ["start", "end"]; }
     // 子どもが じゆうに 書くところ（チェックしない）
-    const QUIZ_FIELDS = ["quizNum", "quizAns"];
+    const QUIZ_FIELDS = ["quizNum", "quizAns", "target"];
     const ALL_FIELDS = ["start", "mid", "end", ...QUIZ_FIELDS];
 
     const svg      = document.getElementById("svg");
@@ -472,14 +524,18 @@
     const ticksG   = document.getElementById("ticks");
     const labelsG  = document.getElementById("tickLabels");
     const markerG  = document.getElementById("marker");
-    const numBtn   = document.getElementById("numBtn");
+    const selG     = document.getElementById("sel");
+    const linksG   = document.getElementById("links");
+    const zoomG    = document.getElementById("zoomG");
     const clearBtn = document.getElementById("clearBtn");
+    const tickBtn  = document.getElementById("tickBtn");
     const boxes    = {
       start: document.getElementById("startBox"),
       mid:   document.getElementById("midBox"),
       end:   document.getElementById("endBox"),
       quizNum: document.getElementById("quizNumBox"),
-      quizAns: document.getElementById("quizAnsBox")
+      quizAns: document.getElementById("quizAnsBox"),
+      target:  document.getElementById("targetBox")
     };
     const candBtn   = document.getElementById("candBtn");
     const candHold  = document.getElementById("cand-holder");
@@ -501,18 +557,43 @@
     }
 
     function hasRange() { return state.start !== null && state.end !== null; }
+    function centerValue() { return (state.start + state.end) / 2; }
     function span() { return state.end - state.start; }
     function valueToX(v) { return START_X + (v - state.start) / span() * SPAN_PX; }
-    function xToValue(x) {
-      const v = state.start + (x - START_X) / SPAN_PX * span();
-      return Math.min(state.end, Math.max(state.start, Math.round(v)));
+    // はんいの なかに ある「しらべたい数」
+    function targetIn(s, e) {
+      const raw = state.text.target;
+      if (raw === "") return null;
+      const v = Number(raw);
+      if (!Number.isInteger(v) || v < s || v > e) return null;
+      return v;
+    }
+    function targetValue() { return hasRange() ? targetIn(state.start, state.end) : null; }
+
+    // どの数直線でも つかえる 値⇔座標
+    function xOf(v, s, e) { return START_X + (v - s) / (e - s) * SPAN_PX; }
+    function vOf(x, s, e) {
+      const v = s + (x - START_X) / SPAN_PX * (e - s);
+      const t = targetIn(s, e);
+      if (t !== null && Math.abs(xOf(t, s, e) - x) <= TARGET_SNAP) return t;
+      return Math.min(e, Math.max(s, Math.round(v)));
+    }
+    function fsFor(endVal, div) {
+      const digits = String(endVal).length;
+      const avail = SPAN_PX / div - 6;
+      return Math.max(9, Math.min(23, Math.floor(avail / (digits * 0.6))));
+    }
+    const LEVEL_H = 260;                       // 数直線 1本ぶんの 高さ
+    function totalH() { return LEVEL_H * (1 + state.zooms.length); }
+    function svgPt(ev) {
+      const r = svg.getBoundingClientRect();
+      return { x: (ev.clientX - r.left) * (1000 / r.width),
+               y: (ev.clientY - r.top) * (totalH() / r.height) };
     }
 
     // めもりの数が横に並びきるよう、けた数にあわせて字を小さくする
     function tickFontSize() {
-      const digits = hasRange() ? String(state.end).length : 4;
-      const avail = SPAN_PX / state.divisions - 6;   // となりのめもりまでの すきま
-      return Math.max(9, Math.min(23, Math.floor(avail / (digits * 0.6))));
+      return fsFor(hasRange() ? state.end : 1000, state.divisions);
     }
 
     // ── めもり・線・めもりの数（始点／終点がかわったときだけ） ──
@@ -537,6 +618,9 @@
         // ボックスがのっているめもり（はじめ・まんなか・おわり）は大きく
         const isEdge  = i === 0 || i === div || (div === 20 && i === 10);
 
+        // 「あいだなし」のときは、ボックスがのっている めもりだけ のこす
+        if (!state.showTicks && !isEdge) continue;
+
         const half = isEdge ? 24 : 13;
         ticksG.appendChild(el("line", {
           x1: x, y1: LINE_Y - half, x2: x, y2: LINE_Y + half,
@@ -559,8 +643,8 @@
         labelsG.appendChild(label);
       }
 
-      labelsG.style.display = state.showNumbers ? "" : "none";
       renderMarker();
+      drawSel(selG, -1);
     }
 
     // ── ▲・ハイライト・▲の数（ドラッグ中はここだけ） ──
@@ -617,23 +701,122 @@
         fill: "transparent", class: "grabzone"
       }));
 
-      if (!state.showNumbers) return;
-
       const text = String(state.marker);
       const w = 30 + text.length * 15;
       const bx = Math.min(END_X + 40 - w, Math.max(START_X - 40, mx - w / 2));
       const by = top + TRI_H + 8;
 
+      const onTarget = state.marker === targetValue();
       markerG.appendChild(el("rect", {
         x: bx, y: by, width: w, height: 40, rx: 10,
-        fill: "#fff", stroke: "#e57373", "stroke-width": 2.5
+        fill: "#fff", stroke: onTarget ? "#8bc34a" : "#e57373",
+        "stroke-width": onTarget ? 3.5 : 2.5
       }));
       const t = el("text", {
         x: bx + w / 2, y: by + 28,
-        "text-anchor": "middle", "font-size": 23, "font-weight": 900, fill: "#c96060"
+        "text-anchor": "middle", "font-size": 23, "font-weight": 900,
+        fill: onTarget ? "#5f8f2e" : "#c96060"
       });
       t.textContent = text;
       markerG.appendChild(t);
+    }
+
+    // ── めもりを えらんで 拡大する ──
+    const SEL_C = "#7e57c2";
+    const ZOOM_R = 21;
+
+    function lineOf(level) {
+      if (level === -1) return { s: state.start, e: state.end, div: state.divisions };
+      const z = state.zooms[level];
+      return { s: z.start, e: z.end, div: 10 };
+    }
+
+    // めもりを えらべるのは 水平線より 上だけ。▲は 線より 下なので ぶつからない
+    function tickHit(p, div) {
+      if (p.y < LINE_Y - 30 || p.y > LINE_Y) return null;
+      const gap = SPAN_PX / div;
+      for (let i = 0; i <= div; i++) {
+        if (Math.abs(p.x - (START_X + i * gap)) <= 13) return i;
+      }
+      return null;
+    }
+
+    function pickTick(level, i) {
+      const sel = state.tickSel;
+      if (sel && sel.level === level && sel.j === null) {
+        if (sel.i === i) { state.tickSel = null; return; }
+        if (Math.abs(sel.i - i) === 1) {
+          state.tickSel = { level, i: Math.min(sel.i, i), j: Math.max(sel.i, i) };
+          return;
+        }
+      }
+      state.tickSel = { level, i, j: null };
+    }
+
+    // 拡大できるのは となりどうしで、はばが 10いじょうの とき
+    function zoomable(sel) {
+      if (!sel || sel.j === null) return null;
+      const { s, e, div } = lineOf(sel.level);
+      const step = (e - s) / div;
+      if (step < 10) return null;
+      return { start: s + sel.i * step, end: s + sel.j * step, midX: START_X + (sel.i + sel.j) / 2 * (SPAN_PX / div) };
+    }
+
+    function zoomBtnHit(p, level) {
+      const sel = state.tickSel;
+      if (!sel || sel.level !== level) return false;
+      const z = zoomable(sel);
+      if (!z) return false;
+      return Math.hypot(p.x - z.midX, p.y - (LINE_Y - 30)) <= ZOOM_R + 4;
+    }
+
+    function drawSel(g, level) {
+      g.textContent = "";
+      const sel = state.tickSel;
+      if (!sel || sel.level !== level) return;
+      const { div } = lineOf(level);
+      const gap = SPAN_PX / div;
+      const xs = [sel.i, sel.j].filter((v) => v !== null).map((i) => START_X + i * gap);
+
+      if (xs.length === 2) {
+        g.appendChild(el("rect", {
+          x: Math.min(...xs), y: LINE_Y - 26, width: Math.abs(xs[1] - xs[0]), height: 52,
+          fill: SEL_C, "fill-opacity": .14, rx: 6
+        }));
+      }
+      for (const x of xs) {
+        g.appendChild(el("line", {
+          x1: x, y1: LINE_Y - 30, x2: x, y2: LINE_Y + 30,
+          stroke: SEL_C, "stroke-width": 6, "stroke-linecap": "round"
+        }));
+      }
+
+      const z = zoomable(sel);
+      if (!z) return;
+      const bx = z.midX, by = LINE_Y - 30;
+      g.appendChild(el("circle", {
+        cx: bx, cy: by, r: ZOOM_R, fill: "#fff", stroke: SEL_C, "stroke-width": 3
+      }));
+      g.appendChild(el("circle", {
+        cx: bx - 2, cy: by - 2, r: 7.5, fill: "none", stroke: SEL_C, "stroke-width": 2.6
+      }));
+      g.appendChild(el("line", {
+        x1: bx + 3.5, y1: by + 3.5, x2: bx + 9, y2: by + 9,
+        stroke: SEL_C, "stroke-width": 3, "stroke-linecap": "round"
+      }));
+      for (const [x1, y1, x2, y2] of [[bx - 5.5, by - 2, bx + 1.5, by - 2], [bx - 2, by - 5.5, bx - 2, by + 1.5]]) {
+        g.appendChild(el("line", { x1, y1, x2, y2, stroke: SEL_C, "stroke-width": 2.4, "stroke-linecap": "round" }));
+      }
+    }
+
+    function doZoom(level) {
+      const z = zoomable(state.tickSel);
+      if (!z) return;
+      state.zooms = state.zooms.slice(0, level + 1);
+      state.zooms.push({ start: z.start, end: z.end, marker: (z.start + z.end) / 2 });
+      state.tickSel = null;
+      drawSel(selG, -1);
+      renderZooms();
     }
 
     // ── 入力チェック ──
@@ -641,7 +824,8 @@
     const FIELD_NAME = { start: "はじめ", mid: "まんなか", end: "おわり" };
     const PAD_TITLE = {
       start: "はじめの 数", mid: "まんなかの 数", end: "おわりの 数",
-      quizNum: "もとの 数", quizAns: "<ruby>約<rt>やく</rt></ruby>の 数"
+      quizNum: "もとの 数", quizAns: "<ruby>約<rt>やく</rt></ruby>の 数",
+      target: "しらべたい 数"
     };
 
     function check() {
@@ -717,8 +901,11 @@
       state.start = c.val.start;
       state.end = c.val.end;
       state.mid = state.divisions === 20 ? c.val.mid : null;
-      state.marker = null;   // はんいがかわったので▲はいったん消す
+      state.marker = centerValue();   // はんいが きまったら まんなかに ▲を おく
+      state.zooms = [];
+      state.tickSel = null;
       renderAll();
+      renderZooms();
     }
 
     // ── こうほ（もとの数から、数直線に入れられる数の くみあわせを つくる） ──
@@ -784,7 +971,16 @@
 
     // ── まるつけ ──
     // 何のくらいで四捨五入するかは、となりあうボックスの さ（＝目もりの まとまり）できまる
-    function roundStep() { return (state.end - state.start) / (state.divisions / 10); }
+    // どの くらいで 四捨五入しても、正しければ ○。数直線には よらない
+    function correctSet(num) {
+      const out = new Set();
+      for (let step = 10; step <= 1e8; step *= 10) {
+        const r = Math.floor(num / step + 0.5) * step;
+        if (r > 0) out.add(r);
+        if (step > num) break;
+      }
+      return out;
+    }
 
     function canJudge() {
       return hasRange() && state.text.quizNum !== "" && state.text.quizAns !== ""
@@ -810,15 +1006,15 @@
 
     judgeBtn.addEventListener("click", () => {
       if (!canJudge()) return;
-      const step = roundStep();
       const num = Number(state.text.quizNum);
-      const correct = Math.floor(num / step + 0.5) * step;
-      state.judged = Number(state.text.quizAns) === correct;
+      state.judged = correctSet(num).has(Number(state.text.quizAns));
       renderJudge();
     });
 
     // ── 数の入力（がめんのテンキー／キーボード） ──
     function refreshText() {
+      state.text.quizNum = state.text.target;      // もとの数は しらべたい数の うつし
+      boxes.quizAns.disabled = state.text.target === "";
       for (const f of ALL_FIELDS) {
         boxes[f].textContent = state.text[f];
         boxes[f].classList.toggle("empty", state.text[f] === "");
@@ -864,6 +1060,7 @@
     }
 
     for (const f of ALL_FIELDS) {
+      if (f === "quizNum") continue;              // うつしなので ひらかない
       boxes[f].addEventListener("click", () => openPad(f));
     }
 
@@ -890,47 +1087,218 @@
       ev.preventDefault();
     });
 
-    // ── ポインタ操作 ──
-    function pointerToValue(ev) {
-      const rect = svg.getBoundingClientRect();
-      const x = (ev.clientX - rect.left) * (1000 / rect.width);
-      return xToValue(x);
+    // ── 拡大した数直線（おなじ SVG のなかに つみあげる）──
+    const zoomEls = [];
+
+    function layoutBoxes() {
+      const pct = 96.2 / totalH() * 100;       // はしの ボックスの 下ばしを y=96.2 に そろえる
+      for (const f of ["start", "mid", "end"]) boxes[f].style.top = pct + "%";
     }
 
-    let dragging = false;
+    function renderZooms() {
+      svg.setAttribute("viewBox", `0 0 1000 ${totalH()}`);
+      layoutBoxes();
+      zoomG.textContent = "";
+      zoomEls.length = 0;
+      state.zooms.forEach((z, k) => {
+        const wrap = el("g", { transform: `translate(0, ${LEVEL_H * (k + 1)})` });
+        const g = {};
+        for (const name of ["bands", "ticks", "labels", "marker", "sel", "ui"]) {
+          g[name] = el("g", {});
+          wrap.appendChild(g[name]);
+        }
+        zoomG.appendChild(wrap);
+        zoomEls.push({ g });
+        drawZoom(k);
+      });
+      drawLinks();
+    }
+
+    // もとの めもりと、拡大した線の はしを うすい点線で つなぐ
+    function drawLinks() {
+      linksG.textContent = "";
+      state.zooms.forEach((z, k) => {
+        const par = lineOf(k - 1);
+        if (par.s === null || par.e === null) return;
+        const y1 = LEVEL_H * k + LINE_Y;
+        const y2 = LEVEL_H * (k + 1) + LINE_Y;
+        for (const [v, cx] of [[z.start, START_X], [z.end, END_X]]) {
+          linksG.appendChild(el("line", {
+            x1: xOf(v, par.s, par.e), y1, x2: cx, y2,
+            stroke: "#9aa5b1", "stroke-width": 2,
+            "stroke-dasharray": "6 8", opacity: .6
+          }));
+        }
+      });
+    }
+
+    function drawZoom(k) {
+      const z = state.zooms[k];
+      const { g } = zoomEls[k];
+      const s = z.start, e = z.end, div = 10;
+      const gap = SPAN_PX / div, step = (e - s) / div;
+      for (const name of ["bands", "ticks", "labels", "marker", "ui"]) g[name].textContent = "";
+
+      // はしの 数（かえられないので わくだけ）
+      for (const [v, x, col] of [[s, START_X, "#1e88e5"], [e, END_X, "#ef8b25"]]) {
+        const txt = String(v);
+        const w = Math.max(86, 34 + txt.length * 16);
+        g.ui.appendChild(el("rect", {
+          x: x - w / 2, y: 55, width: w, height: 42, rx: 12,
+          fill: "#fff", stroke: col, "stroke-width": 3
+        }));
+        const t = el("text", {
+          x, y: 84, "text-anchor": "middle", "font-size": 23, "font-weight": 800, fill: "#1f2933"
+        });
+        t.textContent = txt;
+        g.ui.appendChild(t);
+      }
+
+      g.ticks.appendChild(el("line", {
+        x1: LINE_X0, y1: LINE_Y, x2: LINE_X1, y2: LINE_Y, stroke: "#1f2933", "stroke-width": 3
+      }));
+      const fs = fsFor(e, div);
+      for (let i = -1; i <= div + 1; i++) {
+        const x = START_X + i * gap;
+        const inRange = i >= 0 && i <= div;
+        const isEdge = i === 0 || i === div;
+        if (!state.showTicks && !isEdge) continue;
+        g.ticks.appendChild(el("line", {
+          x1: x, y1: LINE_Y - (isEdge ? 24 : 13), x2: x, y2: LINE_Y + (isEdge ? 24 : 13),
+          stroke: inRange ? "#1f2933" : "#b0bac4",
+          "stroke-width": isEdge ? 4 : 2.5, "stroke-linecap": "round"
+        }));
+        if (!inRange || isEdge) continue;
+        const label = el("text", {
+          x, y: LABEL_Y, "text-anchor": "middle",
+          "font-size": fs, "font-weight": 700, fill: "#52606d"
+        });
+        label.textContent = String(s + i * step);
+        g.labels.appendChild(label);
+      }
+
+      const mx = xOf(z.marker, s, e);
+      g.bands.appendChild(el("rect", {
+        x: START_X, y: BAND_TOP, width: Math.max(0, mx - START_X), height: BAND_H,
+        fill: "#64b5f6", "fill-opacity": 0.32
+      }));
+      g.bands.appendChild(el("rect", {
+        x: mx, y: BAND_TOP, width: Math.max(0, END_X - mx), height: BAND_H,
+        fill: "#ffb74d", "fill-opacity": 0.45
+      }));
+      g.bands.appendChild(el("line", {
+        x1: mx, y1: BAND_TOP, x2: mx, y2: LINE_Y, stroke: "#e57373", "stroke-width": 2.5
+      }));
+
+      const top = LINE_Y + TRI_GAP;
+      g.marker.appendChild(el("polygon", {
+        points: `${mx},${top} ${mx - TRI_SIDE / 2},${top + TRI_H} ${mx + TRI_SIDE / 2},${top + TRI_H}`,
+        fill: "#e57373", stroke: "#cf6161", "stroke-width": 1.5, "stroke-linejoin": "round"
+      }));
+      const txt = String(z.marker);
+      const w = 30 + txt.length * 15;
+      const bx = Math.min(END_X + 40 - w, Math.max(START_X - 40, mx - w / 2));
+      const by = top + TRI_H + 8;
+      const on = z.marker === targetIn(s, e);
+      g.marker.appendChild(el("rect", {
+        x: bx, y: by, width: w, height: 40, rx: 10,
+        fill: "#fff", stroke: on ? "#8bc34a" : "#e57373", "stroke-width": on ? 3.5 : 2.5
+      }));
+      const mt = el("text", {
+        x: bx + w / 2, y: by + 28, "text-anchor": "middle",
+        "font-size": 23, "font-weight": 900, fill: on ? "#5f8f2e" : "#c96060"
+      });
+      mt.textContent = txt;
+      g.marker.appendChild(mt);
+
+      g.ui.appendChild(el("circle", {
+        cx: 962, cy: 30, r: 16, fill: "#fff", stroke: "#b0bac4", "stroke-width": 2.5
+      }));
+      for (const [a, b2] of [[-6, -6], [6, -6]]) {
+        g.ui.appendChild(el("line", {
+          x1: 962 + a, y1: 30 + b2, x2: 962 - a, y2: 30 - b2,
+          stroke: "#6b7280", "stroke-width": 2.6, "stroke-linecap": "round"
+        }));
+      }
+
+      drawSel(g.sel, k);
+    }
+
+    function refreshSel() {
+      drawSel(selG, -1);
+      zoomEls.forEach((z, k) => drawSel(z.g.sel, k));
+    }
+
+    // ── ポインタ操作 ──
+    // どの 数直線を さわったか（-1 = いちばん上）
+    function levelAt(p) { return Math.floor(p.y / LEVEL_H) - 1; }
+    function localPt(p, level) { return { x: p.x, y: p.y - LEVEL_H * (level + 1) }; }
+
+    let dragging = null;      // さわっている 数直線の level
 
     svg.addEventListener("pointerdown", (ev) => {
       closePad();
       if (!hasRange()) return;
-      dragging = true;
+      const g = svgPt(ev);
+      const level = levelAt(g);
+      if (level >= state.zooms.length) return;
+      const p = localPt(g, level);
+
+      if (level >= 0 && Math.hypot(p.x - 962, p.y - 30) <= 20) {   // とじる
+        state.zooms = state.zooms.slice(0, level);
+        if (state.tickSel && state.tickSel.level >= level) state.tickSel = null;
+        renderZooms();
+        drawSel(selG, -1);
+        return;
+      }
+      if (zoomBtnHit(p, level)) { doZoom(level); return; }
+      const ti = tickHit(p, lineOf(level).div);
+      if (ti !== null) { pickTick(level, ti); refreshSel(); return; }
+
+      dragging = level;
       svg.classList.add("dragging");
       svg.setPointerCapture(ev.pointerId);
-      state.marker = pointerToValue(ev);
-      renderMarker();
+      setMarker(level, p.x);
     });
 
     svg.addEventListener("pointermove", (ev) => {
-      if (!dragging) return;
-      const v = pointerToValue(ev);
-      if (v === state.marker) return;
-      state.marker = v;
-      renderMarker();
+      if (dragging === null) return;
+      const g = svgPt(ev);
+      setMarker(dragging, localPt(g, dragging).x);
     });
 
+    function setMarker(level, x) {
+      const { s, e } = lineOf(level);
+      const v = vOf(x, s, e);
+      if (level < 0) {
+        if (v === state.marker) return;
+        state.marker = v;
+        renderMarker();
+        drawSel(selG, -1);
+      } else {
+        if (v === state.zooms[level].marker) return;
+        state.zooms[level].marker = v;
+        drawZoom(level);
+      }
+    }
+
     function endDrag(ev) {
-      if (!dragging) return;
-      dragging = false;
+      if (dragging === null) return;
+      dragging = null;
       svg.classList.remove("dragging");
       if (svg.hasPointerCapture(ev.pointerId)) svg.releasePointerCapture(ev.pointerId);
     }
     svg.addEventListener("pointerup", endDrag);
     svg.addEventListener("pointercancel", endDrag);
 
-    numBtn.addEventListener("click", () => {
-      state.showNumbers = !state.showNumbers;
-      numBtn.setAttribute("aria-pressed", String(state.showNumbers));
-      labelsG.style.display = state.showNumbers ? "" : "none";
-      renderMarker();
+    tickBtn.addEventListener("click", () => {
+      state.showTicks = !state.showTicks;
+      tickBtn.setAttribute("aria-pressed", String(!state.showTicks));
+      const label = state.showTicks ? "あいだの めもりを けす" : "あいだの めもりを だす";
+      tickBtn.setAttribute("aria-label", label);
+      tickBtn.title = label;
+      renderAll();
+      state.zooms.forEach((_, k) => drawZoom(k));
     });
 
     clearBtn.addEventListener("click", () => {
@@ -951,15 +1319,20 @@
         // いまの数がこの分割では つかえないなら、いったん未かくていに もどす
         if (!check().spanOk) { state.start = null; state.mid = null; state.end = null; }
         state.marker = null;
+        state.zooms = [];
+        state.tickSel = null;
         clearJudge();
         closeCand();
         refreshText();
+        if (hasRange() && state.marker === null) state.marker = centerValue();
         renderAll();
+        renderZooms();
       });
     });
 
     refreshText();
     renderAll();
+    renderZooms();
   </script>
 
 
@@ -1039,7 +1412,7 @@
     var btn = document.getElementById('help-btn');
     var HELP = {
       title: 'がいすうの つかいかた',
-      body:  '<span class="sh">【<ruby>数直線<rt>すうちょくせん</rt></ruby>を つくる】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>の <ruby>上<rt>うえ</rt></ruby>に ある <span class="bx"></span> を タップすると、テンキーが でます。<ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れたら、テンキーの そとを タップして とじます。<br><ruby>四捨五入<rt>ししゃごにゅう</rt></ruby>したい <ruby>数<rt>かず</rt></ruby>と、どの くらいで <ruby>概数<rt>がいすう</rt></ruby>に するかに <ruby>合<rt>あ</rt></ruby>わせて、ボックスの <ruby>数<rt>かず</rt></ruby>を きめます。<br>たとえば 1237 を <ruby>百<rt>ひゃく</rt></ruby>のくらいまでの <ruby>概数<rt>がいすう</rt></ruby>に するなら、1200 と 1300 に します。<br><span class="sh">【はばを かえる】</span><ruby>右上<rt>みぎうえ</rt></ruby>の 2つの ボタン（<ruby>数直線<rt>すうちょくせん</rt></ruby>の え）で、ボックスの かずを かえられます。<br>・おおきい めもり 2つ… <span class="bx b"></span><span class="bx o"></span> の 2つ<br>・おおきい めもり 3つ… まんなかにも ふえて <span class="bx b"></span><span class="bx m"></span><span class="bx o"></span> の 3つ。おなじ こまかさの まま <ruby>2倍<rt>にばい</rt></ruby>の はばが <ruby>見<rt>み</rt></ruby>られます<br><span class="sh">【▲を うごかす】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>を タップすると ▲が でます。ドラッグすると なめらかに うごきます。「▲を けす」で <ruby>消<rt>け</rt></ruby>せます。<br><span class="sh">【くらべる】</span>▲の <ruby>左<rt>ひだり</rt></ruby>の あおい ところと、<ruby>右<rt>みぎ</rt></ruby>の オレンジの ところは、▲から となりの <span class="bx"></span> までの <ruby>広<rt>ひろ</rt></ruby>さです。せまい ほうが、▲の <ruby>数<rt>かず</rt></ruby>に <ruby>近<rt>ちか</rt></ruby>い ほうです。<br><span class="sh">【<ruby>数<rt>かず</rt></ruby>を ひょうじ】</span>ボタンを おすと、めもりの <ruby>数<rt>かず</rt></ruby>と ▲の <ruby>数<rt>かず</rt></ruby>が でます。もう <ruby>一度<rt>いちど</rt></ruby> おすと きえます。<br><span class="sh">【もんだいと こたえ】</span>いちばん <ruby>上<rt>うえ</rt></ruby>の <span class="bx q"></span> → <ruby>約<rt>やく</rt></ruby> <span class="bx q"></span> に、じぶんで もんだいと こたえを <ruby>書<rt>か</rt></ruby>きます。ひだりに もとの <ruby>数<rt>かず</rt></ruby>、みぎに <ruby>約<rt>やく</rt></ruby>の <ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れます。<br>ぜんぶ うまったら、よこの チェックの ボタンが おせるように なります。おすと ◯ か ✕ が でます。'
+      body:  '<span class="sh">【<ruby>数直線<rt>すうちょくせん</rt></ruby>を つくる】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>の <ruby>上<rt>うえ</rt></ruby>に ある <span class="bx"></span> を タップすると、テンキーが でます。<ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れたら、テンキーの そとを タップして とじます。<br><ruby>四捨五入<rt>ししゃごにゅう</rt></ruby>したい <ruby>数<rt>かず</rt></ruby>と、どの くらいで <ruby>概数<rt>がいすう</rt></ruby>に するかに <ruby>合<rt>あ</rt></ruby>わせて、ボックスの <ruby>数<rt>かず</rt></ruby>を きめます。<br>たとえば 1237 を <ruby>百<rt>ひゃく</rt></ruby>のくらいまでの <ruby>概数<rt>がいすう</rt></ruby>に するなら、1200 と 1300 に します。<br><span class="sh">【はばを かえる】</span><ruby>右上<rt>みぎうえ</rt></ruby>の 2つの ボタン（<ruby>数直線<rt>すうちょくせん</rt></ruby>の え）で、ボックスの かずを かえられます。<br>・おおきい めもり 2つ… <span class="bx b"></span><span class="bx o"></span> の 2つ<br>・おおきい めもり 3つ… まんなかにも ふえて <span class="bx b"></span><span class="bx m"></span><span class="bx o"></span> の 3つ。おなじ こまかさの まま <ruby>2倍<rt>にばい</rt></ruby>の はばが <ruby>見<rt>み</rt></ruby>られます<br><span class="sh">【▲を うごかす】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>を タップすると ▲が でます。ドラッグすると なめらかに うごきます。「▲を けす」で <ruby>消<rt>け</rt></ruby>せます。<br><span class="sh">【くらべる】</span>▲の <ruby>左<rt>ひだり</rt></ruby>の あおい ところと、<ruby>右<rt>みぎ</rt></ruby>の オレンジの ところは、▲から となりの <span class="bx"></span> までの <ruby>広<rt>ひろ</rt></ruby>さです。せまい ほうが、▲の <ruby>数<rt>かず</rt></ruby>に <ruby>近<rt>ちか</rt></ruby>い ほうです。<br><span class="sh">【あいだの めもり】</span>ひだりの ボタンを おすと、はじめと おわりの あいだの めもりを けせます。はしの めもりは のこります。<br><span class="sh">【もんだいと こたえ】</span>いちばん <ruby>上<rt>うえ</rt></ruby>の <span class="bx q"></span> → <ruby>約<rt>やく</rt></ruby> <span class="bx q"></span> に、じぶんで もんだいと こたえを <ruby>書<rt>か</rt></ruby>きます。ひだりに もとの <ruby>数<rt>かず</rt></ruby>、みぎに <ruby>約<rt>やく</rt></ruby>の <ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れます。<br>ぜんぶ うまったら、よこの チェックの ボタンが おせるように なります。おすと ◯ か ✕ が でます。'
     };
 
     btn.addEventListener('click', function(){
