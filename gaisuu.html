@@ -632,14 +632,17 @@
         // 始点と終点の数は入力ボックスがしめしている
         if (!ranged || !inRange || isEdge) continue;
 
+        const v = state.start + i * step;
+        const kid = zoomChildOf(-1);
+        const dim = kid && v !== kid.start && v !== kid.end;
         const label = el("text", {
           x: x, y: LABEL_Y,
           "text-anchor": "middle",
           "font-size": fs,
           "font-weight": 700,
-          fill: "#52606d"
+          fill: dim ? "#c2cad3" : "#52606d"
         });
-        label.textContent = String(state.start + i * step);
+        label.textContent = String(v);
         labelsG.appendChild(label);
       }
 
@@ -724,6 +727,9 @@
     // ── めもりを えらんで 拡大する ──
     const SEL_C = "#7e57c2";
     const ZOOM_R = 21;
+
+    // その線を もとに 拡大した 線（あれば）
+    function zoomChildOf(level) { return state.zooms[level + 1] || null; }
 
     function lineOf(level) {
       if (level === -1) return { s: state.start, e: state.end, div: state.divisions };
@@ -815,7 +821,7 @@
       state.zooms = state.zooms.slice(0, level + 1);
       state.zooms.push({ start: z.start, end: z.end, marker: (z.start + z.end) / 2 });
       state.tickSel = null;
-      drawSel(selG, -1);
+      renderAll();
       renderZooms();
     }
 
@@ -1169,11 +1175,14 @@
           "stroke-width": isEdge ? 4 : 2.5, "stroke-linecap": "round"
         }));
         if (!inRange || isEdge) continue;
+        const v = s + i * step;
+        const kid = zoomChildOf(k);
+        const dim = kid && v !== kid.start && v !== kid.end;
         const label = el("text", {
           x, y: LABEL_Y, "text-anchor": "middle",
-          "font-size": fs, "font-weight": 700, fill: "#52606d"
+          "font-size": fs, "font-weight": 700, fill: dim ? "#c2cad3" : "#52606d"
         });
-        label.textContent = String(s + i * step);
+        label.textContent = String(v);
         g.labels.appendChild(label);
       }
 
@@ -1247,8 +1256,8 @@
       if (level >= 0 && Math.hypot(p.x - 962, p.y - 30) <= 20) {   // とじる
         state.zooms = state.zooms.slice(0, level);
         if (state.tickSel && state.tickSel.level >= level) state.tickSel = null;
+        renderAll();
         renderZooms();
-        drawSel(selG, -1);
         return;
       }
       if (zoomBtnHit(p, level)) { doZoom(level); return; }
@@ -1307,12 +1316,12 @@
     });
 
     // ── めもりの かずの きりかえ（10分割／20分割） ──
-    document.querySelectorAll(".seg-btn").forEach((btn) => {
+    document.querySelectorAll(".seg-btn[data-div]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const d = Number(btn.dataset.div);
         if (d === state.divisions) return;
         state.divisions = d;
-        document.querySelectorAll(".seg-btn").forEach((b) => {
+        document.querySelectorAll(".seg-btn[data-div]").forEach((b) => {
           b.setAttribute("aria-pressed", String(Number(b.dataset.div) === d));
         });
         boxes.mid.style.display = d === 20 ? "" : "none";
