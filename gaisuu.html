@@ -1300,12 +1300,19 @@
     svg.addEventListener("pointerup", endDrag);
     svg.addEventListener("pointercancel", endDrag);
 
-    tickBtn.addEventListener("click", () => {
-      state.showTicks = !state.showTicks;
+    // 3つのボタンは ひとつだけ えらべる（あいだなし／10分割／20分割）
+    function syncSegButtons() {
       tickBtn.setAttribute("aria-pressed", String(!state.showTicks));
-      const label = state.showTicks ? "あいだの めもりを けす" : "あいだの めもりを だす";
-      tickBtn.setAttribute("aria-label", label);
-      tickBtn.title = label;
+      document.querySelectorAll(".seg-btn[data-div]").forEach((b) => {
+        const on = state.showTicks && Number(b.dataset.div) === state.divisions;
+        b.setAttribute("aria-pressed", String(on));
+      });
+    }
+
+    tickBtn.addEventListener("click", () => {
+      if (!state.showTicks) return;
+      state.showTicks = false;
+      syncSegButtons();
       renderAll();
       state.zooms.forEach((_, k) => drawZoom(k));
     });
@@ -1319,11 +1326,17 @@
     document.querySelectorAll(".seg-btn[data-div]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const d = Number(btn.dataset.div);
-        if (d === state.divisions) return;
+        const same = d === state.divisions;
+        if (same && state.showTicks) return;
+        state.showTicks = true;
         state.divisions = d;
-        document.querySelectorAll(".seg-btn[data-div]").forEach((b) => {
-          b.setAttribute("aria-pressed", String(Number(b.dataset.div) === d));
-        });
+        syncSegButtons();
+        // 分割数が おなじなら めもりを もどすだけ。ばんめんの じょうたいは のこす
+        if (same) {
+          renderAll();
+          state.zooms.forEach((_, k) => drawZoom(k));
+          return;
+        }
         boxes.mid.style.display = d === 20 ? "" : "none";
         // いまの数がこの分割では つかえないなら、いったん未かくていに もどす
         if (!check().spanOk) { state.start = null; state.mid = null; state.end = null; }
