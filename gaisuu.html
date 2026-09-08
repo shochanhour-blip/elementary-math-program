@@ -422,6 +422,14 @@
           </button>
         </div>
         <button id="clearBtn" class="tool-btn" disabled>▲を けす</button>
+        <button id="resetBtn" class="tool-btn tool-btn--icon"
+                aria-label="さいしょから やりなおす" title="さいしょから やりなおす">
+          <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+            <path d="M13 4.6 A8.4 8.4 0 1 0 21.4 13" fill="none" stroke="currentColor"
+                  stroke-width="3" stroke-linecap="round"/>
+            <polygon points="13.6,0.9 13.6,8.3 7.2,4.6" fill="currentColor"/>
+          </svg>
+        </button>
       </div>
     </div>
     <div class="stage">
@@ -853,7 +861,17 @@
           c.spanOk = d1 === d2 && STEPS.includes(d1);
         }
       }
+      // もとの数が あるときは、その こうほの どれかと おなじでないと つかえない
+      c.candOk = c.spanOk && matchesCandidate(fields().map((f) => c.val[f]));
+      c.ready = c.spanOk && c.candOk;
       return c;
+    }
+
+    // こうほが 1つも ないとき（もとの数が まだ）は せいげんしない
+    function matchesCandidate(vals) {
+      const list = candidates();
+      if (!list.length) return true;
+      return list.some((a) => a.length === vals.length && a.every((v, i) => v === vals[i]));
     }
 
     function hintFor(which, c) {
@@ -861,7 +879,7 @@
       if (c.val[which] % 10 !== 0) return "一のくらいは 0 に してね";
       if (c.val[which] > MAX_VALUE) return "おおきすぎます";
       if (!c.ok[which]) return "この 数は つかえません";
-      if (c.spanOk) return "";
+      if (c.spanOk) return c.candOk ? "" : "もとの数が 入りません。こうほの ボタンから えらんでね";
 
       const others = fields().filter((f) => f !== which);
       const bad = others.find((f) => !c.ok[f]);
@@ -885,7 +903,7 @@
       // からっぽのうちは「まちがい」あつかいにしない
       for (const f of fields()) {
         boxes[f].classList.toggle("invalid",
-          c.raw[f] !== "" && (!c.ok[f] || (c.allFilled && !c.spanOk)));
+          c.raw[f] !== "" && (!c.ok[f] || (c.allFilled && !c.ready)));
       }
 
       if (state.editing && QUIZ_FIELDS.includes(state.editing)) {
@@ -900,7 +918,7 @@
         padHint.textContent = hint === "" ? "この 数で つくれます" : hint;
       }
 
-      if (!c.spanOk) return;
+      if (!c.ready) return;
       if (c.val.start === state.start && c.val.end === state.end
           && (state.divisions !== 20 || c.val.mid === state.mid)) return;
 
@@ -1322,6 +1340,27 @@
       renderMarker();
     });
 
+    // ── はじめの じょうたいに もどす ──
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      closePad();
+      closeCand();
+      for (const f of ALL_FIELDS) state.text[f] = "";
+      state.start = null;
+      state.mid = null;
+      state.end = null;
+      state.marker = null;
+      state.zooms = [];
+      state.tickSel = null;
+      state.showTicks = true;
+      state.divisions = 10;
+      boxes.mid.style.display = "none";
+      syncSegButtons();
+      clearJudge();
+      refreshText();
+      renderAll();
+      renderZooms();
+    });
+
     // ── めもりの かずの きりかえ（10分割／20分割） ──
     document.querySelectorAll(".seg-btn[data-div]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -1339,7 +1378,7 @@
         }
         boxes.mid.style.display = d === 20 ? "" : "none";
         // いまの数がこの分割では つかえないなら、いったん未かくていに もどす
-        if (!check().spanOk) { state.start = null; state.mid = null; state.end = null; }
+        if (!check().ready) { state.start = null; state.mid = null; state.end = null; }
         state.marker = null;
         state.zooms = [];
         state.tickSel = null;
@@ -1434,7 +1473,7 @@
     var btn = document.getElementById('help-btn');
     var HELP = {
       title: 'がいすうの つかいかた',
-      body:  '<span class="sh">【<ruby>数直線<rt>すうちょくせん</rt></ruby>を つくる】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>の <ruby>上<rt>うえ</rt></ruby>に ある <span class="bx"></span> を タップすると、テンキーが でます。<ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れたら、テンキーの そとを タップして とじます。<br><ruby>四捨五入<rt>ししゃごにゅう</rt></ruby>したい <ruby>数<rt>かず</rt></ruby>と、どの くらいで <ruby>概数<rt>がいすう</rt></ruby>に するかに <ruby>合<rt>あ</rt></ruby>わせて、ボックスの <ruby>数<rt>かず</rt></ruby>を きめます。<br>たとえば 1237 を <ruby>百<rt>ひゃく</rt></ruby>のくらいまでの <ruby>概数<rt>がいすう</rt></ruby>に するなら、1200 と 1300 に します。<br><span class="sh">【はばを かえる】</span><ruby>右上<rt>みぎうえ</rt></ruby>の 2つの ボタン（<ruby>数直線<rt>すうちょくせん</rt></ruby>の え）で、ボックスの かずを かえられます。<br>・おおきい めもり 2つ… <span class="bx b"></span><span class="bx o"></span> の 2つ<br>・おおきい めもり 3つ… まんなかにも ふえて <span class="bx b"></span><span class="bx m"></span><span class="bx o"></span> の 3つ。おなじ こまかさの まま <ruby>2倍<rt>にばい</rt></ruby>の はばが <ruby>見<rt>み</rt></ruby>られます<br><span class="sh">【▲を うごかす】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>を タップすると ▲が でます。ドラッグすると なめらかに うごきます。「▲を けす」で <ruby>消<rt>け</rt></ruby>せます。<br><span class="sh">【くらべる】</span>▲の <ruby>左<rt>ひだり</rt></ruby>の あおい ところと、<ruby>右<rt>みぎ</rt></ruby>の オレンジの ところは、▲から となりの <span class="bx"></span> までの <ruby>広<rt>ひろ</rt></ruby>さです。せまい ほうが、▲の <ruby>数<rt>かず</rt></ruby>に <ruby>近<rt>ちか</rt></ruby>い ほうです。<br><span class="sh">【あいだの めもり】</span>ひだりの ボタンを おすと、はじめと おわりの あいだの めもりを けせます。はしの めもりは のこります。<br><span class="sh">【もんだいと こたえ】</span>いちばん <ruby>上<rt>うえ</rt></ruby>の <span class="bx q"></span> → <ruby>約<rt>やく</rt></ruby> <span class="bx q"></span> に、じぶんで もんだいと こたえを <ruby>書<rt>か</rt></ruby>きます。ひだりに もとの <ruby>数<rt>かず</rt></ruby>、みぎに <ruby>約<rt>やく</rt></ruby>の <ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れます。<br>ぜんぶ うまったら、よこの チェックの ボタンが おせるように なります。おすと ◯ か ✕ が でます。'
+      body:  '<span class="sh">【<ruby>数直線<rt>すうちょくせん</rt></ruby>を つくる】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>の <ruby>上<rt>うえ</rt></ruby>に ある <span class="bx"></span> を タップすると、テンキーが でます。<ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れたら、テンキーの そとを タップして とじます。<br><ruby>四捨五入<rt>ししゃごにゅう</rt></ruby>したい <ruby>数<rt>かず</rt></ruby>と、どの くらいで <ruby>概数<rt>がいすう</rt></ruby>に するかに <ruby>合<rt>あ</rt></ruby>わせて、ボックスの <ruby>数<rt>かず</rt></ruby>を きめます。<br>たとえば 1237 を <ruby>百<rt>ひゃく</rt></ruby>のくらいまでの <ruby>概数<rt>がいすう</rt></ruby>に するなら、1200 と 1300 に します。<br><span class="sh">【はばを かえる】</span><ruby>右上<rt>みぎうえ</rt></ruby>の 2つの ボタン（<ruby>数直線<rt>すうちょくせん</rt></ruby>の え）で、ボックスの かずを かえられます。<br>・おおきい めもり 2つ… <span class="bx b"></span><span class="bx o"></span> の 2つ<br>・おおきい めもり 3つ… まんなかにも ふえて <span class="bx b"></span><span class="bx m"></span><span class="bx o"></span> の 3つ。おなじ こまかさの まま <ruby>2倍<rt>にばい</rt></ruby>の はばが <ruby>見<rt>み</rt></ruby>られます<br><span class="sh">【▲を うごかす】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>を タップすると ▲が でます。ドラッグすると なめらかに うごきます。「▲を けす」で <ruby>消<rt>け</rt></ruby>せます。<br><span class="sh">【くらべる】</span>▲の <ruby>左<rt>ひだり</rt></ruby>の あおい ところと、<ruby>右<rt>みぎ</rt></ruby>の オレンジの ところは、▲から となりの <span class="bx"></span> までの <ruby>広<rt>ひろ</rt></ruby>さです。せまい ほうが、▲の <ruby>数<rt>かず</rt></ruby>に <ruby>近<rt>ちか</rt></ruby>い ほうです。<br><span class="sh">【あいだの めもり】</span>ひだりの ボタンを おすと、はじめと おわりの あいだの めもりを けせます。はしの めもりは のこります。<br><span class="sh">【もんだいと こたえ】</span>いちばん <ruby>上<rt>うえ</rt></ruby>の <span class="bx q"></span> → <ruby>約<rt>やく</rt></ruby> <span class="bx q"></span> に、じぶんで もんだいと こたえを <ruby>書<rt>か</rt></ruby>きます。ひだりに もとの <ruby>数<rt>かず</rt></ruby>、みぎに <ruby>約<rt>やく</rt></ruby>の <ruby>数<rt>かず</rt></ruby>を <ruby>入<rt>い</rt></ruby>れます。<br>ぜんぶ うまったら、よこの チェックの ボタンが おせるように なります。おすと ◯ か ✕ が でます。<br><span class="sh">【こうほから えらぶ】</span>もとの <ruby>数<rt>かず</rt></ruby>を <ruby>書<rt>か</rt></ruby>くと、<ruby>左上<rt>ひだりうえ</rt></ruby>の ボタンから <ruby>数直線<rt>すうちょくせん</rt></ruby>の こうほが えらべます。<ruby>手<rt>て</rt></ruby>で <ruby>入<rt>い</rt></ruby>れた <ruby>数<rt>かず</rt></ruby>が どの こうほとも ちがうときは、ボックスが <ruby>赤<rt>あか</rt></ruby>く なります。<br><span class="sh">【やりなおす】</span><ruby>右上<rt>みぎうえ</rt></ruby>の ↺ の ボタンで、ぜんぶ <ruby>消<rt>け</rt></ruby>して はじめから やりなおせます。'
     };
 
     btn.addEventListener('click', function(){
