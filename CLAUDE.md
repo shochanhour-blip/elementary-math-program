@@ -21,6 +21,11 @@ JS の構文チェックだけしたいときは、インラインの `<script>`
 node -e "const s=require('fs').readFileSync('gaisuu.html','utf8');[...s.matchAll(/<script>([\s\S]*?)<\/script>/g)].forEach(m=>new Function(m[1]));console.log('OK');"
 ```
 
+**レイアウトの確認は WebKit で行う。** 実機は iPad の Safari なので、Chromium だけで見ても崩れを見逃す
+（実例：`flex-flow: column wrap` の折り返した列を WebKit は親の幅に数えず、囲みの枠が1列ぶんしかなくなる）。
+Playwright（`python3 -m playwright install webkit` 済み）の `p.webkit.launch()` で、
+ビューポート 1194×834（iPad よこ）/ 834×1194（たて）を見る。スクリプトはスクラッチに置き、リポジトリには入れない。
+
 ## 技術方針
 - ビルドツールなし、CDNなし、フレームワークなし
 - 各教材は単一HTMLファイルで完結（HTML + CSS + JS をすべて1ファイルに）
@@ -66,4 +71,5 @@ CLAUDE.md には全教材に共通する話だけを書き、個別の設計は�
 | number_tiles.html | かず タイル | |
 | polygon.html | 正多角形ドロー | |
 | gaisuu.html | がいすう（四捨五入を数直線で） | ○ |
+| ookinakazu.html | おおきな数（くらいの表とタイル・一兆まで） | ○ |
 | taikakusen.html | たいかくせん（対角線から図形をつくる） | ○ |

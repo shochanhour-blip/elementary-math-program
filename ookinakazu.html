@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>おおきな数</title>
+<style>
+  :root {
+    --bg:      #f7f9fc;
+    --panel:   #fff;
+    --text:    #1f2933;
+    --line:    #cfd8e3;
+    --shadow:  0 6px 18px rgba(0,0,0,.08);
+    --accent:  #1565c0;
+    --col:     86px;          /* くらいの列の はば。中身に あわせて JS が ひろげる */
+    --tile:    28px;
+    --rows:    5;             /* タイルは たて5こで 1れつ */
+    /* タイル たて5こぶんの 高さ */
+    --stack-h: calc(var(--rows) * (var(--tile) + 4px) - 4px);
+    /* かこいの わく（padding 4px ＋ border 2.5px）の ぶん */
+    --bundle-pad: 13px;
+    /* タイルを おく へやの たかさ（タイル たて5こぶんの 2ばい）*/
+    --cell-h:  calc(2 * (var(--stack-h) + var(--bundle-pad)) + 16px);
+    /* 数を かく だんの たかさ */
+    --val-h:   124px;
+    /* 画面に おさまらない ときの ちぢめ かた（JS が いれる）*/
+    --k: 1;
+  }
+  /* 一・十・百・千 の 4しょく。万・億・兆でも おなじ いろを くりかえす */
+  .p0 { --c: #ef4444; --c-d: #b91c1c; --c-l: #fef2f2; --c-a: rgba(239,68,68,.45); }
+  .p1 { --c: #f59e0b; --c-d: #b45309; --c-l: #fffbeb; --c-a: rgba(245,158,11,.45); }
+  .p2 { --c: #7c3aed; --c-d: #4c1d95; --c-l: #f5f3ff; --c-a: rgba(124,58,237,.45); }
+  .p3 { --c: #0ea5e9; --c-d: #0369a1; --c-l: #f0f9ff; --c-a: rgba(14,165,233,.45); }
+
+  * { box-sizing: border-box; }
+  /* ぜんたいを 1まいに まとめ、画面に 入らない ときは まるごと ちぢめる。
+     transform では ならびの たかさが かわらず、中で スクロールが おきて
+     さわった ところが ずれるので、ならびごと かわる zoom を つかう */
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 14px 14px 20px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ── うえの ツールバー ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    max-width: 1100px;
+    margin: 0 auto 12px;
+    padding-right: 56px;          /* ヘルプボタンの ぶん */
+  }
+  .tool-group { display: flex; align-items: center; gap: 8px; }
+  .tool-label { font-size: .78rem; font-weight: 800; color: #6b7a8d; }
+
+  .seg {
+    display: flex;
+    border: 2.5px solid #90caf9;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .seg-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 46px;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--accent);
+    background: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg-btn svg { display: block; }
+  .seg-btn + .seg-btn { border-left: 2.5px solid #90caf9; }
+  .seg-btn:not(:disabled):not([aria-pressed="true"]):hover { background: #e3f2fd; }
+  .seg-btn[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .seg-btn:disabled { color: #c3ccd8; cursor: default; }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px; height: 46px;
+    border: 2.5px solid #90caf9;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--accent);
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .icon-btn:hover { background: #e3f2fd; }
+  .icon-btn svg { display: block; }
+  /* ゴミばこは ドラッグちゅうだけ めだつ */
+  #trashBtn.armed { border-color: #ef4444; color: #ef4444; }
+  #trashBtn.over  { background: #ef4444; color: #fff; border-color: #ef4444; transform: scale(1.08); }
+
+  /* ── くらいの ひょう ── */
+  .table-wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  /* ひょうと パレットを おなじ はば・おなじ よこスクロールに のせる。
+     こうすると くらいの れつと タイルが たてに そろう */
+  .board-inner {
+    min-width: min-content;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .table {
+    display: grid;
+    background: var(--panel);
+    border: 3px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  /* 1だんめ：万・億・兆の まとまり */
+  .group-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    font-size: 1.05rem;
+    font-weight: 900;
+    color: #fff;
+    background: #94a3b8;
+    border-right: 2px solid #fff;
+    border-bottom: 2px solid var(--line);
+  }
+  .group-cell.edge { border-right: none; }
+  .group-cell.g0 { background: #eef2f7; }
+  .group-cell.g1 { background: #64748b; }
+  .group-cell.g2 { background: #475569; }
+  .group-cell.g3 { background: #334155; }
+  .group-cell rt { font-size: .5em; font-weight: 700; opacity: .85; }
+
+  /* 2だんめ：くらいの 名まえ と もとになる タイル */
+  .head-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px 2px 7px;
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: var(--c-d);
+    background: var(--c-l);
+    border-right: 2px solid var(--line);
+  }
+  .head-cell.edge { border-right: none; }
+  /* 万・億・兆の 帯が 下に ない ときは、ここで しきる */
+  .head-cell.underline { border-bottom: 2px solid var(--line); }
+  .head-cell rt { font-size: .42em; font-weight: 700; color: var(--c-d); opacity: .8; }
+
+  /* いちばん左の 見出しの かどで、くらいを 1つずつ ふやす／へらす */
+  .corner-btn {
+    position: absolute;
+    top: 3px;
+    width: 21px; height: 21px;
+    border: 2px solid var(--c);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--c-d);
+    font-family: inherit;
+    font-size: .8rem; font-weight: 900; line-height: 1;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    opacity: .55;
+    transition: opacity .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .head-cell:hover .corner-btn { opacity: 1; }
+  .corner-btn:hover:not(:disabled) { background: var(--c); color: #fff; }
+  .corner-btn:disabled { opacity: .15; cursor: default; }
+  .corner-btn.at-left  { left: 3px; }
+  .corner-btn.at-right { right: 3px; }
+
+  /* ── タイルの パレット（ここから ひょうへ ドラッグする）── */
+  .zone-palette {
+    background: var(--panel);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 12px 0 14px;
+  }
+  .zone-title {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    color: #7c3aed;
+    margin: 0 0 10px 16px;
+  }
+  /* ひょうと おなじ れつわりで ならべる。だから ぜったいに 2行に ならない */
+  .tile-palette {
+    display: grid;
+    align-items: center;
+    padding: 0 3px;        /* .table の わく（border 3px）に あわせる */
+  }
+  .tile-source {
+    width: min(72px, calc(100% - 10px));
+    aspect-ratio: 1;
+    justify-self: center;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+    font-weight: 900;
+    color: #fff;
+    background: var(--c);
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 0 0 3px #a78bfa, 0 4px 0 rgba(0,0,0,0.25);
+    opacity: .9;
+    padding: 0;
+    touch-action: none;
+    cursor: grab;
+    transition: transform .1s, opacity .1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tile-source:hover  { opacity: 1; transform: scale(1.1); }
+  .tile-source:active { cursor: grabbing; transform: scale(1.05); }
+
+  /* 3だんめ：タイルを おく へや */
+  .cell {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;   /* タイルは へやの まんなかに */
+    flex-wrap: wrap;           /* よこに 入らない ぶんは 下へ */
+    align-content: flex-start;
+    gap: 6px;
+    padding: 8px 6px;
+    min-height: var(--cell-h);
+    border-right: 2px solid var(--line);
+    background: #fff;
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .cell.edge { border-right: none; }
+  .cell:hover { background: var(--c-l); }
+  .cell.drop-ok {
+    background: #dcfce7;
+    box-shadow: inset 0 0 0 3px #22c55e;
+  }
+  /* タイルの ならべかた：たて5こで つぎの れつへ。
+     はばは --cols から けいさんして きめる（ブラウザに まかせない）*/
+  .stack {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--tile);
+    gap: 4px;
+    width: calc(var(--cols, 1) * (var(--tile) + 4px) - 4px);
+  }
+  .tile {
+    width: var(--tile);
+    height: var(--tile);
+    border-radius: 7px;
+    background: var(--c);
+    box-shadow: 0 2px 0 var(--c-d);
+    touch-action: none;
+    cursor: grab;
+    flex-shrink: 0;
+  }
+  .tile:active { cursor: grabbing; }
+
+  /* 10こ そろった かたまり＝くりあがりできる */
+  .bundle {
+    position: relative;
+    padding: 4px;
+    border: 2.5px dashed var(--c-d);
+    border-radius: 10px;
+    background: var(--c-l);
+    touch-action: none;
+    cursor: grab;
+    animation: bundle-pulse 2.2s ease-in-out infinite;
+  }
+  .bundle .tile { pointer-events: none; }
+  .bundle:active { cursor: grabbing; }
+  /* ひだり（ひとつ 上の くらい）へ はこべる ことを しめす やじるし */
+  .bundle.can-carry::after {
+    content: "";
+    position: absolute;
+    left: -7px; top: 50%;
+    width: 0; height: 0;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: var(--c-d);
+    opacity: .75;
+  }
+  @keyframes bundle-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--c-a); }
+    50%      { box-shadow: 0 0 0 6px rgba(255,255,255,0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .bundle { animation: none; } }
+  .dragging { opacity: .25; }
+
+  /* ドラッグちゅうに ゆびに ついてくる え */
+  #ghost {
+    position: fixed;
+    z-index: 300;
+    pointer-events: none;
+    opacity: .9;
+    transform: translate(-50%, -50%) scale(var(--k));
+  }
+
+  /* 4だんめ：数を かく／じどうで 見せる */
+  .val-cell {
+    position: relative;
+    min-height: var(--val-h);
+    border-right: 2px solid var(--line);
+    border-top: 2px solid var(--line);
+    background: #fcfdff;
+  }
+  .val-cell.edge { border-right: none; }
+  /* 書くところだと わかるよう、うすい 線を しく */
+  .val-cell.writable::after {
+    content: "";
+    position: absolute;
+    left: 12%; right: 12%; bottom: 22px;
+    border-bottom: 2px dashed var(--c);
+    opacity: .3;
+    pointer-events: none;
+  }
+  .write-canvas {
+    display: block;
+    width: 100%;
+    height: var(--val-h);
+    touch-action: none;
+  }
+  .write-clear {
+    position: absolute;
+    right: 2px; top: 2px;
+    width: 20px; height: 20px;
+    border: none; border-radius: 50%;
+    background: #eef2f7; color: #6b7a8d;
+    font-size: .75rem; line-height: 1;
+    cursor: pointer; opacity: 0;
+    transition: opacity .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .val-cell:hover .write-clear { opacity: 1; }
+  .digit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--val-h);
+    font-size: 2.6rem;
+    font-weight: 900;
+    color: var(--c-d);
+  }
+  .digit.zero { color: #c3ccd8; }
+  /* 10こ いじょう＝まだ くりあがって いない */
+  .digit.over {
+    color: #ef4444;
+    background: #fef2f2;
+    font-size: 2rem;
+  }
+  /* じどう ひょうじの ときだけ 出る ▲▼。おした ぶんだけ タイルが ふえる／へる */
+  .spin {
+    position: absolute;
+    right: 3px; top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .spin-btn {
+    width: 22px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--c);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--c-d);
+    font-family: inherit;
+    font-size: .78rem;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .spin-btn:hover:not(:disabled) { background: var(--c); color: #fff; }
+  /* この ひとおしで くりあがる／くりさがる ことを しめす */
+  .spin-btn.carry:not(:disabled) { border-color: #10b981; color: #0f766e; background: #ecfdf5; }
+  .spin-btn.carry:not(:disabled):hover { background: #10b981; color: #fff; }
+  .spin-btn:active:not(:disabled) { transform: translateY(1px); }
+  .spin-btn:disabled { opacity: .2; cursor: default; }
+
+</style>
+</head>
+<body>
+
+<div id="board">
+
+<div class="toolbar">
+  <div class="tool-group">
+    <span class="tool-label">下の だん</span>
+    <div class="seg" id="modeSeg" role="group" aria-label="下のだんの つかいかた">
+      <button class="seg-btn" data-mode="write" aria-pressed="true"
+              aria-label="じぶんで かく" title="じぶんで かく">
+        <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 20l1-4.5L15.5 5a2 2 0 0 1 2.8 0l.7.7a2 2 0 0 1 0 2.8L8.5 19 4 20z"
+                fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+          <line x1="14" y1="7" x2="17" y2="10" stroke="currentColor" stroke-width="2.2"/>
+        </svg>
+      </button>
+      <button class="seg-btn" data-mode="auto" aria-pressed="false"
+              aria-label="じどうで だす" title="じどうで だす">
+        <svg width="30" height="24" viewBox="0 0 30 24" aria-hidden="true">
+          <text x="15" y="18" text-anchor="middle" font-family="inherit"
+                font-size="15" font-weight="900" fill="currentColor">123</text>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="tool-group" style="margin-left:auto">
+    <button id="trashBtn" class="icon-btn" aria-label="タイルを すてる" title="タイルを すてる">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 6h16M9.5 6V3.8h5V6M6.5 6l1 14h9l1-14"/>
+          <line x1="10" y1="10" x2="10" y2="17"/>
+          <line x1="14" y1="10" x2="14" y2="17"/>
+        </g>
+      </svg>
+    </button>
+    <button id="resetBtn" class="icon-btn" aria-label="さいしょから やりなおす" title="さいしょから やりなおす">
+      <svg width="24" height="24" viewBox="0 0 26 26" aria-hidden="true">
+        <path d="M13 4.6 A8.4 8.4 0 1 0 21.4 13" fill="none" stroke="currentColor"
+              stroke-width="3" stroke-linecap="round"/>
+        <polygon points="13.6,0.9 13.6,8.3 7.2,4.6" fill="currentColor"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<div class="table-wrap" id="tableWrap">
+  <div class="board-inner">
+    <div class="table" id="table"></div>
+    <section class="zone-palette">
+      <div class="zone-title">タイル</div>
+      <div id="tilePalette" class="tile-palette"></div>
+    </section>
+  </div>
+</div>
+
+</div>
+
+
+<script>
+  // ── くらいの ていぎ ───────────────────────────────
+  // 10の なんじょうか（exp）で くらいを あらわす。0=一, 3=千, 4=一万, 8=一億, 12=一兆
+  const KANJI = ["一", "十", "百", "千"];
+  const YOMI  = ["いち", "じゅう", "ひゃく", "せん"];
+  const GROUP = [null, { k: "万", y: "まん" }, { k: "億", y: "おく" }, { k: "兆", y: "ちょう" }];
+  const MAX_EXP = 12;               // いちばん上は 一兆のくらい
+  const START_EXP = 3;              // さいしょは 一〜千の 4つ
+  const MAX_TILES = 40;             // 1つの へやに おける タイルの かぎり
+
+  const state = {
+    topExp: START_EXP,              // いま 出ている いちばん上の くらい
+    mode: "write",                  // "write"（じぶんで かく）／"auto"（じどう）
+    counts: {},                     // くらい(exp) ごとの タイルの かず
+    ink: {}                         // 手書きの ないよう（exp ごとの dataURL）
+  };
+  for (let e = 0; e <= 12; e++) state.counts[e] = 0;
+
+  const table     = document.getElementById("table");
+  const tableWrap = document.getElementById("tableWrap");
+  const trashBtn  = document.getElementById("trashBtn");
+  const modeSeg   = document.getElementById("modeSeg");
+  const palette   = document.getElementById("tilePalette");
+  const board     = document.getElementById("board");
+
+  const cellEls = {};   // exp → タイルの へや
+  const valEls  = {};   // exp → 下のだんの セル
+  let minusBtn  = null; // いちばん左の 見出しの －ボタン
+
+  function topExp() { return state.topExp; }
+  // ひょうに 出ている くらいを 上（大きい）から じゅんに
+  function visibleExps() {
+    const out = [];
+    for (let e = topExp(); e >= 0; e--) out.push(e);
+    return out;
+  }
+  function ruby(k, y) { return "<ruby>" + k + "<rt>" + y + "</rt></ruby>"; }
+  // タイルに 書く 数（1 / 10 / 100 / 1000 / 1万 / 10万 …／1兆）
+  function tileLabel(e) {
+    const g = GROUP[Math.floor(e / 4)];
+    return "1" + "0".repeat(e % 4) + (g ? g.k : "");
+  }
+  // 読みあげ用の 名まえ（一万・十万・一億 …）
+  function fullName(e) {
+    const g = GROUP[Math.floor(e / 4)];
+    return KANJI[e % 4] + (g ? g.k : "");
+  }
+  function div(cls) { const d = document.createElement("div"); d.className = cls; return d; }
+
+  function cornerBtn(symbol, side, disabled, label, onClick) {
+    const b = document.createElement("button");
+    b.className = "corner-btn at-" + side;
+    b.textContent = symbol;
+    b.disabled = disabled;
+    b.setAttribute("aria-label", label);
+    b.title = label;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+  function tileEl() { return div("tile"); }
+
+  // CSS と おなじ 数を つかう（ずれると はみ出しの もとに なる）
+  const TILE = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tile"));
+  const T_GAP = 4;                 // タイルどうしの あき
+  const B_CHROME = 8 + 5;          // かこいの padding(4×2) ＋ border(2.5×2)
+  const CELL_PAD = 12;             // へやの 左右の あき(6×2)
+  const ITEM_GAP = 6;              // かたまり どうしの あき
+
+  // へやの 中で いちばん はばを とる かたまり 1つぶん。
+  // よこに 入らない ぶんは 下へ 折り返すので、合計では なく 最大で よい
+  function widestItem(n) {
+    const rest = n % 10;
+    let w = n >= 10 ? 2 * TILE + T_GAP + B_CHROME : 0;   // 10この かたまり
+    if (rest) {
+      const cols = Math.ceil(rest / 5);
+      w = Math.max(w, cols * TILE + (cols - 1) * T_GAP);
+    }
+    return w;
+  }
+
+  // れつの はばは、いちばん はばを とる かたまりが かならず 入る 大きさに する。
+  // こうしないと 中央ぞろえの とき、かこいが 左右に はみ出す
+  function syncColWidth() {
+    let widest = 0;
+    for (const e of visibleExps()) widest = Math.max(widest, widestItem(state.counts[e]));
+    const w = Math.max(86, Math.ceil(widest + CELL_PAD));
+    document.documentElement.style.setProperty("--col", w + "px");
+  }
+
+  // タイルを n こ ならべた かたまり。たて5こで つぎの れつへ
+  function stackOf(n) {
+    const st = div("stack");
+    st.style.setProperty("--cols", Math.max(1, Math.ceil(n / 5)));
+    st.style.gridTemplateRows = "repeat(" + Math.min(5, Math.max(1, n)) + ", var(--tile))";
+    for (let i = 0; i < n; i++) st.appendChild(tileEl());
+    return st;
+  }
+
+  // ── 画面に おさめる ───────────────────────────────
+  // くらいが ふえても、たかい だんに しても、画面から はみ出さないように
+  // ぜんたいを まるごと ちぢめる。よこは ひょうの 中で スクロールする
+  function fitToScreen() {
+    board.style.zoom = "1";                  // いったん もどして 本来の たかさを はかる
+    const natural = board.offsetHeight;
+    if (!natural) return;
+    const avail = window.innerHeight - 34;   // body の うえ下の あき
+    const k = Math.min(1, avail / natural);
+    document.documentElement.style.setProperty("--k", k);
+    board.style.zoom = k < 1 ? k : "";
+  }
+
+  // ── ひょうを つくりなおす ──────────────────────────
+  function renderAll() {
+    saveInk();
+    const exps = visibleExps();
+    table.textContent = "";
+    const cols = "repeat(" + exps.length + ", minmax(var(--col), 1fr))";
+    table.style.gridTemplateColumns = cols;
+    palette.style.gridTemplateColumns = cols;   // くらいの れつと そろえる
+
+    // 1だんめ：くらいの 名まえ と、もとになる タイル
+    const hasBand = topExp() >= 4;   // 万・億・兆の 帯が 下に つくか
+    minusBtn = null;
+    for (const e of exps) {
+      const c = div("head-cell p" + (e % 4) + (e === 0 ? " edge" : "")
+                  + (hasBand ? "" : " underline"));
+      const name = document.createElement("span");
+      name.innerHTML = ruby(KANJI[e % 4], YOMI[e % 4]);
+      c.appendChild(name);
+
+      // いちばん左の くらいだけ、かどで 1つずつ ふやす／へらす
+      if (e === exps[0]) {
+        c.appendChild(cornerBtn("＋", "left", e >= MAX_EXP,
+          fullName(e + 1) + "のくらいを ふやす", () => { state.topExp = e + 1; renderAll(); }));
+        minusBtn = cornerBtn("－", "right", e === 0,
+          fullName(e) + "のくらいを けす", () => {
+            clearInk(e);
+            state.topExp = e - 1;
+            renderAll();
+          });
+        c.appendChild(minusBtn);
+      }
+      table.appendChild(c);
+    }
+
+    // 2だんめ：万・億・兆の まとまり（4つずつ おなじ ならびが くりかえす）。
+    // 一十百千 の すぐ 下に おいて、「十の 万」の ように よめるように する
+    // 一〜千 だけの ときは 名まえが ないので この だんは 出さない
+    let i = hasBand ? 0 : exps.length;
+    while (i < exps.length) {
+      const g = Math.floor(exps[i] / 4);
+      let n = 1;
+      while (i + n < exps.length && Math.floor(exps[i + n] / 4) === g) n++;
+      const cell = div("group-cell g" + g);
+      cell.style.gridColumn = "span " + n;
+      if (GROUP[g]) cell.innerHTML = ruby(GROUP[g].k, GROUP[g].y);
+      table.appendChild(cell);
+      i += n;
+      if (i >= exps.length) cell.classList.add("edge");
+    }
+
+    // 3だんめ：タイルを おく へや
+    for (const e of exps) {
+      const c = div("cell p" + (e % 4) + (e === 0 ? " edge" : ""));
+      c.dataset.exp = e;
+      c.addEventListener("click", () => addTile(e, true));
+      cellEls[e] = c;
+      table.appendChild(c);
+    }
+
+    // 4だんめ：数を かく／じどうで 見せる
+    for (const e of exps) {
+      const c = div("val-cell p" + (e % 4) + (e === 0 ? " edge" : ""));
+      valEls[e] = c;
+      table.appendChild(c);
+    }
+
+    renderPalette();
+    renderTiles();
+    renderValues();
+    fitToScreen();
+    // はばに おさまらない ときは、一のくらい（右はし）が 見えるように しておく
+    tableWrap.scrollLeft = tableWrap.scrollWidth;
+  }
+
+  // ── タイルの パレット（出ている くらいの ぶんだけ ならべる）────
+  function renderPalette() {
+    palette.textContent = "";
+    for (const e of visibleExps()) {
+      const b = document.createElement("button");
+      b.className = "tile-source p" + (e % 4);
+      const label = tileLabel(e);
+      b.textContent = label;
+      b.style.fontSize = (label.length <= 2 ? 30 : label.length === 3 ? 25
+                       : label.length === 4 ? 21 : 17) + "px";
+      b.setAttribute("aria-label", fullName(e) + "のくらいの タイル。へやへ ドラッグ");
+      b.title = fullName(e) + "のタイルを ドラッグして はいち";
+      b.addEventListener("pointerdown", (ev) => startDrag(ev, e, "source", b));
+      palette.appendChild(b);
+    }
+  }
+
+  // ── タイルだけ かきなおす（手書きには さわらない）──────
+  function renderTiles() {
+    for (const e of visibleExps()) {
+      const cell = cellEls[e];
+      cell.textContent = "";
+      const n = state.counts[e];
+      if (n === 0) continue;
+      // 10こずつ かたまりに する。かたまりは まるごと 1つとして うごかす
+      const bundles = Math.floor(n / 10);
+      const canCarry = e + 1 <= topExp();
+      for (let b = 0; b < bundles; b++) {
+        // やじるしは いちばん 左の かこいだけ。いくつも 出すと ごちゃつく
+        const bd = div("bundle" + (canCarry && b === 0 ? " can-carry" : ""));
+        bd.appendChild(stackOf(10));
+        bd.addEventListener("pointerdown", (ev) => startDrag(ev, e, "bundle", bd));
+        cell.appendChild(bd);
+      }
+      const rest = n % 10;
+      if (rest > 0) {
+        const st = stackOf(rest);
+        for (const el of st.children) {
+          el.addEventListener("pointerdown", (ev) => startDrag(ev, e, "tile", el));
+        }
+        cell.appendChild(st);
+      }
+    }
+    syncColWidth();     // 中身が はみ出さない はばに する
+    syncCornerBtns();   // タイルが のこる くらいは けせなく する
+    fitToScreen();      // タイルが ふえて せが のびても 画面に おさめる
+  }
+
+  // ── 下のだん ────────────────────────────────────
+  function renderValues() {
+    for (const e of visibleExps()) {
+      const cell = valEls[e];
+      cell.textContent = "";
+      cell.classList.remove("writable");
+      if (state.mode === "auto") {
+        const n = state.counts[e];
+        const d = div("digit" + (n === 0 ? " zero" : n > 9 ? " over" : ""));
+        d.textContent = String(n);
+        cell.appendChild(d);
+        // ▲▼で その くらいの 数を かえる。タイルも いっしょに ふえる／へる
+        const sp = div("spin");
+        sp.appendChild(spinBtn("▲", e, +1));
+        sp.appendChild(spinBtn("▼", e, -1));
+        cell.appendChild(sp);
+      } else {
+        cell.classList.add("writable");
+        const cv = document.createElement("canvas");
+        cv.className = "write-canvas";
+        cv.dataset.exp = e;
+        cell.appendChild(cv);
+        const clr = document.createElement("button");
+        clr.className = "write-clear";
+        clr.textContent = "×";
+        clr.setAttribute("aria-label", "けす");
+        clr.addEventListener("click", (ev) => { ev.stopPropagation(); clearInk(e); });
+        cell.appendChild(clr);
+        attachCanvas(cv);
+      }
+    }
+    if (state.mode === "write") sizeCanvases();
+  }
+
+  // くらいの 数は 0〜9。9の つぎは くりあがり、0の まえは くりさがり。
+  // 999＋1 や 100−1 の ように、いくつも となりへ つながる ことが ある。
+  // できあがりを 先に つくって、むりな ときだけ null を かえす
+  function spinResult(exp, step) {
+    const top = topExp();
+    const c = Object.assign({}, state.counts);
+    if (step > 0) {
+      let e = exp;
+      c[e] += 1;
+      while (c[e] > 9) {              // 10に なったら 上の くらいへ くりあがる
+        if (e + 1 > top) return null; // 上の くらいが ない
+        c[e] -= 10;
+        c[e + 1] += 1;
+        e += 1;
+      }
+    } else if (c[exp] > 0) {
+      c[exp] -= 1;
+    } else {
+      let up = exp + 1;               // 0では ひけないので、上の 0でない くらいを さがす
+      while (up <= top && c[up] === 0) up++;
+      if (up > top) return null;
+      c[up] -= 1;                     // その 1こを くずすと、下は ぜんぶ 9に なる
+      for (let k = up - 1; k > exp; k--) c[k] += 9;
+      c[exp] = 9;
+    }
+    return c;
+  }
+
+  function canSpin(exp, step) { return spinResult(exp, step) !== null; }
+
+  function spinBtn(mark, exp, step) {
+    const n = state.counts[exp];
+    const carries = step > 0 ? n + 1 > 9 : n === 0;
+    const b = document.createElement("button");
+    b.className = "spin-btn" + (carries ? " carry" : "");
+    b.textContent = mark;
+    b.disabled = !canSpin(exp, step);
+    const label = carries
+      ? fullName(exp) + "のくらいを " + (step > 0 ? "くりあげる" : "くりさげる")
+      : fullName(exp) + "のくらいを " + (step > 0 ? "1 ふやす" : "1 へらす");
+    b.setAttribute("aria-label", label);
+    b.title = label;
+    b.addEventListener("click", () => {
+      const next = spinResult(exp, step);
+      if (!next) return;
+      state.counts = next;
+      renderTiles();
+      renderValues();
+    });
+    return b;
+  }
+
+  // ── 手書き ──────────────────────────────────────
+  // ひょうを つくりなおすと canvas は まっさらに なる。
+  // つくりなおす まえに dataURL で とっておき、大きさが きまってから かきもどす
+  function saveInk() {
+    document.querySelectorAll(".write-canvas").forEach((c) => {
+      if (!c.width || !c.height || c.dataset.ink !== "1") return;
+      try { state.ink[c.dataset.exp] = c.toDataURL(); } catch (err) { /* とれない かんきょうは むし */ }
+    });
+  }
+
+  function sizeCanvases() {
+    // レイアウトが きまってから 実ピクセルを あわせる
+    requestAnimationFrame(() => {
+      document.querySelectorAll(".write-canvas").forEach((c) => {
+        const r = c.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        c.width  = Math.round(r.width);
+        c.height = Math.round(r.height);
+        setPen(c);
+        restoreInk(c);
+      });
+    });
+  }
+
+  function setPen(c) {
+    const ctx = c.getContext("2d");
+    ctx.strokeStyle = "#1f2933";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+  }
+
+  function restoreInk(c) {
+    const data = state.ink[c.dataset.exp];
+    if (!data) { delete c.dataset.ink; return; }
+    c.dataset.ink = "1";
+    const img = new Image();
+    img.onload = () => c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    img.src = data;
+  }
+
+  function clearInk(exp) {
+    if (exp === undefined) state.ink = {};
+    else delete state.ink[exp];
+    document.querySelectorAll(".write-canvas").forEach((c) => {
+      if (exp !== undefined && c.dataset.exp !== String(exp)) return;
+      if (c.width && c.height) c.getContext("2d").clearRect(0, 0, c.width, c.height);
+      delete c.dataset.ink;
+    });
+  }
+
+  function attachCanvas(c) {
+    let drawing = false;
+    function pos(ev) {
+      const r = c.getBoundingClientRect();
+      return [(ev.clientX - r.left) * (c.width / r.width),
+              (ev.clientY - r.top) * (c.height / r.height)];
+    }
+    c.addEventListener("pointerdown", (ev) => {
+      ev.preventDefault();
+      c.setPointerCapture(ev.pointerId);
+      drawing = true;
+      c.dataset.ink = "1";
+      const ctx = c.getContext("2d");
+      ctx.beginPath();
+      ctx.moveTo(...pos(ev));
+    });
+    c.addEventListener("pointermove", (ev) => {
+      if (!drawing) return;
+      ev.preventDefault();
+      const ctx = c.getContext("2d");
+      ctx.lineTo(...pos(ev));
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(...pos(ev));
+    });
+    c.addEventListener("pointerup",     () => { drawing = false; });
+    c.addEventListener("pointercancel", () => { drawing = false; });
+  }
+
+  // ── タイルを ふやす ────────────────────────────────
+  // fromCell: へやを タップした とき。ドラッグを おえた ときの click で
+  // タイルが ふえて しまわないよう、そのときだけ すこしのあいだ 受けつけない
+  function addTile(exp, fromCell) {
+    if (fromCell && performance.now() - dragEndAt < 300) return;
+    if (state.counts[exp] >= MAX_TILES) return;
+    state.counts[exp]++;
+    renderTiles();
+    renderValues();
+  }
+
+  // ── ドラッグ（くりあがり・くりさがり・すてる）──────────
+  let drag = null;        // { id, exp, kind, el, ghost, target }
+  let dragEndAt = -1e9;   // ドラッグが おわった 時こく
+
+  function ghostFor(kind, exp) {
+    const cls = "p" + (exp % 4);
+    if (kind === "tile") {
+      const g = div("tile " + cls);
+      g.id = "ghost";
+      return g;
+    }
+    const g = div("bundle " + cls);
+    g.id = "ghost";
+    g.style.animation = "none";
+    g.appendChild(stackOf(10));
+    return g;
+  }
+
+  function startDrag(ev, exp, kind, el) {
+    if (drag) return;
+    ev.preventDefault();
+    ev.stopPropagation();          // へやの タップ（タイルを ふやす）と かさならないように
+    el.setPointerCapture(ev.pointerId);   // パレットは ひょうの そとに あるので、つかんだ ものに とらせる
+    const ghost = ghostFor(kind === "bundle" ? "bundle" : "tile", exp);
+    document.body.appendChild(ghost);
+    drag = { id: ev.pointerId, exp, kind, el, ghost, target: null,
+             x0: ev.clientX, y0: ev.clientY, moved: false };
+    // もとになる タイルは その場に のこす（へって いく ものでは ない）
+    if (kind !== "source") el.classList.add("dragging");
+    if (kind !== "source") trashBtn.classList.add("armed");
+    el.addEventListener("pointermove", onDragMove);
+    el.addEventListener("pointerup", onDragEnd);
+    el.addEventListener("pointercancel", onDragEnd);
+    moveDrag(ev);
+  }
+
+  function onDragMove(ev) {
+    if (!drag || ev.pointerId !== drag.id) return;
+    ev.preventDefault();
+    moveDrag(ev);
+  }
+
+  function onDragEnd(ev) {
+    if (!drag || ev.pointerId !== drag.id) return;
+    endDrag(ev);
+  }
+
+  // おける さきは 1つだけ。
+  // もとタイル→おなじ くらい／かたまり→ひとつ 上の くらい／タイル1こ→ひとつ 下の くらい
+  function dropExpFor(d) {
+    if (d.kind === "bundle") return d.exp + 1;   // くりあがり
+    if (d.kind === "tile")   return d.exp - 1;   // くりさがり
+    return d.exp;   // もとになる タイルは おなじ くらいの へや
+  }
+
+
+  function moveDrag(ev) {
+    drag.ghost.style.left = ev.clientX + "px";
+    drag.ghost.style.top  = ev.clientY + "px";
+    if (Math.abs(ev.clientX - drag.x0) > 5 || Math.abs(ev.clientY - drag.y0) > 5) drag.moved = true;
+
+    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    const overTrash = drag.kind !== "source" && !!(under && under.closest("#trashBtn"));
+    trashBtn.classList.toggle("over", overTrash);
+
+    const want = dropExpFor(drag);
+    const cell = under && under.closest(".cell");
+    const ok = !overTrash && cell && Number(cell.dataset.exp) === want;
+    const next = ok ? cell : null;
+    if (next !== drag.target) {
+      if (drag.target) drag.target.classList.remove("drop-ok");
+      if (next) next.classList.add("drop-ok");
+      drag.target = next;
+    }
+  }
+
+  function endDrag(ev) {
+    const d = drag;
+    drag = null;
+    dragEndAt = performance.now();
+    if (d.target) d.target.classList.remove("drop-ok");
+    d.ghost.remove();
+    d.el.classList.remove("dragging");
+    trashBtn.classList.remove("armed", "over");
+    d.el.removeEventListener("pointermove", onDragMove);
+    d.el.removeEventListener("pointerup", onDragEnd);
+    d.el.removeEventListener("pointercancel", onDragEnd);
+    if (d.el.hasPointerCapture(ev.pointerId)) d.el.releasePointerCapture(ev.pointerId);
+
+    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    if (d.kind === "source") {
+      // うごかさずに はなした ときは タップと みなして 1こ おく
+      if (d.target || !d.moved) addTile(d.exp);
+    } else if (under && under.closest("#trashBtn")) {
+      state.counts[d.exp] -= d.kind === "bundle" ? 10 : 1;
+    } else if (d.target) {
+      const to = dropExpFor(d);
+      if (d.kind === "bundle") {
+        // くりあがり：10こ → ひとつ 上の くらいの 1こ
+        state.counts[d.exp] -= 10;
+        state.counts[to] += 1;
+      } else {
+        // くりさがり：1こ → ひとつ 下の くらいの 10こ
+        state.counts[d.exp] -= 1;
+        state.counts[to] += 10;
+      }
+    }
+    renderTiles();
+    renderValues();
+  }
+
+  // ── くらいの はんい ────────────────────────────────
+  // タイルが のこって いる くらいは、だまって 消さずに ボタンを おせなく する
+  function syncCornerBtns() {
+    if (!minusBtn) return;
+    const e = topExp();
+    minusBtn.disabled = e === 0 || state.counts[e] > 0;
+  }
+
+  modeSeg.addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".seg-btn");
+    if (!btn) return;
+    const m = btn.dataset.mode;
+    if (m === state.mode) return;
+    saveInk();
+    state.mode = m;
+    modeSeg.querySelectorAll(".seg-btn").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.mode === m));
+    });
+    renderValues();
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    for (let e = 0; e <= MAX_EXP; e++) state.counts[e] = 0;
+    clearInk();
+    state.topExp = START_EXP;
+    state.mode = "write";
+    modeSeg.querySelectorAll(".seg-btn").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.mode === "write"));
+    });
+    renderAll();
+  });
+
+  window.addEventListener("resize", () => {
+    if (state.mode === "write") saveInk();
+    fitToScreen();
+    if (state.mode === "write") sizeCanvases();
+  });
+
+  renderAll();
+</script>
+
+
+<!-- ── そうさせつめい（ヘルプ） ────────────────────────── -->
+<style>
+  /* ── ヘルプボタン（画面右上に固定） ── */
+  .help-btn {
+    position: fixed;
+    right: 16px;
+    top: max(16px, env(safe-area-inset-top));
+    width: 44px; height: 44px; margin: 0;
+    border-radius: 50%; border: 3px solid #90caf9;
+    background: #fff; color: #1565c0;
+    font-family: inherit; font-size: 1.2rem; font-weight: 800; line-height: 1;
+    padding: 0; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    z-index: 190;
+    box-shadow: 0 4px 14px rgba(0,0,0,.20);
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-btn:hover  { background: #e3f2fd; }
+  .help-btn:active { transform: translateY(1px); }
+  #help-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #help-modal {
+    background: #fff; border-radius: 20px; padding: 22px 28px 26px;
+    max-width: 480px; width: 100%; position: relative;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    max-height: calc(100svh - 40px); overflow-y: auto;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  }
+  /* スクロールしても閉じるボタンが隠れないよう sticky にする */
+  #help-close {
+    position: sticky; top: 0; display: block;
+    margin: 0 -10px 4px auto;
+    background: #fff; border: none; font-size: 1.2rem;
+    color: #6b7280; cursor: pointer; padding: 2px 8px; z-index: 1;
+  }
+  #help-modal h2 { font-size: 1.1rem; font-weight: 900; color: #1565c0; margin: 0 0 14px; }
+  #help-modal p  { font-size: .95rem; line-height: 2.05; color: #374151; margin: 0; }
+  #help-modal rt { font-size: .58em; font-weight: 700; color: #6b7280; }
+  #help-modal .sh { display: block; font-weight: 900; color: #1565c0; margin-top: 14px; margin-bottom: 2px; }
+  #help-modal .sh:first-child { margin-top: 0; }
+  /* 説明のなかに 本物とおなじ見た目の タイルを出す */
+  #help-modal .tl {
+    display: inline-block;
+    width: 15px; height: 15px;
+    margin: 0 1px;
+    vertical-align: -2px;
+    border-radius: 4px;
+  }
+  #help-modal .tl.a { background: #ef4444; }
+  #help-modal .tl.b { background: #f59e0b; }
+  #help-modal .tl.c { background: #7c3aed; }
+  #help-modal .tl.d { background: #0ea5e9; }
+</style>
+
+<button id="help-btn" class="help-btn" aria-label="つかいかた">?</button>
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close" aria-label="とじる">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
+  </div>
+</div>
+<script>
+  (function(){
+    var ov  = document.getElementById('help-overlay');
+    var btn = document.getElementById('help-btn');
+    var HELP = {
+      title: 'おおきな数の つかいかた',
+      body:  '<span class="sh">【タイルを おく】</span><ruby>下<rt>した</rt></ruby>の「タイル」から、おなじ くらいの へやへ ドラッグします。ちがう くらいには 入りません。タップするだけでも 1こ おけます。<br><span class="sh">【<ruby>同<rt>おな</rt></ruby>じ いろ】</span><span class="tl a"></span> は <ruby>一<rt>いち</rt></ruby>のくらい・<ruby>一万<rt>いちまん</rt></ruby>のくらい・<ruby>一億<rt>いちおく</rt></ruby>のくらい・<ruby>一兆<rt>いっちょう</rt></ruby>のくらい。<span class="tl b"></span> は <ruby>十<rt>じゅう</rt></ruby>のくらい・<ruby>十万<rt>じゅうまん</rt></ruby>のくらい…。<br><ruby>万<rt>まん</rt></ruby>・<ruby>億<rt>おく</rt></ruby>・<ruby>兆<rt>ちょう</rt></ruby>でも、<ruby>一<rt>いち</rt></ruby> <ruby>十<rt>じゅう</rt></ruby> <ruby>百<rt>ひゃく</rt></ruby> <ruby>千<rt>せん</rt></ruby> の ならびが おなじように くりかえします。<br><span class="sh">【くらいを ふやす】</span>いちばん <ruby>左<rt>ひだり</rt></ruby>の くらいの かどに ある ＋ で、くらいが 1つずつ ふえます。<ruby>一兆<rt>いっちょう</rt></ruby>のくらいまで のばせます。<br>－ を おすと、いちばん <ruby>左<rt>ひだり</rt></ruby>の くらいを けせます。タイルが のこって いる あいだは おせません。<br><span class="sh">【くりあがり】</span>ひとつの へやに タイルが 10こ たまると、10こが てんせんで かこまれます。その かたまりを ひとつ <ruby>左<rt>ひだり</rt></ruby>の へやへ ドラッグすると、<ruby>上<rt>うえ</rt></ruby>の くらいの タイル 1こに かわります。<br><span class="sh">【くりさがり】</span>タイル 1こを ひとつ <ruby>右<rt>みぎ</rt></ruby>の へやへ ドラッグすると、<ruby>下<rt>した</rt></ruby>の くらいの タイル 10こに かわります。<br><span class="sh">【<ruby>数<rt>かず</rt></ruby>を あらわす】</span>ひょうの <ruby>下<rt>した</rt></ruby>の だんは、2つの つかいかたが えらべます。<br>・えんぴつの ボタン… じぶんで ゆびで <ruby>書<rt>か</rt></ruby>きます。<ruby>右上<rt>みぎうえ</rt></ruby>の × で けせます<br>・123 の ボタン… タイルの かずが じどうで でます。10いじょうの ときは <ruby>赤<rt>あか</rt></ruby>く なります（まだ くりあがって いません）<br>この ときは 数の <ruby>右<rt>みぎ</rt></ruby>に ▲▼ が でます。おすと その くらいの 数が かわり、タイルも いっしょに ふえたり へったり します。<br>くらいの 数は 0から 9まで です。9で ▲を おすと <ruby>上<rt>うえ</rt></ruby>の くらいへ くりあがり、0で ▼を おすと <ruby>上<rt>うえ</rt></ruby>の くらいから くりさがります（ボタンが みどりに なります）。<br><span class="sh">【すてる・やりなおす】</span>タイルを ゴミばこの ボタンへ ドラッグすると すてられます。↺ の ボタンで、ぜんぶ はじめから やりなおせます。'
+    };
+
+    btn.addEventListener('click', function(){
+      document.getElementById('help-title').innerHTML = HELP.title;
+      document.getElementById('help-body').innerHTML  = HELP.body;
+      ov.style.display = 'flex';
+    });
+    document.getElementById('help-close').addEventListener('click', function(){ ov.style.display = 'none'; });
+    ov.addEventListener('click', function(e){ if (e.target === ov) ov.style.display = 'none'; });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') ov.style.display = 'none'; });
+  })();
+</script>
+</body>
+</html>
