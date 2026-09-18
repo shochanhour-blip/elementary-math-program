@@ -107,7 +107,7 @@
 
   /* ── くらいの ひょう ── */
   .table-wrap {
-    max-width: 1120px;
+    max-width: 1140px;   /* JS が 中身に あわせて ひろげる */
     margin: 0 auto;
     overflow-x: auto;
     overflow-y: hidden;
@@ -564,11 +564,22 @@
   // くらいが ふえても、たかい だんに しても、画面から はみ出さないように
   // ぜんたいを まるごと ちぢめる。よこは ひょうの 中で スクロールする
   function fitToScreen() {
-    board.style.zoom = "1";                  // いったん もどして 本来の たかさを はかる
-    const natural = board.offsetHeight;
-    if (!natural) return;
-    const avail = window.innerHeight - 34;   // body の うえ下の あき
-    const k = Math.min(1, avail / natural);
+    board.style.zoom = "1";                  // いったん もどして 本来の 大きさを はかる
+
+    // ひょうが ほしい よこはば。れつ数 × れつの はば ＋ 外わく(4px×2)。
+    // はかるのでは なく けいさんで 出す（1fr で のびる ので、はかっても
+    // 「いま ひろがって いる はば」しか わからない）
+    const colPx = parseFloat(getComputedStyle(document.documentElement)
+                             .getPropertyValue("--col")) || 86;
+    const needW = Math.ceil(visibleExps().length * colPx + 8);
+    // わくが 中身より せまいと、ちぢめても スクロールが のこる
+    tableWrap.style.maxWidth = Math.max(1140, needW) + "px";
+
+    const natH = board.offsetHeight;
+    if (!natH) return;
+    const availH = window.innerHeight - 34;                      // body の うえ下の あき
+    const availW = document.documentElement.clientWidth - 28;    // body の 左右の あき
+    const k = Math.min(1, availH / natH, availW / needW);
     document.documentElement.style.setProperty("--k", k);
     board.style.zoom = k < 1 ? k : "";
   }
