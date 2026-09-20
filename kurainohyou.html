@@ -602,7 +602,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 4px;
     }
     /* 10個で枠が出現 */
     .carry-group {
@@ -1004,7 +1004,7 @@
     <!-- りょうがえ確認モーダル -->
     <div id="confirmModal" class="confirm-overlay" style="display:none">
       <div class="confirm-box">
-        <div id="confirmMsg" class="confirm-msg">りょうがえ<br>しますか？</div>
+        <div id="confirmMsg" class="confirm-msg">くりさがり（りょうがえ）<br>しますか？</div>
         <div class="confirm-btns">
           <button id="confirmYes" class="confirm-yes">はい</button>
           <button id="confirmNo"  class="confirm-no">いいえ</button>
@@ -1943,8 +1943,10 @@ function isValidDrop(payload, targetPV) {
 
 // ── りょうがえ確認モーダル ────────────────────────────
 function showExchangeConfirm(payload) {
-  pendingAction = { type: 'exchange', ...payload };
-  confirmMsg.innerHTML = 'りょうがえ<br>しますか？';
+  // payload は { type:'tile', ... }。展開を後ろに置くと type が 'tile' に上書きされ、
+  // 「はい」を押しても exchange の分岐に入らない
+  pendingAction = { ...payload, type: 'exchange' };
+  confirmMsg.innerHTML = 'くりさがり（りょうがえ）<br>しますか？';
   confirmModal.style.display = 'flex';
 }
 
@@ -1992,24 +1994,32 @@ function autoScaleTileAreas() {
       .forEach(t => { t.style.zoom = ''; });
     document.querySelectorAll('.tile-area').forEach(a => { a.style.height = ''; });
 
-    // ② 位の表：tile-areaに高さをセット → 縦が溢れたら右へ折り返す（多列）
+    // ② 位の表：1列5個までにする。tile-areaの高さを「タイル5個ぶん」にすると、
+    //    6個めから右の列へ折り返る（10個なら 5×2列）
+    const PER_COL = 5;
     document.querySelectorAll('.place-body').forEach(body => {
-      const availH = body.clientHeight;
-      if (availH <= 0) return;
-      const tileAreaH = Math.max(48, availH - 12); // 上下padding分を引く
+      if (body.clientHeight <= 0) return;
       body.querySelectorAll('.place-cell:not(.decimal-sep)').forEach(cell => {
-        const cellW = cell.clientWidth;
+        const cellW = cell.clientWidth, cellH = cell.clientHeight;
         if (cellW <= 0) return;
         cell.querySelectorAll('.tile-area').forEach(a => {
-          a.style.height = tileAreaH + 'px';
+          const t = a.querySelector('.tile');
+          if (!t) { a.style.height = ''; return; }
+          // box-sizing は border-box なので、指定する高さに padding も入れる
+          const cs   = getComputedStyle(a);
+          const gap  = parseFloat(cs.rowGap) || 4;
+          const padV = parseFloat(cs.paddingTop)  + parseFloat(cs.paddingBottom);
+          const padH = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+          const w = t.offsetWidth, h = t.offsetHeight;
+          const cols  = Math.max(1, Math.ceil(a.querySelectorAll('.tile').length / PER_COL));
+          const needW = cols * w + (cols - 1) * gap + padH;
+          const needH = PER_COL * h + (PER_COL - 1) * gap + padV;
+          // ③ 5個ぶんの縦か、列を並べた横が はみ出すならタイルを縮める
+          const scale = Math.max(0.25, Math.min(1, cellW / needW, Math.max(48, cellH) / needH));
+          if (scale < 1) a.querySelectorAll('.tile').forEach(x => { x.style.zoom = String(scale); });
+          // ＋2px だけ余裕をもたせる。増やしすぎると6個めが入ってしまう
+          a.style.height = Math.ceil(PER_COL * h * scale + (PER_COL - 1) * gap + padV + 2) + 'px';
         });
-        // ③ 多列になっても横方向に溢れる場合はタイルを縮小
-        let totalW = 0;
-        cell.querySelectorAll('.tile-area').forEach(a => { totalW = Math.max(totalW, a.scrollWidth); });
-        if (totalW > cellW) {
-          const scale = Math.max(0.25, cellW / totalW);
-          cell.querySelectorAll('.tile-area .tile').forEach(t => { t.style.zoom = String(scale); });
-        }
       });
     });
 
