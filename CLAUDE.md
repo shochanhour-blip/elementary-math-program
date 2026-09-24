@@ -71,5 +71,6 @@ CLAUDE.md には全教材に共通する話だけを書き、個別の設計は�
 | number_tiles.html | かず タイル | |
 | polygon.html | 正多角形ドロー | |
 | gaisuu.html | がいすう（四捨五入を数直線で） | ○ |
+| shousuu.html | しょうすうの数直線（10等分と拡大） | ○ |
 | ookinakazu.html | おおきな数（くらいの表とタイル・一兆まで） | ○ |
 | taikakusen.html | たいかくせん（対角線から図形をつくる） | ○ |

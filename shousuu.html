@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>しょうすうの数直線</title>
+<style>
+  :root {
+    --bg:     #f7f9fc;
+    --panel:  #fff;
+    --text:   #1f2933;
+    --accent: #1565c0;
+    --shadow: 0 6px 18px rgba(0,0,0,.08);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 14px 14px 20px;
+    display: flex;
+    flex-direction: column;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ── うえの ツールバー ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto 12px;
+    padding-right: 56px;          /* ヘルプボタンの ぶん */
+    flex: 0 0 auto;
+  }
+  .tool-label { font-size: .78rem; font-weight: 800; color: #6b7a8d; }
+
+  .seg {
+    display: flex;
+    border: 2.5px solid #90caf9;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .seg-btn {
+    min-width: 62px;
+    padding: 9px 14px;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--accent);
+    background: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg-btn + .seg-btn { border-left: 2.5px solid #90caf9; }
+  .seg-btn:not([aria-pressed="true"]):hover { background: #e3f2fd; }
+  .seg-btn[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+  .tool-btn {
+    padding: 10px 16px;
+    font-family: inherit;
+    font-size: .95rem;
+    font-weight: 800;
+    color: var(--accent);
+    background: #fff;
+    border: 2.5px solid #90caf9;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tool-btn:hover:not(:disabled) { background: #e3f2fd; }
+  .tool-btn:disabled { color: #b0bac4; border-color: #dbe3ec; background: #f7f9fc; cursor: default; }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px; height: 46px;
+    border: 2.5px solid #90caf9;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--accent);
+    cursor: pointer;
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .icon-btn:hover { background: #e3f2fd; }
+  .icon-btn svg { display: block; }
+
+  /* ── 数直線の ばしょ ── */
+  .board {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    background: var(--panel);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 10px 12px;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+  }
+  /* よこは はばに あわせ、たては あまった ところに おさめる。
+     SVG は viewBox で ひずまずに ちぢむので、これだけで 画面に 入る */
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    margin: auto;
+    touch-action: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  svg.dragging { cursor: grabbing; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="tool-label">はじめの 数直線</span>
+  <div class="seg" id="rangeSeg" role="group" aria-label="はじめの 数直線">
+    <button class="seg-btn" data-exp="1" aria-pressed="true">0〜1</button>
+    <button class="seg-btn" data-exp="0" aria-pressed="false">0〜10</button>
+  </div>
+  <button id="clearMarkBtn" class="tool-btn" disabled>▲を けす</button>
+  <button id="resetBtn" class="icon-btn" style="margin-left:auto"
+          aria-label="さいしょから やりなおす" title="さいしょから やりなおす">
+    <svg width="24" height="24" viewBox="0 0 26 26" aria-hidden="true">
+      <path d="M13 4.6 A8.4 8.4 0 1 0 21.4 13" fill="none" stroke="currentColor"
+            stroke-width="3" stroke-linecap="round"/>
+      <polygon points="13.6,0.9 13.6,8.3 7.2,4.6" fill="currentColor"/>
+    </svg>
+  </button>
+</div>
+
+<main class="board">
+  <svg id="svg" viewBox="0 0 1000 170" aria-label="しょうすうの数直線"></svg>
+</main>
+
+<script>
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  // ── 数直線の かたち ──────────────────────────────
+  const START_X = 110, END_X = 890, SPAN_PX = END_X - START_X;
+  const STEP_PX = SPAN_PX / 10;   // 1めもりぶんの はば（1画面に 10めもり）
+  const LEVEL_H = 170;            // 1本ぶんの たかさ
+  const LINE_Y  = 96;             // その中での 線の たかさ
+  const LABEL_Y = 72;             // めもりの 数の ベースライン
+  const TICK_BIG = 20, TICK_SMALL = 13;
+  const DIV_BTN   = { x: 852, y: 8, w: 68, h: 38 };   // 「10等分」
+  const CLOSE_BTN = { cx: 958, cy: 27, r: 17 };       // この拡大を けす
+  const ZOOM_BTN  = { dy: 50, r: 19 };                // 区間を 拡大する ⊕
+  const PAN_BTN   = { r: 21, lx: 62, rx: 938 };       // 左右へ うごかす
+
+  const MAX_EXP    = 4;   // 0.0001 まで
+  const MAX_LEVELS = 4;
+  const MAX_VALUE  = 100; // これより 大きい 数には いかない
+  const MARK_EXP   = 6;   // ▲の いちは この こまかさの 整数で もつ（ずれない）
+  const SNAP_PX    = 13;  // これより ちかいと ▲が めもりに 吸いつく
+
+  // ── いまの じょうたい ─────────────────────────────
+  // 1本の 数直線は { exp, off }。1めもりは 1/10^exp で、画面の 左はしが off めもりめ。
+  // off は とちゅうの ばしょでも よい（なめらかに スクロールするため）。
+  // めもりに ふる 数は いつも 整数 n なので、0.1+0.2 のような ずれは 出ない
+  const state = {
+    topExp: 1,                                      // はじめの 数直線（1なら 0〜1）
+    levels: [{ exp: 1, off: 0, divided: false }],   // 上から じゅんに
+    sel: null,                                      // えらんだ 区間 { level, n }（n〜n+1）
+    mark: null                                      // ▲の いち（MARK_EXP の 整数）
+  };
+
+  const svg = document.getElementById("svg");
+  const rangeSeg = document.getElementById("rangeSeg");
+  const clearMarkBtn = document.getElementById("clearMarkBtn");
+
+  function el(name, attrs, text) {
+    const node = document.createElementNS(SVG_NS, name);
+    for (const key in attrs) node.setAttribute(key, attrs[key]);
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+  function totalH() { return LEVEL_H * state.levels.length; }
+  function svgPt(ev) {
+    const r = svg.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) * (1000 / r.width),
+             y: (ev.clientY - r.top) * (totalH() / r.height) };
+  }
+
+  // ── 数の あらわしかた（整数だけで あつかう）──────────
+  // n を 10^exp で わった 数を 文字に する
+  function fmt(n, exp) {
+    if (exp === 0) return String(n);
+    const s = String(n).padStart(exp + 1, "0");
+    return s.slice(0, s.length - exp) + "." + s.slice(s.length - exp);
+  }
+  // まだ 等分して いない 線は、けたを そろえずに みじかく 書く
+  function fmtTrim(n, exp) {
+    const s = fmt(n, exp);
+    if (s.indexOf(".") < 0) return s;
+    const t = s.replace(/0+$/, "");
+    return t.endsWith(".") ? t.slice(0, -1) : t;
+  }
+  // 0 や 1 のような 整数は、けたを そろえずに そのまま 書く
+  function fmtLabel(n, exp) {
+    if (exp === 0) return String(n);
+    const p = Math.pow(10, exp);
+    return n % p === 0 ? String(n / p) : fmt(n, exp);
+  }
+  // 字の 大きさは、いちばん 長い ラベルが 入る ように きめる
+  function labelFont(texts) {
+    if (!texts.length) return 23;
+    return Math.min(23, Math.floor(118 / Math.max(...texts.map((t) => t.length))));
+  }
+
+  // ── 画面と 数の いったりきたり ─────────────────────
+  function xOfN(lv, n) { return START_X + (n - lv.off) * STEP_PX; }
+  function nOfX(lv, x) { return lv.off + (x - START_X) / STEP_PX; }
+  function maxOff(exp) { return MAX_VALUE * Math.pow(10, exp) - 10; }
+  function clampOff(exp, o) { return Math.max(0, Math.min(maxOff(exp), o)); }
+
+  // 画面に 出ている めもり（整数）を ならべる。
+  // 10等分して いない ときは、10ずつの めもり（ひとつ 上の くらい）だけ
+  function visibleTicks(lv) {
+    const out = [];
+    const from = Math.ceil(lv.off - 1e-9), to = Math.floor(lv.off + 10 + 1e-9);
+    for (let n = from; n <= to; n++) {
+      if (!lv.divided && n % 10 !== 0) continue;
+      out.push(n);
+    }
+    return out;
+  }
+
+  // ▲が この 線の どこに くるか（画面の そとなら null）
+  function markX(lv) {
+    if (state.mark === null) return null;
+    const unit = Math.pow(10, MARK_EXP - lv.exp);
+    const x = xOfN(lv, state.mark / unit);
+    return (x < START_X - 0.5 || x > END_X + 0.5) ? null : x;
+  }
+  // 画面に 出て いる いちばん ちかい めもり（無ければ null）
+  function nearestTick(lv, n) {
+    const g = lv.divided ? 1 : 10;          // 等分して いなければ 10ごとの めもりだけ
+    const t = Math.round(n / g) * g;
+    return (t >= lv.off - 1e-9 && t <= lv.off + 10 + 1e-9) ? t : null;
+  }
+  function xToMark(lv, x) {
+    const unit = Math.pow(10, MARK_EXP - lv.exp);
+    let n = Math.min(lv.off + 10, Math.max(lv.off, nOfX(lv, x)));
+    // めもりの ちかくでは ぴたりと つく。ちょうどの 数に おける ように
+    const t = nearestTick(lv, n);
+    if (t !== null && Math.abs(t - n) * STEP_PX <= SNAP_PX) n = t;
+    return Math.max(0, Math.round(n * unit));
+  }
+
+  function canZoom(k) {
+    return state.levels[k].divided
+        && state.levels[k].exp + 1 <= MAX_EXP
+        && state.levels.length < MAX_LEVELS;
+  }
+
+  // ── えがく ──────────────────────────────────────
+  function renderAll() {
+    svg.setAttribute("viewBox", "0 0 1000 " + totalH());
+    svg.textContent = "";
+
+    const cones = el("g", {});
+    svg.appendChild(cones);
+    state.levels.forEach((lv, k) => { if (k > 0) drawCone(cones, k); });
+
+    state.levels.forEach((lv, k) => {
+      const g = el("g", { transform: "translate(0," + LEVEL_H * k + ")" });
+      drawLevel(g, lv, k);
+      svg.appendChild(g);
+    });
+
+    clearMarkBtn.disabled = state.mark === null;
+    rangeSeg.querySelectorAll(".seg-btn").forEach((b) => {
+      b.setAttribute("aria-pressed", String(Number(b.dataset.exp) === state.topExp));
+    });
+  }
+
+  // 親の どの区間を ひろげたのかを、ひろがる かたちで 見せる。
+  // スクロールで 親の 画面から 出たら ひかない
+  function drawCone(parent, k) {
+    const par = state.levels[k - 1], lv = state.levels[k];
+    const x1 = xOfN(par, lv.off / 10), x2 = xOfN(par, (lv.off + 10) / 10);
+    if (x1 < START_X - 0.5 || x2 > END_X + 0.5) return;
+    const y1 = LEVEL_H * (k - 1) + LINE_Y, y2 = LEVEL_H * k + LINE_Y;
+    parent.appendChild(el("polygon", {
+      points: `${x1},${y1} ${x2},${y1} ${END_X},${y2} ${START_X},${y2}`,
+      fill: "#f59e0b", opacity: .12
+    }));
+    for (const [xa, xb] of [[x1, START_X], [x2, END_X]]) {
+      parent.appendChild(el("line", {
+        x1: xa, y1, x2: xb, y2, stroke: "#f59e0b", "stroke-width": 2.5,
+        "stroke-dasharray": "7 7", opacity: .55
+      }));
+    }
+  }
+
+  function drawLevel(g, lv, k) {
+    // えらんだ 区間の おび
+    if (state.sel && state.sel.level === k) {
+      const x1 = xOfN(lv, state.sel.n), x2 = xOfN(lv, state.sel.n + 1);
+      g.appendChild(el("rect", {
+        x: x1, y: LINE_Y - 26, width: x2 - x1, height: 52,
+        rx: 8, fill: "#fde68a", opacity: .75
+      }));
+    }
+
+    // 線（りょうはしの うすい 線は「まだ つづく」しるし）
+    g.appendChild(el("line", {
+      x1: 40, y1: LINE_Y, x2: 960, y2: LINE_Y,
+      stroke: "#cfd8e3", "stroke-width": 3, "stroke-linecap": "round"
+    }));
+    g.appendChild(el("line", {
+      x1: START_X, y1: LINE_Y, x2: END_X, y2: LINE_Y,
+      stroke: "#1f2933", "stroke-width": 4, "stroke-linecap": "round"
+    }));
+
+    // めもりと 数
+    const ticks = visibleTicks(lv);
+    const texts = ticks.map((n) => lv.divided ? fmtLabel(n, lv.exp) : fmtTrim(n, lv.exp));
+    const fs = labelFont(texts);
+    ticks.forEach((n, ti) => {
+      const big = n % 10 === 0;                  // ひとつ 上の くらいの めもり
+      const half = big ? TICK_BIG : TICK_SMALL;
+      const x = xOfN(lv, n);
+      g.appendChild(el("line", {
+        x1: x, y1: LINE_Y - half, x2: x, y2: LINE_Y + half,
+        stroke: "#1f2933", "stroke-width": big ? 4 : 2.5, "stroke-linecap": "round"
+      }));
+      g.appendChild(el("text", {
+        x, y: LABEL_Y, "text-anchor": "middle",
+        "font-family": "inherit", "font-size": big ? fs + 3 : fs,
+        "font-weight": big ? 900 : 700, fill: big ? "#1f2933" : "#52616f"
+      }, texts[ti]));
+    });
+
+    // ▲（この線に 出ている ときだけ）
+    const mx = markX(lv);
+    if (mx !== null) {
+      g.appendChild(el("polygon", {
+        points: `${mx},${LINE_Y + 6} ${mx - 13},${LINE_Y + 29} ${mx + 13},${LINE_Y + 29}`,
+        fill: "#d4574f", stroke: "#fff", "stroke-width": 2
+      }));
+    }
+
+    // 「10等分」の ボタン
+    const b = DIV_BTN;
+    g.appendChild(el("rect", {
+      x: b.x, y: b.y, width: b.w, height: b.h, rx: 10,
+      fill: lv.divided ? "#1565c0" : "#fff", stroke: "#90caf9", "stroke-width": 2.5
+    }));
+    const ic = lv.divided ? "#fff" : "#1565c0";
+    g.appendChild(el("line", {
+      x1: b.x + 10, y1: b.y + b.h / 2, x2: b.x + b.w - 10, y2: b.y + b.h / 2,
+      stroke: ic, "stroke-width": 2
+    }));
+    for (let t = 0; t <= 10; t++) {
+      const x = b.x + 10 + (b.w - 20) * t / 10;
+      const isEnd = t === 0 || t === 10;
+      g.appendChild(el("line", {
+        x1: x, y1: b.y + b.h / 2 - (isEnd ? 11 : 6), x2: x, y2: b.y + b.h / 2 + (isEnd ? 11 : 6),
+        stroke: ic, "stroke-width": isEnd ? 3 : 1.6, "stroke-linecap": "round"
+      }));
+    }
+
+    // この拡大を けす（2本目から）
+    if (k > 0) {
+      const c = CLOSE_BTN;
+      g.appendChild(el("circle", { cx: c.cx, cy: c.cy, r: c.r,
+        fill: "#fff", stroke: "#90caf9", "stroke-width": 2.5 }));
+      for (const [dx, dy] of [[1, 1], [1, -1]]) {
+        g.appendChild(el("line", {
+          x1: c.cx - 7 * dx, y1: c.cy - 7 * dy, x2: c.cx + 7 * dx, y2: c.cy + 7 * dy,
+          stroke: "#1565c0", "stroke-width": 3, "stroke-linecap": "round"
+        }));
+      }
+    }
+
+    // ◀ ▶（左右へ うごかす）
+    for (const [dir, cx] of [[-1, PAN_BTN.lx], [1, PAN_BTN.rx]]) {
+      const off = dir < 0 ? lv.off <= 0 : lv.off >= maxOff(lv.exp);
+      g.appendChild(el("circle", { cx, cy: LINE_Y, r: PAN_BTN.r,
+        fill: "#fff", stroke: "#90caf9", "stroke-width": 2.5, opacity: off ? .25 : 1 }));
+      g.appendChild(el("polygon", {
+        points: `${cx + dir * 7},${LINE_Y} ${cx - dir * 4},${LINE_Y - 9} ${cx - dir * 4},${LINE_Y + 9}`,
+        fill: "#1565c0", opacity: off ? .25 : 1
+      }));
+    }
+
+    // ⊕（えらんだ 区間を 拡大する）
+    if (state.sel && state.sel.level === k && canZoom(k)) {
+      const cx = (xOfN(lv, state.sel.n) + xOfN(lv, state.sel.n + 1)) / 2;
+      const cy = LINE_Y + ZOOM_BTN.dy;
+      g.appendChild(el("circle", { cx, cy, r: ZOOM_BTN.r,
+        fill: "#1565c0", stroke: "#fff", "stroke-width": 3 }));
+      g.appendChild(el("line", { x1: cx - 9, y1: cy, x2: cx + 9, y2: cy,
+        stroke: "#fff", "stroke-width": 3.4, "stroke-linecap": "round" }));
+      g.appendChild(el("line", { x1: cx, y1: cy - 9, x2: cx, y2: cy + 9,
+        stroke: "#fff", "stroke-width": 3.4, "stroke-linecap": "round" }));
+    }
+  }
+
+  // ── そうさ ──────────────────────────────────────
+  function toggleDivide(k) {
+    const lv = state.levels[k];
+    lv.divided = !lv.divided;
+    // 等分を やめたら、その めもりから 生えた 拡大も なくす
+    state.levels = state.levels.slice(0, k + 1);
+    if (state.sel && state.sel.level >= k) state.sel = null;
+    renderAll();
+  }
+
+  function doZoom(k) {
+    if (!state.sel || state.sel.level !== k || !canZoom(k)) return;
+    const par = state.levels[k];
+    state.levels = state.levels.slice(0, k + 1);
+    state.levels.push({ exp: par.exp + 1, off: state.sel.n * 10, divided: false });
+    state.sel = null;
+    renderAll();
+  }
+
+  function removeLevel(k) {
+    state.levels = state.levels.slice(0, k);
+    if (state.sel && state.sel.level >= k) state.sel = null;
+    renderAll();
+  }
+
+  // よこへ うごかす。off は とちゅうの ばしょでも よい
+  function panTo(k, o) {
+    const lv = state.levels[k];
+    const b = clampOff(lv.exp, o);
+    if (b === lv.off) return false;
+    lv.off = b;
+    // えらんだ 区間が 画面から 出たら えらびなおし
+    if (state.sel && state.sel.level === k &&
+        (state.sel.n < lv.off - 1e-9 || state.sel.n + 1 > lv.off + 10 + 1e-9)) {
+      state.sel = null;
+    }
+    return true;
+  }
+  // ボタンは 1めもりぶん。きりの いい ばしょに そろえながら うごかす
+  function panStep(k, dir) {
+    const lv = state.levels[k];
+    const o = dir > 0 ? Math.floor(lv.off + 1e-9) + 1 : Math.ceil(lv.off - 1e-9) - 1;
+    return panTo(k, o);
+  }
+
+  function pickInterval(k, x) {
+    const lv = state.levels[k];
+    if (!lv.divided) { state.sel = null; renderAll(); return; }
+    const n = Math.floor(nOfX(lv, x));
+    // 画面に まるごと 出て いる 区間だけ えらべる
+    if (n < lv.off - 1e-9 || n + 1 > lv.off + 10 + 1e-9) { state.sel = null; renderAll(); return; }
+    state.sel = (state.sel && state.sel.level === k && state.sel.n === n)
+      ? null : { level: k, n };
+    renderAll();
+  }
+
+  function hitRect(r, p) { return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h; }
+  function hitCircle(c, p) { return Math.hypot(p.x - c.cx, p.y - c.cy) <= c.r + 4; }
+
+  let drag = null;   // { mode:"pan"|"mark", k, startX, off0, moved }
+
+  svg.addEventListener("pointerdown", (ev) => {
+    const p = svgPt(ev);
+    const k = Math.floor(p.y / LEVEL_H);
+    if (k < 0 || k >= state.levels.length) return;
+    const lp = { x: p.x, y: p.y - LEVEL_H * k };
+
+    // ① ⊕（えらんだ 区間の 上に あるので さきに しらべる）
+    if (state.sel && state.sel.level === k && canZoom(k)) {
+      const lv = state.levels[k];
+      const cx = (xOfN(lv, state.sel.n) + xOfN(lv, state.sel.n + 1)) / 2;
+      if (hitCircle({ cx, cy: LINE_Y + ZOOM_BTN.dy, r: ZOOM_BTN.r }, lp)) { doZoom(k); return; }
+    }
+    // ② ボタン
+    if (hitRect(DIV_BTN, lp)) { toggleDivide(k); return; }
+    if (k > 0 && hitCircle(CLOSE_BTN, lp)) { removeLevel(k); return; }
+    // ③ ◀ ▶
+    for (const dir of [-1, 1]) {
+      if (hitCircle({ cx: dir < 0 ? PAN_BTN.lx : PAN_BTN.rx, cy: LINE_Y, r: PAN_BTN.r }, lp)) {
+        if (panStep(k, dir)) renderAll();
+        return;
+      }
+    }
+    ev.preventDefault();
+    svg.setPointerCapture(ev.pointerId);
+    svg.classList.add("dragging");
+    if (lp.y <= LINE_Y + 12) {
+      // ④ 線の うえ半分＝よこに ドラッグで スクロール、うごかさなければ 区間を えらぶ
+      drag = { mode: "pan", k, startX: p.x, off0: state.levels[k].off, moved: false };
+    } else {
+      // ⑤ 線の した半分＝▲を おく／うごかす
+      drag = { mode: "mark", k };
+      state.mark = xToMark(state.levels[k], p.x);
+      renderAll();
+    }
+  });
+
+  svg.addEventListener("pointermove", (ev) => {
+    if (!drag) return;
+    ev.preventDefault();
+    const p = svgPt(ev);
+    if (drag.mode === "mark") {
+      state.mark = xToMark(state.levels[drag.k], p.x);
+      renderAll();
+      return;
+    }
+    if (Math.abs(p.x - drag.startX) > 4) drag.moved = true;
+    if (panTo(drag.k, drag.off0 + (drag.startX - p.x) / STEP_PX)) renderAll();
+  });
+
+  function endDrag(ev) {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    svg.classList.remove("dragging");
+    if (svg.hasPointerCapture(ev.pointerId)) svg.releasePointerCapture(ev.pointerId);
+    // うごかさずに はなした＝タップ。区間を えらぶ
+    if (d.mode === "pan" && !d.moved) pickInterval(d.k, svgPt(ev).x);
+  }
+  svg.addEventListener("pointerup", endDrag);
+  svg.addEventListener("pointercancel", endDrag);
+
+  // ── ツールバー ──────────────────────────────────
+  rangeSeg.addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".seg-btn");
+    if (!btn) return;
+    const exp = Number(btn.dataset.exp);
+    if (exp === state.topExp) return;
+    state.topExp = exp;
+    reset(false);
+  });
+
+  clearMarkBtn.addEventListener("click", () => { state.mark = null; renderAll(); });
+
+  function reset(all) {
+    if (all) state.topExp = 1;
+    state.levels = [{ exp: state.topExp, off: 0, divided: false }];
+    state.sel = null;
+    state.mark = null;
+    renderAll();
+  }
+  document.getElementById("resetBtn").addEventListener("click", () => reset(true));
+
+  renderAll();
+</script>
+
+
+<!-- ── そうさせつめい（ヘルプ） ────────────────────────── -->
+<style>
+  /* ── ヘルプボタン（画面右上に固定） ── */
+  .help-btn {
+    position: fixed;
+    right: 16px;
+    top: max(16px, env(safe-area-inset-top));
+    width: 44px; height: 44px; margin: 0;
+    border-radius: 50%; border: 3px solid #90caf9;
+    background: #fff; color: #1565c0;
+    font-family: inherit; font-size: 1.2rem; font-weight: 800; line-height: 1;
+    padding: 0; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    z-index: 190;
+    box-shadow: 0 4px 14px rgba(0,0,0,.20);
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-btn:hover  { background: #e3f2fd; }
+  .help-btn:active { transform: translateY(1px); }
+  #help-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #help-modal {
+    background: #fff; border-radius: 20px; padding: 22px 28px 26px;
+    max-width: 480px; width: 100%; position: relative;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    max-height: calc(100svh - 40px); overflow-y: auto;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  }
+  /* スクロールしても閉じるボタンが隠れないよう sticky にする */
+  #help-close {
+    position: sticky; top: 0; display: block;
+    margin: 0 -10px 4px auto;
+    background: #fff; border: none; font-size: 1.2rem;
+    color: #6b7280; cursor: pointer; padding: 2px 8px; z-index: 1;
+  }
+  #help-modal h2 { font-size: 1.1rem; font-weight: 900; color: #1565c0; margin: 0 0 14px; }
+  #help-modal p  { font-size: .95rem; line-height: 2.05; color: #374151; margin: 0; }
+  #help-modal rt { font-size: .58em; font-weight: 700; color: #6b7280; }
+  #help-modal .sh { display: block; font-weight: 900; color: #1565c0; margin-top: 14px; margin-bottom: 2px; }
+  #help-modal .sh:first-child { margin-top: 0; }
+</style>
+
+<button id="help-btn" class="help-btn" aria-label="つかいかた">?</button>
+<div id="help-overlay" style="display:none">
+  <div id="help-modal">
+    <button id="help-close" aria-label="とじる">✕</button>
+    <h2 id="help-title"></h2>
+    <p id="help-body"></p>
+  </div>
+</div>
+<script>
+  (function(){
+    var ov  = document.getElementById('help-overlay');
+    var btn = document.getElementById('help-btn');
+    var HELP = {
+      title: 'しょうすうの数直線の つかいかた',
+      body:  '<span class="sh">【はじめの <ruby>数直線<rt>すうちょくせん</rt></ruby>】</span><ruby>左上<rt>ひだりうえ</rt></ruby>で 0〜1 か 0〜10 を えらべます。えらびなおすと はじめから に なります。<br><span class="sh">【10<ruby>等分<rt>とうぶん</rt></ruby>する】</span><ruby>数直線<rt>すうちょくせん</rt></ruby>の <ruby>右<rt>みぎ</rt></ruby>に ある めもりの ボタンを おすと、その <ruby>線<rt>せん</rt></ruby>が 10<ruby>等分<rt>とうぶん</rt></ruby>されます。0〜1 を 10<ruby>等分<rt>とうぶん</rt></ruby>すると、1めもりが 0.1 に なります。もう<ruby>一度<rt>いちど</rt></ruby> おすと もとに もどります。<br>ふとい めもりは、ひとつ <ruby>上<rt>うえ</rt></ruby>の くらいの めもりです。<br><span class="sh">【<ruby>拡大<rt>かくだい</rt></ruby>する】</span>10<ruby>等分<rt>とうぶん</rt></ruby>した あと、めもりと めもりの あいだを タップすると、そこが きいろく なります。<ruby>下<rt>した</rt></ruby>に でる ⊕ を おすと、その あいだだけを <ruby>横<rt>よこ</rt></ruby>いっぱいに ひろげた <ruby>数直線<rt>すうちょくせん</rt></ruby>が <ruby>下<rt>した</rt></ruby>に できます。<br>ひろげた <ruby>線<rt>せん</rt></ruby>も また 10<ruby>等分<rt>とうぶん</rt></ruby>できます。0〜0.1 を 10<ruby>等分<rt>とうぶん</rt></ruby>すると 0.01 の めもりに なります。<br>きいろい ひろがりは、<ruby>上<rt>うえ</rt></ruby>の どこを ひろげたのかを あらわして います。<ruby>数直線<rt>すうちょくせん</rt></ruby>は 4<ruby>本<rt>ほん</rt></ruby>まで、0.0001 の めもりまで ひろげられます。<br><span class="sh">【よこに うごかす】</span><ruby>線<rt>せん</rt></ruby>を よこに ドラッグすると、ゆびに ついて なめらかに うごきます。<ruby>左右<rt>さゆう</rt></ruby>の ◀ ▶ を おすと、1めもりずつ きっちり うごきます。100 まで いけます。<br><span class="sh">【▲を おく】</span><ruby>線<rt>せん</rt></ruby>より <ruby>下<rt>した</rt></ruby>を タップすると ▲が でます。ドラッグで うごきます。<br>▲は その <ruby>数<rt>かず</rt></ruby>が ある <ruby>線<rt>せん</rt></ruby> すべてに でます。<ruby>上<rt>うえ</rt></ruby>の <ruby>線<rt>せん</rt></ruby>では 0.3 と 0.4 の あいだに しか <ruby>見<rt>み</rt></ruby>えない <ruby>数<rt>かず</rt></ruby>も、ひろげると どの めもりに あるか わかります。めもりの ちかくでは、ぴたりと めもりに つきます。<ruby>上<rt>うえ</rt></ruby>の「▲を けす」で <ruby>消<rt>け</rt></ruby>せます。<br><span class="sh">【もどす】</span>ひろげた <ruby>線<rt>せん</rt></ruby>の ✕ で、その ひろがりを けせます。<ruby>右上<rt>みぎうえ</rt></ruby>の ↺ で ぜんぶ はじめから やりなおせます。'
+    };
+
+    btn.addEventListener('click', function(){
+      document.getElementById('help-title').innerHTML = HELP.title;
+      document.getElementById('help-body').innerHTML  = HELP.body;
+      ov.style.display = 'flex';
+    });
+    document.getElementById('help-close').addEventListener('click', function(){ ov.style.display = 'none'; });
+    ov.addEventListener('click', function(e){ if (e.target === ov) ov.style.display = 'none'; });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') ov.style.display = 'none'; });
+  })();
+</script>
+</body>
+</html>
